@@ -521,7 +521,7 @@ git commit -m "feat: add Subcategory model and admin CRUD API"
 
 **Interfaces:**
 - Consumes: `app`, `connectTestDB/clearTestDB/closeTestDB` (Task 1).
-- Produces: `PUT/DELETE /api/categories/:id` (create/read already existed).
+- Produces: `PUT/DELETE /api/categories/id/:id` (create/read already existed at `/api/categories` and `/api/categories/:slug`).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -566,7 +566,7 @@ test("updates a category's description", async () => {
   });
 
   const res = await request(app)
-    .put(`/api/categories/${category._id}`)
+    .put(`/api/categories/id/${category._id}`)
     .set("Cookie", [`token=${token}`])
     .send({ description: "Updated description" });
 
@@ -589,7 +589,7 @@ test("blocks deleting a category still referenced by a product", async () => {
   });
 
   const res = await request(app)
-    .delete(`/api/categories/${category._id}`)
+    .delete(`/api/categories/id/${category._id}`)
     .set("Cookie", [`token=${token}`]);
 
   expect(res.status).toBe(409);
@@ -600,7 +600,7 @@ test("deletes an unreferenced category", async () => {
   const category = await Category.create({ name: "Eyewear", slug: "eyewear", type: "eyewear" });
 
   const res = await request(app)
-    .delete(`/api/categories/${category._id}`)
+    .delete(`/api/categories/id/${category._id}`)
     .set("Cookie", [`token=${token}`]);
 
   expect(res.status).toBe(200);
@@ -691,8 +691,6 @@ router
   .put(protect, admin, updateCategory)
   .delete(protect, admin, deleteCategory);
 ```
-
-Update the test file's URLs from `/api/categories/${category._id}` to `/api/categories/id/${category._id}` to match (edit the three `request(app)...` calls in `categoryController.test.js` accordingly).
 
 - [ ] **Step 5: Run tests**
 
