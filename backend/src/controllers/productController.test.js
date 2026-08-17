@@ -92,3 +92,17 @@ test("rejects updating to a sub-category that doesn't match the product's catego
 
   expect(res.status).toBe(400);
 });
+
+test("persists the validated sub-category rather than a raw falsy override", async () => {
+  const token = await adminToken();
+  await Subcategory.create({ name: "Sunglasses", slug: "sunglasses", categoryType: "eyewear" });
+  const created = await Product.create(basePayload);
+
+  const res = await request(app)
+    .put(`/api/products/${created._id}`)
+    .set("Cookie", [`token=${token}`])
+    .send({ category: "eyewear", subCategory: "" });
+
+  expect(res.status).toBe(200);
+  expect(res.body.subCategory).toBe("sunglasses");
+});

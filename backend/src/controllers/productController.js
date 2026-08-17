@@ -102,7 +102,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     }
   }
 
-  Object.assign(product, req.body);
+  Object.assign(product, req.body, { category: nextCategory, subCategory: nextSubCategory });
   const updated = await product.save();
   res.json(updated);
 });
