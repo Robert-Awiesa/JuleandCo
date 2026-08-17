@@ -484,7 +484,7 @@ async function seed() {
   await Subcategory.insertMany(subcategories);
 
   console.log("Inserting products...");
-  const inserted = await Product.insertMany(
+  const inserted = await Product.create(
     products.map(({ pairsWithSlugs, colors, sizes, stock, ...rest }) => ({
       ...rest,
       subCategory: slugify(rest.subCategory),
