@@ -4,6 +4,9 @@ require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 const connectDB = require("../config/db");
 const Product = require("../models/Product");
 const Category = require("../models/Category");
+const Subcategory = require("../models/Subcategory");
+const User = require("../models/User");
+const { buildVariants } = require("./toVariants");
 
 const img = (seed, w = 900, h = 1125) => `https://picsum.photos/seed/${seed}/${w}/${h}`;
 
@@ -445,19 +448,48 @@ const products = [
   },
 ];
 
+function slugify(value) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+function deriveSubcategories(productList) {
+  const seen = new Map();
+  productList.forEach((p) => {
+    const key = `${p.category}:${p.subCategory}`;
+    if (!seen.has(key)) {
+      seen.set(key, {
+        name: p.subCategory,
+        slug: slugify(p.subCategory),
+        categoryType: p.category,
+        sortOrder: seen.size,
+      });
+    }
+  });
+  return Array.from(seen.values());
+}
+
 async function seed() {
   await connectDB();
 
   console.log("Clearing existing catalog...");
   await Product.deleteMany({});
   await Category.deleteMany({});
+  await Subcategory.deleteMany({});
 
   console.log("Inserting categories...");
   await Category.insertMany(categories);
 
+  console.log("Inserting sub-categories...");
+  const subcategories = deriveSubcategories(products);
+  await Subcategory.insertMany(subcategories);
+
   console.log("Inserting products...");
   const inserted = await Product.insertMany(
-    products.map(({ pairsWithSlugs, ...rest }) => rest)
+    products.map(({ pairsWithSlugs, colors, sizes, stock, ...rest }) => ({
+      ...rest,
+      subCategory: slugify(rest.subCategory),
+      variants: buildVariants({ colors, sizes, stock }),
+    }))
   );
 
   const slugToId = new Map(inserted.map((p) => [p.slug, p._id]));
@@ -472,7 +504,25 @@ async function seed() {
     })
   );
 
-  console.log(`Seeded ${inserted.length} products and ${categories.length} categories.`);
+  console.log("Ensuring an admin user exists...");
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@auraandoptic.com";
+  const adminPassword = process.env.ADMIN_PASSWORD || "changeme123";
+  const existingAdmin = await User.findOne({ email: adminEmail });
+  if (!existingAdmin) {
+    await User.create({
+      name: "Store Admin",
+      email: adminEmail,
+      password: adminPassword,
+      role: "admin",
+    });
+    console.log(`Created admin user: ${adminEmail}`);
+  } else {
+    console.log(`Admin user already exists: ${adminEmail}`);
+  }
+
+  console.log(
+    `Seeded ${inserted.length} products, ${categories.length} categories, and ${subcategories.length} sub-categories.`
+  );
   process.exit(0);
 }
 
