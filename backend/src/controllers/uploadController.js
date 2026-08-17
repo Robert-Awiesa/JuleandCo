@@ -3,7 +3,7 @@ const cloudinary = require("../config/cloudinary");
 
 const signUpload = asyncHandler(async (req, res) => {
   const timestamp = Math.round(Date.now() / 1000);
-  const folder = req.body.folder || "aura-optic/products";
+  const folder = req.body.folder || "jules-and-co/products";
 
   const signature = cloudinary.utils.api_sign_request(
     { timestamp, folder },

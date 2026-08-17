@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Instagram, Facebook, Twitter } from "lucide-react";
 
@@ -42,10 +43,16 @@ export function Footer() {
     <footer className="border-t border-obsidian/10 bg-obsidian text-alabaster">
       <div className="container-elevated grid grid-cols-1 gap-12 py-16 md:grid-cols-[1.3fr_1fr_1fr_1fr]">
         <div>
-          <p className="font-serif text-2xl">Aura &amp; Optic</p>
+          <Image
+            src="/images/brand/logo-footer.png"
+            alt="JULES & CO — Wear the Difference"
+            width={524}
+            height={280}
+            className="h-14 w-auto"
+          />
           <p className="mt-4 max-w-xs text-sm text-alabaster/60">
-            Curated eyewear and apparel for the deliberate wardrobe. Designed in-house,
-            crafted to last.
+            Curated eyewear and apparel for those who wear the difference. Designed
+            in-house, crafted to last.
           </p>
           <form
             onSubmit={(e) => {
@@ -89,7 +96,7 @@ export function Footer() {
 
       <div className="container-elevated flex flex-col items-center justify-between gap-4 border-t border-alabaster/10 py-6 sm:flex-row">
         <p className="text-xs text-alabaster/50">
-          &copy; {new Date().getFullYear()} Aura &amp; Optic. All rights reserved.
+          &copy; {new Date().getFullYear()} JULES &amp; CO. All rights reserved.
         </p>
         <div className="flex items-center gap-5">
           <Instagram size={16} className="text-alabaster/60 hover:text-gold" />

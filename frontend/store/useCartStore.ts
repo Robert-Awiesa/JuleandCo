@@ -74,6 +74,6 @@ export const useCartStore = create<CartState>()(
         get().lines.reduce((sum, l) => sum + l.price * l.quantity, 0),
       itemCount: () => get().lines.reduce((sum, l) => sum + l.quantity, 0),
     }),
-    { name: "aura-optic-cart" }
+    { name: "jules-and-co-cart" }
   )
 );

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Package, Tags, ShoppingBag, Users, Settings } from "lucide-react";
@@ -20,8 +21,14 @@ export function Sidebar() {
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-obsidian/10 bg-alabaster">
       <div className="px-6 py-8">
-        <span className="font-serif text-xl tracking-tight text-obsidian">Aura & Optic</span>
-        <span className="mt-1 block text-xs uppercase tracking-widest2 text-obsidian/50">Admin</span>
+        <Image
+          src="/images/brand/logo-header.png"
+          alt="JULES & CO"
+          width={599}
+          height={320}
+          className="h-9 w-auto"
+        />
+        <span className="mt-2 block text-xs uppercase tracking-widest2 text-obsidian/50">Admin</span>
       </div>
       <nav className="flex-1 space-y-1 px-3">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {

@@ -7,8 +7,15 @@ const sans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-sans", di
 const serif = Playfair_Display({ subsets: ["latin"], variable: "--font-serif", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Admin — Aura & Optic",
-  description: "Store management dashboard for Aura & Optic.",
+  title: "Admin — JULES & CO",
+  description: "Store management dashboard for JULES & CO.",
+  icons: {
+    icon: [
+      { url: "/images/brand/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/images/brand/favicon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/images/brand/apple-icon.png",
+  },
 };
 
 export default function AdminRootLayout({ children }: { children: React.ReactNode }) {

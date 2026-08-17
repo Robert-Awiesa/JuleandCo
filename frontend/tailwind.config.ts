@@ -13,9 +13,9 @@ const config: Config = {
         obsidian: "#121212",
         alabaster: "#F9F8F6",
         gold: {
-          DEFAULT: "#D4AF37",
+          DEFAULT: "#CDAD54",
           light: "#E4C767",
-          dark: "#B8942B",
+          dark: "#A9873A",
         },
         sage: {
           DEFAULT: "#8A9A86",

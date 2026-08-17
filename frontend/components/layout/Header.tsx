@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 import { Heart, Menu, Search, ShoppingBag, X } from "lucide-react";
 import { primaryNav, megaMenu } from "@/lib/navigation";
@@ -40,8 +41,15 @@ export function Header() {
         )}
       >
         <div className="container-elevated flex h-20 items-center justify-between">
-          <Link href="/" className="font-serif text-2xl tracking-tight">
-            Aura &amp; Optic
+          <Link href="/" className="flex items-center" aria-label="JULES & CO home">
+            <Image
+              src="/images/brand/logo-header.png"
+              alt="JULES & CO — Wear the Difference"
+              width={599}
+              height={320}
+              priority
+              className="h-11 w-auto sm:h-12"
+            />
           </Link>
 
           <nav className="hidden items-center gap-9 lg:flex">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { loginAdmin } from "../_lib/auth";
 import { ApiError } from "../_lib/api";
@@ -32,14 +33,29 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-alabaster px-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-alabaster px-4">
+      <Image
+        src="/images/brand/watermark-mark.png"
+        alt=""
+        aria-hidden="true"
+        width={1200}
+        height={374}
+        className="pointer-events-none absolute left-1/2 top-1/2 w-[130vw] max-w-none -translate-x-1/2 -translate-y-1/2 select-none sm:w-[70vw]"
+      />
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-5 rounded-lg border border-obsidian/10 bg-white p-8"
+        className="relative w-full max-w-sm space-y-5 rounded-lg border border-obsidian/10 bg-white p-8 shadow-soft"
       >
-        <div>
-          <h1 className="font-serif text-2xl text-obsidian">Aura & Optic</h1>
-          <p className="mt-1 text-xs uppercase tracking-widest2 text-obsidian/50">Admin sign in</p>
+        <div className="flex flex-col items-center text-center">
+          <Image
+            src="/images/brand/logo-header.png"
+            alt="JULES & CO"
+            width={599}
+            height={320}
+            priority
+            className="h-14 w-auto"
+          />
+          <p className="mt-3 text-xs uppercase tracking-widest2 text-obsidian/50">Admin sign in</p>
         </div>
 
         {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}

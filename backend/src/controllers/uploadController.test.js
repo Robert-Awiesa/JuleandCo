@@ -35,10 +35,10 @@ test("returns a valid Cloudinary upload signature", async () => {
   const res = await request(app)
     .post("/api/uploads/sign")
     .set("Cookie", [`token=${token}`])
-    .send({ folder: "aura-optic/test" });
+    .send({ folder: "jules-and-co/test" });
 
   expect(res.status).toBe(200);
-  expect(res.body.folder).toBe("aura-optic/test");
+  expect(res.body.folder).toBe("jules-and-co/test");
   expect(res.body.cloudName).toBe("test-cloud");
 
   const expectedSignature = cloudinary.utils.api_sign_request(

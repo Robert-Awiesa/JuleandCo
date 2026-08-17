@@ -505,7 +505,7 @@ async function seed() {
   );
 
   console.log("Ensuring an admin user exists...");
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@auraandoptic.com";
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@julesandco.com";
   const adminPassword = process.env.ADMIN_PASSWORD || "changeme123";
   const existingAdmin = await User.findOne({ email: adminEmail });
   if (!existingAdmin) {

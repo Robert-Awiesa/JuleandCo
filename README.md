@@ -1,6 +1,8 @@
-# Aura & Optic
+# JULES & CO
 
-An elevated, professional e-commerce platform for curated eyewear and apparel. Minimalist luxury aesthetic, editorial typography, and a robust technical foundation — functionally inspired by storefronts like julesandco.shop, but rebuilt with a modern stack, richer product discovery, and a more refined visual language.
+*Wear the Difference.*
+
+An elevated, professional e-commerce platform for curated eyewear and apparel. Minimalist luxury aesthetic, editorial typography, and a robust technical foundation, built around the JULES & CO brand — signature gold-on-black identity, richer product discovery, and a refined visual language.
 
 ## 1. Project Vision & Aesthetic Direction
 
@@ -12,7 +14,7 @@ An elevated, professional e-commerce platform for curated eyewear and apparel. M
 |---|---|---|
 | Primary | Deep Obsidian / Rich Charcoal | `#121212` |
 | Secondary | Warm Alabaster / Soft Cream | `#F9F8F6` |
-| Accent (gold) | Champagne Gold | `#D4AF37` |
+| Accent (gold) | Signature Gold (from logo) | `#CDAD54` |
 | Accent (sage) | Muted Sage | `#8A9A86` |
 
 **Typography**
@@ -43,7 +45,7 @@ This repo is an **npm workspaces** monorepo: the root `package.json` wires `fron
 ## 4. Project Structure
 
 ```
-jules&co/
+julesandco/
 ├── frontend/                  Next.js storefront
 │   ├── app/                   App Router pages (home, shop, product/[slug], checkout)
 │   ├── components/
