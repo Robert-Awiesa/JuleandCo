@@ -106,3 +106,36 @@ test("persists the validated sub-category rather than a raw falsy override", asy
   expect(res.status).toBe(200);
   expect(res.body.subCategory).toBe("sunglasses");
 });
+
+test("admin list paginates and filters by stock status", async () => {
+  const token = await adminToken();
+  await Subcategory.create({ name: "Sunglasses", slug: "sunglasses", categoryType: "eyewear" });
+  await Product.create({ ...basePayload, slug: "in-stock", variants: [{ colorId: "black", colorLabel: "Black", stock: 10 }] });
+  await Product.create({ ...basePayload, slug: "out-of-stock", variants: [{ colorId: "black", colorLabel: "Black", stock: 0 }] });
+
+  const res = await request(app)
+    .get("/api/products/admin?stockStatus=out")
+    .set("Cookie", [`token=${token}`]);
+
+  expect(res.status).toBe(200);
+  expect(res.body.total).toBe(1);
+  expect(res.body.items[0].slug).toBe("out-of-stock");
+});
+
+test("admin list rejects unauthenticated requests", async () => {
+  const res = await request(app).get("/api/products/admin");
+  expect(res.status).toBe(401);
+});
+
+test("fetches a single product by id for admin editing", async () => {
+  const token = await adminToken();
+  await Subcategory.create({ name: "Sunglasses", slug: "sunglasses", categoryType: "eyewear" });
+  const created = await Product.create(basePayload);
+
+  const res = await request(app)
+    .get(`/api/products/id/${created._id}`)
+    .set("Cookie", [`token=${token}`]);
+
+  expect(res.status).toBe(200);
+  expect(res.body.name).toBe("Test Frame");
+});

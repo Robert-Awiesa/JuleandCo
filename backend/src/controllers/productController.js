@@ -121,10 +121,57 @@ const deleteProduct = asyncHandler(async (req, res) => {
   res.json({ message: "Product removed" });
 });
 
+// @desc    Get paginated/filterable product list for the admin dashboard
+// @route   GET /api/products/admin
+// @access  Private/Admin
+const getAdminProducts = asyncHandler(async (req, res) => {
+  const { category, subCategory, stockStatus, search, page = 1, limit = 20 } = req.query;
+  const query = {};
+
+  if (category && category !== "all") query.category = category;
+  if (subCategory) query.subCategory = subCategory;
+  if (search) query.$text = { $search: search };
+  if (stockStatus === "out") query.stock = 0;
+  if (stockStatus === "low") query.stock = { $gt: 0, $lte: 5 };
+  if (stockStatus === "in") query.stock = { $gt: 5 };
+
+  const pageNum = Math.max(1, Number(page));
+  const limitNum = Math.max(1, Number(limit));
+
+  const [items, total] = await Promise.all([
+    Product.find(query)
+      .sort({ createdAt: -1 })
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum),
+    Product.countDocuments(query),
+  ]);
+
+  res.json({
+    items,
+    total,
+    page: pageNum,
+    pages: Math.max(1, Math.ceil(total / limitNum)),
+  });
+});
+
+// @desc    Get a single product by Mongo id (admin editing — the public route only supports slug)
+// @route   GET /api/products/id/:id
+// @access  Private/Admin
+const getAdminProductById = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+  res.json(product);
+});
+
 module.exports = {
   getProducts,
   getProductBySlug,
   createProduct,
   updateProduct,
   deleteProduct,
+  getAdminProducts,
+  getAdminProductById,
 };
