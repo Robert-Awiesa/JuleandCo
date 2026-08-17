@@ -1582,17 +1582,19 @@ git commit -m "feat: add Cloudinary signed upload endpoint"
 
 ### Task 9: Auth — JWT role claim + httpOnly cookie login/logout + cookie-aware protect middleware + tests
 
+**Note: the `authMiddleware.js` cookie-fallback change below has already landed.** Task 2's implementer discovered its own admin-authenticated tests required cookie-based `protect` support (every backend task's tests authenticate via `.set("Cookie", ...)`), and added it early — byte-for-byte the same change specified here. Human-adjudicated ruling: keep it. **Skip Step 6 below** (the `authMiddleware.js` edit) — read the file first to confirm it already matches, note that in your report, and don't re-apply it. Everything else in this task (generateToken's role claim, login/logout cookie-setting, the auth controller tests) has NOT been done yet and is still this task's job.
+
 **Files:**
 - Modify: `backend/src/utils/generateToken.js`
 - Modify: `backend/src/controllers/authController.js`
 - Create: `backend/src/controllers/authController.test.js`
 - Modify: `backend/src/routes/authRoutes.js`
-- Modify: `backend/src/middleware/authMiddleware.js`
+- ~~Modify: `backend/src/middleware/authMiddleware.js`~~ (already done in Task 2 — verify only, don't re-edit)
 
 **Interfaces:**
 - Produces: `generateToken(userId, role)` (signature change — previously `generateToken(userId)`). The JWT payload now includes `role`, so it can be checked from Next.js Edge middleware (Task 15) without a database round trip.
 - Produces: `POST /api/auth/logout`; `POST /api/auth/login` and `POST /api/auth/register` now also set an httpOnly `token` cookie (in addition to returning the token in the JSON body for non-browser clients).
-- Produces: `protect` middleware now accepts the token from either the `Authorization: Bearer` header or the `token` cookie.
+- Produces: `protect` middleware now accepts the token from either the `Authorization: Bearer` header or the `token` cookie. (Already true as of Task 2 — this task adds the role claim and cookie-setting around it.)
 
 - [ ] **Step 1: Write the failing tests**
 
