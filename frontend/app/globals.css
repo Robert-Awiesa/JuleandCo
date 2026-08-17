@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-obsidian/10;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-alabaster text-obsidian antialiased;
+  }
+
+  ::selection {
+    @apply bg-gold/30 text-obsidian;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-alabaster;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-obsidian/20 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-obsidian/40;
+  }
+}
+
+@layer components {
+  .container-elevated {
+    @apply mx-auto w-full max-w-8xl px-6 md:px-10;
+  }
+
+  .eyebrow {
+    @apply text-xs uppercase tracking-widest2 text-obsidian/60 font-medium;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-obsidian text-alabaster px-7 py-3.5 text-sm uppercase tracking-wide transition-colors duration-300 hover:bg-gold hover:text-obsidian;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 border border-obsidian/30 text-obsidian px-7 py-3.5 text-sm uppercase tracking-wide transition-colors duration-300 hover:border-obsidian hover:bg-obsidian hover:text-alabaster;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 text-sm uppercase tracking-wide text-obsidian/80 underline-offset-4 hover:underline transition-colors;
+  }
+
+  .glass-panel {
+    @apply bg-alabaster/70 backdrop-blur-md border border-obsidian/10;
+  }
+}
