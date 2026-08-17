@@ -139,3 +139,38 @@ test("fetches a single product by id for admin editing", async () => {
   expect(res.status).toBe(200);
   expect(res.body.name).toBe("Test Frame");
 });
+
+test("patches stock for specific variants and recomputes the total", async () => {
+  const token = await adminToken();
+  await Subcategory.create({ name: "Sunglasses", slug: "sunglasses", categoryType: "eyewear" });
+  const created = await Product.create({
+    ...basePayload,
+    variants: [
+      { colorId: "black", colorLabel: "Black", stock: 4 },
+      { colorId: "tortoise", colorLabel: "Tortoise", stock: 2 },
+    ],
+  });
+
+  const res = await request(app)
+    .patch(`/api/products/${created._id}/stock`)
+    .set("Cookie", [`token=${token}`])
+    .send({ variants: [{ id: "black", stock: 0 }] });
+
+  expect(res.status).toBe(200);
+  const blackVariant = res.body.variants.find((v) => v.id === "black");
+  expect(blackVariant.stock).toBe(0);
+  expect(res.body.stock).toBe(2);
+});
+
+test("stock patch rejects a missing or empty variants array", async () => {
+  const token = await adminToken();
+  await Subcategory.create({ name: "Sunglasses", slug: "sunglasses", categoryType: "eyewear" });
+  const created = await Product.create(basePayload);
+
+  const res = await request(app)
+    .patch(`/api/products/${created._id}/stock`)
+    .set("Cookie", [`token=${token}`])
+    .send({});
+
+  expect(res.status).toBe(400);
+});

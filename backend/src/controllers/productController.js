@@ -166,6 +166,33 @@ const getAdminProductById = asyncHandler(async (req, res) => {
   res.json(product);
 });
 
+// @desc    Update stock for specific variants without resending the whole product
+// @route   PATCH /api/products/:id/stock
+// @access  Private/Admin
+const updateProductStock = asyncHandler(async (req, res) => {
+  const { variants } = req.body;
+  if (!Array.isArray(variants) || variants.length === 0) {
+    res.status(400);
+    throw new Error("variants array is required");
+  }
+
+  const product = await Product.findById(req.params.id);
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  const updates = new Map(variants.map((v) => [v.id, v.stock]));
+  product.variants.forEach((variant) => {
+    if (updates.has(variant.id)) {
+      variant.stock = Math.max(0, Number(updates.get(variant.id)) || 0);
+    }
+  });
+
+  const updated = await product.save();
+  res.json(updated);
+});
+
 module.exports = {
   getProducts,
   getProductBySlug,
@@ -174,4 +201,5 @@ module.exports = {
   deleteProduct,
   getAdminProducts,
   getAdminProductById,
+  updateProductStock,
 };
