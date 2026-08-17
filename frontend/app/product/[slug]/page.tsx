@@ -14,7 +14,7 @@ export function generateMetadata({ params }: ProductPageProps) {
   const product = getProductBySlug(params.slug);
   if (!product) return {};
   return {
-    title: `${product.name} — Aura & Optic`,
+    title: `${product.name} — JULES & CO`,
     description: product.description,
   };
 }

@@ -495,7 +495,7 @@ export const testimonials: Testimonial[] = [
   {
     id: "t3",
     quote:
-      "Aura & Optic feels like shopping an editorial spread, not a catalog. The pairing suggestions are spot on.",
+      "JULES & CO feels like shopping an editorial spread, not a catalog. The pairing suggestions are spot on.",
     author: "Naana O.",
     role: "London",
   },

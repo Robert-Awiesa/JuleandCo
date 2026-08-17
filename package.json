@@ -1,8 +1,8 @@
 {
-  "name": "aura-and-optic",
+  "name": "jules-and-co",
   "private": true,
   "version": "0.1.0",
-  "description": "Aura & Optic — curated eyewear and apparel e-commerce platform",
+  "description": "JULES & CO — curated eyewear and apparel e-commerce platform",
   "workspaces": [
     "frontend",
     "backend"

@@ -31,7 +31,7 @@ export function BrandStory() {
         >
           <Image
             src="https://picsum.photos/seed/brand-story/900/1125"
-            alt="Aura & Optic craftsmanship"
+            alt="JULES & CO craftsmanship"
             fill
             sizes="(min-width: 768px) 50vw, 100vw"
             className="object-cover"
@@ -44,10 +44,11 @@ export function BrandStory() {
             Craftsmanship, edited for a modern wardrobe.
           </h2>
           <p className="mt-6 max-w-lg text-alabaster/70">
-            Aura &amp; Optic began with a simple frustration: too much of what&apos;s sold as
-            &ldquo;premium&rdquo; is neither considered nor built to last. We work directly with a
-            small circle of ateliers to produce fewer, better pieces — each one designed to
-            pair effortlessly with the rest of your wardrobe.
+            JULES &amp; CO started with a simple belief: what you wear should set you apart,
+            not blend in. Too much of what&apos;s sold as &ldquo;premium&rdquo; is neither
+            considered nor built to last. We work directly with a small circle of ateliers to
+            produce fewer, better pieces — each one designed to pair effortlessly with the
+            rest of your wardrobe. That&apos;s the difference we mean when we say wear it.
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-3">

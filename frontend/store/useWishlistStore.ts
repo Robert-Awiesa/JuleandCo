@@ -19,6 +19,6 @@ export const useWishlistStore = create<WishlistState>()(
         })),
       has: (productId) => get().productIds.includes(productId),
     }),
-    { name: "aura-optic-wishlist" }
+    { name: "jules-and-co-wishlist" }
   )
 );

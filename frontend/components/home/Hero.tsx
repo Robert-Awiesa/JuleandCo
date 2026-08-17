@@ -9,7 +9,7 @@ export function Hero() {
     <section className="relative flex h-[92vh] min-h-[640px] w-full items-end overflow-hidden bg-obsidian">
       <Image
         src="/images/hero/jules-hero.jpg"
-        alt="Aura & Optic editorial campaign"
+        alt="JULES & CO editorial campaign"
         fill
         priority
         sizes="100vw"
@@ -22,9 +22,9 @@ export function Hero() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="eyebrow mb-5 text-alabaster/70"
+          className="eyebrow mb-5 text-gold"
         >
-          Autumn / Winter Collection
+          Wear the Difference
         </motion.p>
         <motion.h1
           initial={{ opacity: 0, y: 16 }}

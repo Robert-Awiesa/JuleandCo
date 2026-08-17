@@ -18,9 +18,22 @@ const serif = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Aura & Optic — Curated Eyewear & Apparel",
+  title: "JULES & CO — Wear the Difference",
   description:
-    "Minimalist luxury eyewear and apparel, curated for the deliberate wardrobe.",
+    "Curated eyewear and apparel with a signature gold edge — JULES & CO is designed for those who wear the difference.",
+  icons: {
+    icon: [
+      { url: "/images/brand/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/images/brand/favicon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/images/brand/apple-icon.png",
+  },
+  openGraph: {
+    title: "JULES & CO — Wear the Difference",
+    description:
+      "Curated eyewear and apparel with a signature gold edge — JULES & CO is designed for those who wear the difference.",
+    images: ["/images/brand/og-image.jpg"],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
