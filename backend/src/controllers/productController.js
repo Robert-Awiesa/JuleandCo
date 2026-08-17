@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const Product = require("../models/Product");
+const Subcategory = require("../models/Subcategory");
 
 // @desc    Get products with optional multi-facet filtering
 // @route   GET /api/products
@@ -63,6 +64,17 @@ const getProductBySlug = asyncHandler(async (req, res) => {
 // @route   POST /api/products
 // @access  Private/Admin
 const createProduct = asyncHandler(async (req, res) => {
+  const validSubcategory = await Subcategory.findOne({
+    slug: req.body.subCategory,
+    categoryType: req.body.category,
+  });
+  if (!validSubcategory) {
+    res.status(400);
+    throw new Error(
+      `"${req.body.subCategory}" is not a valid sub-category for "${req.body.category}"`
+    );
+  }
+
   const product = await Product.create(req.body);
   res.status(201).json(product);
 });
@@ -71,17 +83,28 @@ const createProduct = asyncHandler(async (req, res) => {
 // @route   PUT /api/products/:id
 // @access  Private/Admin
 const updateProduct = asyncHandler(async (req, res) => {
-  const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
-
+  const product = await Product.findById(req.params.id);
   if (!product) {
     res.status(404);
     throw new Error("Product not found");
   }
 
-  res.json(product);
+  const nextCategory = req.body.category || product.category;
+  const nextSubCategory = req.body.subCategory || product.subCategory;
+  if (req.body.category || req.body.subCategory) {
+    const validSubcategory = await Subcategory.findOne({
+      slug: nextSubCategory,
+      categoryType: nextCategory,
+    });
+    if (!validSubcategory) {
+      res.status(400);
+      throw new Error(`"${nextSubCategory}" is not a valid sub-category for "${nextCategory}"`);
+    }
+  }
+
+  Object.assign(product, req.body);
+  const updated = await product.save();
+  res.json(updated);
 });
 
 // @desc    Delete a product
