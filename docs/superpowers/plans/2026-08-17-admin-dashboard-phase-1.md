@@ -521,7 +521,7 @@ git commit -m "feat: add Subcategory model and admin CRUD API"
 
 **Interfaces:**
 - Consumes: `app`, `connectTestDB/clearTestDB/closeTestDB` (Task 1).
-- Produces: `PUT/DELETE /api/categories/:id` (create/read already existed).
+- Produces: `PUT/DELETE /api/categories/id/:id` (create/read already existed at `/api/categories` and `/api/categories/:slug`).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -566,7 +566,7 @@ test("updates a category's description", async () => {
   });
 
   const res = await request(app)
-    .put(`/api/categories/${category._id}`)
+    .put(`/api/categories/id/${category._id}`)
     .set("Cookie", [`token=${token}`])
     .send({ description: "Updated description" });
 
@@ -589,7 +589,7 @@ test("blocks deleting a category still referenced by a product", async () => {
   });
 
   const res = await request(app)
-    .delete(`/api/categories/${category._id}`)
+    .delete(`/api/categories/id/${category._id}`)
     .set("Cookie", [`token=${token}`]);
 
   expect(res.status).toBe(409);
@@ -600,7 +600,7 @@ test("deletes an unreferenced category", async () => {
   const category = await Category.create({ name: "Eyewear", slug: "eyewear", type: "eyewear" });
 
   const res = await request(app)
-    .delete(`/api/categories/${category._id}`)
+    .delete(`/api/categories/id/${category._id}`)
     .set("Cookie", [`token=${token}`]);
 
   expect(res.status).toBe(200);
@@ -691,8 +691,6 @@ router
   .put(protect, admin, updateCategory)
   .delete(protect, admin, deleteCategory);
 ```
-
-Update the test file's URLs from `/api/categories/${category._id}` to `/api/categories/id/${category._id}` to match (edit the three `request(app)...` calls in `categoryController.test.js` accordingly).
 
 - [ ] **Step 5: Run tests**
 
@@ -1584,17 +1582,19 @@ git commit -m "feat: add Cloudinary signed upload endpoint"
 
 ### Task 9: Auth — JWT role claim + httpOnly cookie login/logout + cookie-aware protect middleware + tests
 
+**Note: the `authMiddleware.js` cookie-fallback change below has already landed.** Task 2's implementer discovered its own admin-authenticated tests required cookie-based `protect` support (every backend task's tests authenticate via `.set("Cookie", ...)`), and added it early — byte-for-byte the same change specified here. Human-adjudicated ruling: keep it. **Skip Step 6 below** (the `authMiddleware.js` edit) — read the file first to confirm it already matches, note that in your report, and don't re-apply it. Everything else in this task (generateToken's role claim, login/logout cookie-setting, the auth controller tests) has NOT been done yet and is still this task's job.
+
 **Files:**
 - Modify: `backend/src/utils/generateToken.js`
 - Modify: `backend/src/controllers/authController.js`
 - Create: `backend/src/controllers/authController.test.js`
 - Modify: `backend/src/routes/authRoutes.js`
-- Modify: `backend/src/middleware/authMiddleware.js`
+- ~~Modify: `backend/src/middleware/authMiddleware.js`~~ (already done in Task 2 — verify only, don't re-edit)
 
 **Interfaces:**
 - Produces: `generateToken(userId, role)` (signature change — previously `generateToken(userId)`). The JWT payload now includes `role`, so it can be checked from Next.js Edge middleware (Task 15) without a database round trip.
 - Produces: `POST /api/auth/logout`; `POST /api/auth/login` and `POST /api/auth/register` now also set an httpOnly `token` cookie (in addition to returning the token in the JSON body for non-browser clients).
-- Produces: `protect` middleware now accepts the token from either the `Authorization: Bearer` header or the `token` cookie.
+- Produces: `protect` middleware now accepts the token from either the `Authorization: Bearer` header or the `token` cookie. (Already true as of Task 2 — this task adds the role claim and cookie-setting around it.)
 
 - [ ] **Step 1: Write the failing tests**
 
