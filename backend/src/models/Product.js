@@ -26,18 +26,52 @@ const productSchema = new mongoose.Schema(
     compareAtPrice: { type: Number, min: 0 },
     description: { type: String, required: true },
     images: { type: [String], required: true },
+    // --- Eyewear attributes ---
+    // frameShape/frameMaterial/gender hold Attribute `value` slugs, not free text.
     frameShape: String,
+    frameMaterial: String,
+    // The hero lens shown in the spec list. Kept for back-compat with the
+    // storefront's existing "Lens Color" row.
     lensColor: String,
+    // Lens types this frame can be ordered with. Selectable on the storefront,
+    // but NOT a stock axis — inventory is tracked per frame colour only.
+    lensOptions: [String],
+    measurements: {
+      lensWidthMm: Number,
+      bridgeWidthMm: Number,
+      templeLengthMm: Number,
+    },
+
+    // --- Apparel attributes ---
     clothingSize: [String],
     fabric: String,
+    composition: String,
+    fit: String,
+
+    // --- Shared ---
+    gender: String,
+    careInstructions: String,
     variants: { type: [variantSchema], default: [] },
     stock: { type: Number, default: 0 },
-    isNew: { type: Boolean, default: false },
+    isNewArrival: { type: Boolean, default: false },
     isBestSeller: { type: Boolean, default: false },
     rating: { type: Number, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0 },
     pairsWith: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
     tags: [String],
+
+    // Nothing reaches the storefront until it is explicitly published.
+    publishStatus: { type: String, enum: ["draft", "published"], default: "draft" },
+
+    // --- Commerce/ops fields, admin-only (never serialized to the storefront) ---
+    costPrice: { type: Number, min: 0 },
+    barcode: String,
+    weightGrams: { type: Number, min: 0 },
+
+    seo: {
+      title: String,
+      description: String,
+    },
   },
   { timestamps: true }
 );

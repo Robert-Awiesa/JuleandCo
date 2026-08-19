@@ -1,29 +1,34 @@
 import { notFound } from "next/navigation";
-import { getProductBySlug, getRelatedProducts, products } from "@/lib/mockData";
+import { fetchProductBySlug } from "@/lib/api";
 import { ProductDetailView } from "@/components/product/ProductDetailView";
 
 interface ProductPageProps {
   params: { slug: string };
 }
 
-export function generateStaticParams() {
-  return products.map((p) => ({ slug: p.slug }));
-}
+// Rendered on demand rather than pre-generated: the catalogue lives in Mongo
+// now, so a product published in the admin must become reachable without a
+// rebuild. lib/api.ts sets the revalidate window.
+export const dynamicParams = true;
 
-export function generateMetadata({ params }: ProductPageProps) {
-  const product = getProductBySlug(params.slug);
+export async function generateMetadata({ params }: ProductPageProps) {
+  const product = await fetchProductBySlug(params.slug);
   if (!product) return {};
+
   return {
     title: `${product.name} — JULES & CO`,
     description: product.description,
+    openGraph: {
+      title: `${product.name} — JULES & CO`,
+      description: product.description,
+      images: product.images?.[0] ? [product.images[0]] : undefined,
+    },
   };
 }
 
-export default function ProductPage({ params }: ProductPageProps) {
-  const product = getProductBySlug(params.slug);
+export default async function ProductPage({ params }: ProductPageProps) {
+  const product = await fetchProductBySlug(params.slug);
   if (!product) notFound();
 
-  const related = getRelatedProducts(product);
-
-  return <ProductDetailView product={product} related={related} />;
+  return <ProductDetailView product={product} related={product.related ?? []} />;
 }

@@ -22,6 +22,11 @@ build/
 .env.test.local
 .env.production.local
 backend/.env
+# any hand-made backup/scratch copy of an env file (these carry live secrets)
+.env.bak*
+**/.env.bak*
+.env.*.bak
+**/.env.*.bak
 
 # logs
 npm-debug.log*
@@ -42,3 +47,8 @@ Thumbs.db
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright
+test-results/
+playwright-report/
+playwright/.cache/

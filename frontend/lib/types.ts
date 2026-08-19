@@ -4,7 +4,45 @@ export interface ProductVariant {
   id: string;
   label: string;
   hex?: string;
+  /** Optional per-colour shot, swapped into the gallery when that colour is picked. */
+  image?: string;
   inStock: boolean;
+}
+
+/** A lens the frame can be ordered with. `value` is the stable code, `label` is display text. */
+export interface LensOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * A display-ready spec row. Built server-side so the storefront never needs to
+ * know the attribute vocabulary to turn a stored code into readable text.
+ */
+export interface ProductSpec {
+  key: string;
+  label: string;
+  value: string;
+}
+
+export interface FacetOption {
+  value: string;
+  label: string;
+  hex?: string;
+}
+
+export interface FacetResponse {
+  groups: {
+    frameShape: FacetOption[];
+    frameMaterial: FacetOption[];
+    lensType: FacetOption[];
+    gender: FacetOption[];
+    fit: FacetOption[];
+    fabric: FacetOption[];
+    clothingSize: FacetOption[];
+  };
+  subCategories: string[];
+  priceBounds: [number, number];
 }
 
 export interface Product {
@@ -17,14 +55,24 @@ export interface Product {
   compareAtPrice?: number;
   description: string;
   images: [string, string] | string[];
+  // Raw attribute codes — used for filtering. For display, use `specs`.
   frameShape?: string;
+  frameMaterial?: string;
   lensColor?: string;
+  lensOptions: LensOption[];
+  measurements?: { lensWidthMm?: number; bridgeWidthMm?: number; templeLengthMm?: number };
   clothingSize?: string[];
   fabric?: string;
+  composition?: string;
+  fit?: string;
+  gender?: string;
+  careInstructions?: string;
   colors: ProductVariant[];
   sizes?: ProductVariant[];
   stock: number;
-  isNew?: boolean;
+  /** Pre-resolved, ordered spec rows for the product page. */
+  specs: ProductSpec[];
+  isNewArrival?: boolean;
   isBestSeller?: boolean;
   rating?: number;
   reviewCount?: number;
@@ -56,13 +104,17 @@ export interface CartLine {
   price: number;
   color?: string;
   size?: string;
+  lens?: string;
   quantity: number;
 }
 
 export interface FilterState {
   category: ProductCategory | "all";
   frameShapes: string[];
-  lensColors: string[];
+  frameMaterials: string[];
+  lensTypes: string[];
+  genders: string[];
+  fits: string[];
   sizes: string[];
   fabrics: string[];
   priceRange: [number, number];

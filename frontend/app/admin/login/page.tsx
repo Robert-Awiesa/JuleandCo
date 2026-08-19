@@ -40,6 +40,7 @@ export default function AdminLoginPage() {
         aria-hidden="true"
         width={1200}
         height={374}
+        priority
         className="pointer-events-none absolute left-1/2 top-1/2 w-[130vw] max-w-none -translate-x-1/2 -translate-y-1/2 select-none sm:w-[70vw]"
       />
       <form
