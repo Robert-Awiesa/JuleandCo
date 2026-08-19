@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { Search, X } from "lucide-react";
-import { products } from "@/lib/mockData";
+import type { Product } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
 interface SearchModalProps {
@@ -15,20 +15,40 @@ interface SearchModalProps {
 
 export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Product[]>([]);
+  const [searching, setSearching] = useState(false);
 
-  const results = useMemo(() => {
-    if (!query.trim()) return [];
-    const q = query.toLowerCase();
-    return products
-      .filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.subCategory.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q) ||
-          (p.fabric ?? "").toLowerCase().includes(q) ||
-          (p.frameShape ?? "").toLowerCase().includes(q)
-      )
-      .slice(0, 6);
+  // Searches the live catalogue instead of a hardcoded array. Debounced so
+  // typing does not fire a request per keystroke, and aborted on change so a
+  // slow earlier response cannot overwrite a newer one.
+  useEffect(() => {
+    const term = query.trim();
+    if (!term) {
+      setResults([]);
+      setSearching(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+        const res = await fetch(`${base}/products?search=${encodeURIComponent(term)}`, {
+          signal: controller.signal,
+        });
+        setResults(res.ok ? ((await res.json()) as Product[]).slice(0, 6) : []);
+      } catch {
+        // Aborted or offline — leave the previous results rather than flashing empty.
+      } finally {
+        setSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [query]);
 
   return (
@@ -71,7 +91,9 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
                 {query.trim() && (
                   <div className="max-h-[60vh] overflow-y-auto p-2">
-                    {results.length === 0 ? (
+                    {searching && results.length === 0 ? (
+                      <p className="px-4 py-8 text-center text-sm text-obsidian/40">Searching…</p>
+                    ) : results.length === 0 ? (
                       <p className="px-4 py-8 text-center text-sm text-obsidian/50">
                         No results for &ldquo;{query}&rdquo;
                       </p>

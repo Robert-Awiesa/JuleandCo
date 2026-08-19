@@ -1,75 +1,54 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation";
+import { useCallback, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { SlidersHorizontal, X } from "lucide-react";
-import { products, priceBounds } from "@/lib/mockData";
-import { filterProducts } from "@/lib/filterProducts";
-import { FilterState, ProductCategory } from "@/lib/types";
+import type { FacetResponse, Product } from "@/lib/types";
 import { FilterSidebar } from "./FilterSidebar";
 import { ProductGrid } from "./ProductGrid";
 
-const defaultFilters: FilterState = {
-  category: "all",
-  frameShapes: [],
-  lensColors: [],
-  sizes: [],
-  fabrics: [],
-  priceRange: priceBounds,
-  search: "",
-};
-
 type SortOption = "featured" | "new" | "bestseller" | "price-asc" | "price-desc";
 
-function filtersFromParams(searchParams: ReadonlyURLSearchParams): FilterState {
-  return {
-    ...defaultFilters,
-    category: (searchParams.get("category") as ProductCategory | null) ?? "all",
-    frameShapes: searchParams.get("frameShape") ? [searchParams.get("frameShape") as string] : [],
-    fabrics: searchParams.get("fabric") ? [searchParams.get("fabric") as string] : [],
-  };
+interface ShopViewProps {
+  products: Product[];
+  facets: FacetResponse;
 }
 
-export function ShopView() {
+/**
+ * Filter state lives in the URL, not in component state.
+ *
+ * Filtering used to run in the browser over a hardcoded array. Now the server
+ * queries Mongo, so every filter change is a navigation: the URL is the single
+ * source of truth, which also makes filtered views shareable and bookmarkable.
+ */
+export function ShopView({ products, facets }: ShopViewProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-
-  const [filters, setFilters] = useState<FilterState>(() => filtersFromParams(searchParams));
-  const [sort, setSort] = useState<SortOption>(
-    (searchParams.get("sort") as SortOption | null) ?? "featured"
-  );
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  // Re-sync filters when the URL's query string changes (e.g. a header nav
-  // link to /shop?category=eyewear while already on /shop) — the page
-  // component instance persists across search-param-only navigations, so
-  // the useState initializer above only runs once and won't pick this up.
-  useEffect(() => {
-    setFilters(filtersFromParams(searchParams));
-    setSort((searchParams.get("sort") as SortOption | null) ?? "featured");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  const sort = (searchParams.get("sort") as SortOption | null) ?? "featured";
 
-  const filtered = useMemo(() => {
-    const results = filterProducts(products, filters);
-    switch (sort) {
-      case "new":
-        return [...results].sort((a, b) => Number(b.isNew) - Number(a.isNew));
-      case "bestseller":
-        return [...results].sort((a, b) => Number(b.isBestSeller) - Number(a.isBestSeller));
-      case "price-asc":
-        return [...results].sort((a, b) => a.price - b.price);
-      case "price-desc":
-        return [...results].sort((a, b) => b.price - a.price);
-      default:
-        return results;
-    }
-  }, [filters, sort]);
+  const setParams = useCallback(
+    (patch: Record<string, string | string[] | null>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      Object.entries(patch).forEach(([key, value]) => {
+        const next = Array.isArray(value) ? value.join(",") : value;
+        if (!next) params.delete(key);
+        else params.set(key, next);
+      });
+      startTransition(() => {
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      });
+    },
+    [pathname, router, searchParams]
+  );
 
-  const handleChange = (patch: Partial<FilterState>) =>
-    setFilters((prev) => ({ ...prev, ...patch }));
-
-  const handleReset = () => setFilters(defaultFilters);
+  const handleReset = useCallback(() => {
+    startTransition(() => router.replace(pathname, { scroll: false }));
+  }, [pathname, router]);
 
   return (
     <div className="container-elevated py-12">
@@ -86,11 +65,11 @@ export function ShopView() {
           <SlidersHorizontal size={15} /> Filters
         </button>
         <p className="hidden text-sm text-obsidian/50 lg:block">
-          {filtered.length} {filtered.length === 1 ? "piece" : "pieces"}
+          {isPending ? "Updating…" : `${products.length} ${products.length === 1 ? "piece" : "pieces"}`}
         </p>
         <select
           value={sort}
-          onChange={(e) => setSort(e.target.value as SortOption)}
+          onChange={(e) => setParams({ sort: e.target.value === "featured" ? null : e.target.value })}
           className="border-none bg-transparent text-sm focus:outline-none"
         >
           <option value="featured">Sort: Featured</option>
@@ -103,10 +82,21 @@ export function ShopView() {
 
       <div className="grid grid-cols-1 gap-10 py-10 lg:grid-cols-[240px_1fr]">
         <aside className="hidden lg:block">
-          <FilterSidebar filters={filters} onChange={handleChange} onReset={handleReset} />
+          <FilterSidebar facets={facets} onChange={setParams} onReset={handleReset} />
         </aside>
 
-        <ProductGrid products={filtered} />
+        <div className={isPending ? "opacity-60 transition-opacity" : "transition-opacity"}>
+          {products.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-24 text-center">
+              <p className="text-obsidian/50">Nothing matches these filters.</p>
+              <button onClick={handleReset} className="text-sm underline underline-offset-4">
+                Clear all filters
+              </button>
+            </div>
+          ) : (
+            <ProductGrid products={products} />
+          )}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -132,7 +122,7 @@ export function ShopView() {
                   <X size={18} />
                 </button>
               </div>
-              <FilterSidebar filters={filters} onChange={handleChange} onReset={handleReset} />
+              <FilterSidebar facets={facets} onChange={setParams} onReset={handleReset} />
             </motion.div>
           </>
         )}

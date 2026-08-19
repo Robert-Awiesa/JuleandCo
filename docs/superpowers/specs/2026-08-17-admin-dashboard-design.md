@@ -101,7 +101,7 @@ shadcn `DataTable` with: thumbnail, name, category/subcategory, price (strikethr
 
 Tabbed, Zod-validated (shadcn form pattern), inline field errors, unsaved-changes navigation guard, optimistic save with toast feedback:
 
-1. **Details** — name, auto-generated editable slug, category (Eyewear/Apparel — drives tabs 2–4), subcategory (dropdown from `Subcategory` list + inline "add new"), description, tags, price, compare-at price, `isNew`/`isBestSeller` flags.
+1. **Details** — name, auto-generated editable slug, category (Eyewear/Apparel — drives tabs 2–4), subcategory (dropdown from `Subcategory` list + inline "add new"), description, tags, price, compare-at price, `isNewArrival`/`isBestSeller` flags.
 2. **Attributes** — conditionally rendered by category: eyewear → frame shape, lens color; apparel → fabric, offered clothing sizes.
 3. **Colors & Images** — add/remove color rows (label, hex color picker, optional per-color Cloudinary image); main gallery with drag-to-reorder, first image = primary/storefront thumbnail.
 4. **Inventory** — variant matrix auto-generated from the colors (× sizes, for apparel) defined in tab 3: a grid of numeric stock inputs per cell, live-computed in/out badge per cell, a "set all to…" bulk-fill helper, and a live total-stock sum at the top.

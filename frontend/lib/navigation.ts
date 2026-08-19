@@ -1,4 +1,18 @@
-import { collections, frameShapes } from "./mockData";
+import { collections } from "./mockData";
+
+// Curated navigation, not an exhaustive facet list — the shop sidebar renders
+// the full set from /api/products/facets. These values are Attribute `value`
+// slugs and must match the vocabulary seeded by backend/src/scripts/seedAttributes.js;
+// they were previously display names ("Cashmere"), which no longer match anything
+// now that products store slugs.
+const FEATURED_FRAME_SHAPES = [
+  { label: "Aviator", value: "aviator" },
+  { label: "Round", value: "round" },
+  { label: "Square", value: "square" },
+  { label: "Cat-Eye", value: "cat-eye" },
+  { label: "Oversized", value: "oversized" },
+  { label: "Rectangle", value: "rectangle" },
+];
 
 export interface MegaMenuLink {
   label: string;
@@ -24,16 +38,16 @@ export const megaMenu: Record<"eyewear" | "apparel", MegaMenuSection> = {
     columns: [
       {
         title: "Shop by Shape",
-        links: frameShapes.map((shape) => ({
-          label: shape,
-          href: `/shop?category=eyewear&frameShape=${encodeURIComponent(shape)}`,
+        links: FEATURED_FRAME_SHAPES.map((shape) => ({
+          label: shape.label,
+          href: `/shop?category=eyewear&frameShape=${shape.value}`,
         })),
       },
       {
         title: "Shop by Type",
         links: [
-          { label: "Sunglasses", href: "/shop?category=eyewear&subCategory=Sunglasses" },
-          { label: "Optical", href: "/shop?category=eyewear&subCategory=Optical" },
+          { label: "Sunglasses", href: "/shop?category=eyewear&subCategory=sunglasses" },
+          { label: "Optical", href: "/shop?category=eyewear&subCategory=optical" },
           { label: "New Arrivals", href: "/shop?category=eyewear&sort=new" },
           { label: "Best Sellers", href: "/shop?category=eyewear&sort=bestseller" },
         ],
@@ -53,19 +67,19 @@ export const megaMenu: Record<"eyewear" | "apparel", MegaMenuSection> = {
       {
         title: "Shop by Category",
         links: [
-          { label: "Knitwear", href: "/shop?category=apparel&subCategory=Knitwear" },
-          { label: "Outerwear", href: "/shop?category=apparel&subCategory=Outerwear" },
-          { label: "Shirting", href: "/shop?category=apparel&subCategory=Shirting" },
-          { label: "Bottoms", href: "/shop?category=apparel&subCategory=Bottoms" },
+          { label: "Knitwear", href: "/shop?category=apparel&subCategory=knitwear" },
+          { label: "Outerwear", href: "/shop?category=apparel&subCategory=outerwear" },
+          { label: "Shirting", href: "/shop?category=apparel&subCategory=shirting" },
+          { label: "Bottoms", href: "/shop?category=apparel&subCategory=bottoms" },
         ],
       },
       {
         title: "Shop by Fabric",
         links: [
-          { label: "Cashmere", href: "/shop?category=apparel&fabric=Cashmere" },
-          { label: "Merino Wool", href: "/shop?category=apparel&fabric=Merino" },
-          { label: "Linen", href: "/shop?category=apparel&fabric=Linen" },
-          { label: "Silk", href: "/shop?category=apparel&fabric=Silk" },
+          { label: "Cashmere", href: "/shop?category=apparel&fabric=100-cashmere" },
+          { label: "Merino Wool", href: "/shop?category=apparel&fabric=100-merino-wool" },
+          { label: "Linen", href: "/shop?category=apparel&fabric=100-linen" },
+          { label: "Silk", href: "/shop?category=apparel&fabric=100-mulberry-silk" },
         ],
       },
     ],

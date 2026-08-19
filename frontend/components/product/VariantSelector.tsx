@@ -10,8 +10,10 @@ interface VariantSelectorProps {
   product: Product;
   color?: string;
   size?: string;
+  lens?: string;
   onColorChange: (color: string) => void;
   onSizeChange: (size: string) => void;
+  onLensChange: (lens: string) => void;
 }
 
 const apparelSizeChart = [
@@ -26,8 +28,10 @@ export function VariantSelector({
   product,
   color,
   size,
+  lens,
   onColorChange,
   onSizeChange,
+  onLensChange,
 }: VariantSelectorProps) {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
@@ -53,6 +57,33 @@ export function VariantSelector({
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {product.lensOptions && product.lensOptions.length > 0 && (
+        <div className="mb-6">
+          <p className="mb-3 text-xs uppercase tracking-widest2 text-obsidian/50">
+            Lens — {product.lensOptions.find((o) => o.value === lens)?.label}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {product.lensOptions.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => onLensChange(option.value)}
+                className={cn(
+                  "border px-3.5 py-2 text-sm transition-colors",
+                  lens === option.value
+                    ? "border-obsidian bg-obsidian text-alabaster"
+                    : "border-obsidian/20 hover:border-obsidian"
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-obsidian/45">
+            Every lens is available in this frame — stock is held per frame colour.
+          </p>
         </div>
       )}
 

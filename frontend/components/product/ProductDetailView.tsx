@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { Heart, RefreshCw, ShieldCheck, Truck } from "lucide-react";
 import { Product } from "@/lib/types";
@@ -22,6 +22,7 @@ interface ProductDetailViewProps {
 export function ProductDetailView({ product, related }: ProductDetailViewProps) {
   const [color, setColor] = useState(product.colors[0]?.label);
   const [size, setSize] = useState(product.sizes?.[0]?.label);
+  const [lens, setLens] = useState(product.lensOptions?.[0]?.value);
   const addLine = useCartStore((s) => s.addLine);
   const wishlisted = useWishlistStore((s) => s.has(product.id));
   const toggleWishlist = useWishlistStore((s) => s.toggle);
@@ -41,7 +42,7 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
           </nav>
 
           <div className="mb-3 flex gap-2">
-            {product.isNew && <Badge tone="sage">New</Badge>}
+            {product.isNewArrival && <Badge tone="sage">New</Badge>}
             {product.isBestSeller && <Badge tone="gold">Best Seller</Badge>}
           </div>
 
@@ -50,26 +51,16 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
 
           <p className="mt-6 text-sm leading-relaxed text-obsidian/65">{product.description}</p>
 
-          <dl className="mt-6 grid grid-cols-2 gap-y-2 text-sm">
-            {product.frameShape && (
-              <>
-                <dt className="text-obsidian/45">Frame Shape</dt>
-                <dd>{product.frameShape}</dd>
-              </>
-            )}
-            {product.lensColor && (
-              <>
-                <dt className="text-obsidian/45">Lens Color</dt>
-                <dd>{product.lensColor}</dd>
-              </>
-            )}
-            {product.fabric && (
-              <>
-                <dt className="text-obsidian/45">Fabric</dt>
-                <dd>{product.fabric}</dd>
-              </>
-            )}
-          </dl>
+          {product.specs.length > 0 && (
+            <dl className="mt-6 grid grid-cols-2 gap-y-2 text-sm">
+              {product.specs.map((spec) => (
+                <Fragment key={spec.key}>
+                  <dt className="text-obsidian/45">{spec.label}</dt>
+                  <dd>{spec.value}</dd>
+                </Fragment>
+              ))}
+            </dl>
+          )}
 
           <p
             className={cn(
@@ -97,8 +88,10 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
               product={product}
               color={color}
               size={size}
+              lens={lens}
               onColorChange={setColor}
               onSizeChange={setSize}
+              onLensChange={setLens}
             />
           </div>
 
@@ -115,6 +108,7 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
                   price: product.price,
                   color,
                   size,
+                  lens: product.lensOptions?.find((o) => o.value === lens)?.label,
                 })
               }
             >

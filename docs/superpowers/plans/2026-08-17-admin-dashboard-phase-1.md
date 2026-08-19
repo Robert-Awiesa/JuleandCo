@@ -888,7 +888,7 @@ const productSchema = new mongoose.Schema(
     fabric: String,
     variants: { type: [variantSchema], default: [] },
     stock: { type: Number, default: 0 },
-    isNew: { type: Boolean, default: false },
+    isNewArrival: { type: Boolean, default: false },
     isBestSeller: { type: Boolean, default: false },
     rating: { type: Number, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0 },
@@ -2751,7 +2751,7 @@ export interface AdminProduct {
   clothingSize?: string[];
   variants: Variant[];
   stock: number;
-  isNew?: boolean;
+  isNewArrival?: boolean;
   isBestSeller?: boolean;
   tags?: string[];
   pairsWith?: string[];
@@ -3824,7 +3824,7 @@ export const productFormSchema = z.object({
   lensColor: z.string().optional(),
   fabric: z.string().optional(),
   clothingSize: z.array(z.string()).optional(),
-  isNew: z.boolean().optional(),
+  isNewArrival: z.boolean().optional(),
   isBestSeller: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
   colors: z.array(colorSchema).min(1, "Add at least one color"),
@@ -3970,7 +3970,7 @@ export function DetailsTab() {
 
       <div className="flex gap-6">
         <label className="flex items-center gap-2 text-sm text-obsidian">
-          <input type="checkbox" {...register("isNew")} /> New arrival
+          <input type="checkbox" {...register("isNewArrival")} /> New arrival
         </label>
         <label className="flex items-center gap-2 text-sm text-obsidian">
           <input type="checkbox" {...register("isBestSeller")} /> Best seller
@@ -4085,7 +4085,7 @@ function toFormValues(product?: AdminProduct): ProductFormValues {
     lensColor: product.lensColor,
     fabric: product.fabric,
     clothingSize: product.clothingSize ?? [],
-    isNew: product.isNew,
+    isNewArrival: product.isNewArrival,
     isBestSeller: product.isBestSeller,
     tags: product.tags ?? [],
     colors: Array.from(colorMap.values()),

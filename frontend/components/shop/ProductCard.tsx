@@ -43,7 +43,7 @@ export function ProductCard({ product }: ProductCardProps) {
           </Link>
 
           <div className="absolute left-3 top-3 flex flex-col gap-1.5">
-            {product.isNew && <Badge tone="sage">New</Badge>}
+            {product.isNewArrival && <Badge tone="sage">New</Badge>}
             {product.isBestSeller && <Badge tone="gold">Best Seller</Badge>}
             {stock.tone !== "in" && (
               <Badge tone={stock.tone === "out" ? "obsidian" : "low"}>{stock.label}</Badge>

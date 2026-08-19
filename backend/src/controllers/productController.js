@@ -1,6 +1,9 @@
 const asyncHandler = require("express-async-handler");
 const Product = require("../models/Product");
 const Subcategory = require("../models/Subcategory");
+const Attribute = require("../models/Attribute");
+const { toPublicProduct } = require("../utils/publicProduct");
+const { buildLabelMap } = require("../utils/labelMap");
 
 // @desc    Get products with optional multi-facet filtering
 // @route   GET /api/products
@@ -9,22 +12,35 @@ const getProducts = asyncHandler(async (req, res) => {
   const {
     category,
     frameShape,
+    frameMaterial,
+    lensType,
+    gender,
+    fit,
     lensColor,
     size,
     fabric,
+    subCategory,
     minPrice,
     maxPrice,
     search,
     sort,
   } = req.query;
 
-  const query = {};
+  // Draft products must never reach the storefront.
+  const query = { publishStatus: "published" };
+
+  const csv = (v) => String(v).split(",").filter(Boolean);
 
   if (category && category !== "all") query.category = category;
-  if (frameShape) query.frameShape = { $in: frameShape.split(",") };
-  if (lensColor) query.lensColor = { $in: lensColor.split(",") };
-  if (size) query.clothingSize = { $in: size.split(",") };
-  if (fabric) query.fabric = { $regex: fabric, $options: "i" };
+  if (subCategory) query.subCategory = { $in: csv(subCategory) };
+  if (frameShape) query.frameShape = { $in: csv(frameShape) };
+  if (frameMaterial) query.frameMaterial = { $in: csv(frameMaterial) };
+  if (lensType) query.lensOptions = { $in: csv(lensType) };
+  if (gender) query.gender = { $in: csv(gender) };
+  if (fit) query.fit = { $in: csv(fit) };
+  if (lensColor) query.lensColor = { $in: csv(lensColor) };
+  if (size) query.clothingSize = { $in: csv(size) };
+  if (fabric) query.fabric = { $in: csv(fabric) };
   if (search) query.$text = { $search: search };
 
   if (minPrice || maxPrice) {
@@ -36,28 +52,41 @@ const getProducts = asyncHandler(async (req, res) => {
   let sortOption = { createdAt: -1 };
   if (sort === "price-asc") sortOption = { price: 1 };
   if (sort === "price-desc") sortOption = { price: -1 };
-  if (sort === "new") sortOption = { isNew: -1, createdAt: -1 };
+  if (sort === "new") sortOption = { isNewArrival: -1, createdAt: -1 };
   if (sort === "bestseller") sortOption = { isBestSeller: -1, createdAt: -1 };
 
-  const products = await Product.find(query).sort(sortOption);
-  res.json(products);
+  const [products, labels] = await Promise.all([
+    Product.find(query).sort(sortOption),
+    buildLabelMap(),
+  ]);
+  res.json(products.map((p) => toPublicProduct(p, labels)));
 });
 
 // @desc    Get single product by slug
 // @route   GET /api/products/slug/:slug
 // @access  Public
 const getProductBySlug = asyncHandler(async (req, res) => {
-  const product = await Product.findOne({ slug: req.params.slug }).populate(
-    "pairsWith",
-    "name slug price images category subCategory"
-  );
+  const product = await Product.findOne({
+    slug: req.params.slug,
+    publishStatus: "published",
+  });
 
   if (!product) {
     res.status(404);
     throw new Error("Product not found");
   }
 
-  res.json(product);
+  // "Complete the Look" needs whole products, not just ids — and a paired
+  // product that has since been unpublished must not surface.
+  const [related, labels] = await Promise.all([
+    Product.find({ _id: { $in: product.pairsWith || [] }, publishStatus: "published" }),
+    buildLabelMap(),
+  ]);
+
+  res.json({
+    ...toPublicProduct(product, labels),
+    related: related.map((p) => toPublicProduct(p, labels)),
+  });
 });
 
 // @desc    Create a product
@@ -193,8 +222,71 @@ const updateProductStock = asyncHandler(async (req, res) => {
   res.json(updated);
 });
 
+const FACET_GROUPS = ["frameShape", "frameMaterial", "lensType", "gender", "fit", "fabric", "clothingSize"];
+
+// @desc    Filter facets actually present in the published catalogue
+// @route   GET /api/products/facets
+// @access  Public
+const getProductFacets = asyncHandler(async (req, res) => {
+  const { category } = req.query;
+  const match = { publishStatus: "published" };
+  if (category && category !== "all") match.category = category;
+
+  const [raw] = await Product.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: null,
+        frameShape: { $addToSet: "$frameShape" },
+        frameMaterial: { $addToSet: "$frameMaterial" },
+        lensType: { $addToSet: "$lensOptions" },
+        gender: { $addToSet: "$gender" },
+        fit: { $addToSet: "$fit" },
+        fabric: { $addToSet: "$fabric" },
+        clothingSize: { $addToSet: "$clothingSize" },
+        subCategory: { $addToSet: "$subCategory" },
+        minPrice: { $min: "$price" },
+        maxPrice: { $max: "$price" },
+      },
+    },
+  ]);
+
+  // Callers destructure groups.<name>, so an empty catalogue must still return
+  // every key rather than an empty object.
+  const emptyGroups = Object.fromEntries(FACET_GROUPS.map((g) => [g, []]));
+
+  if (!raw) {
+    return res.json({ groups: emptyGroups, subCategories: [], priceBounds: [0, 0] });
+  }
+
+  // $addToSet over array fields (lensOptions, clothingSize) yields arrays of
+  // arrays; flatten and drop the nulls left by products missing that field.
+  const clean = (values) =>
+    Array.from(new Set(values.flat().filter((v) => v !== null && v !== undefined && v !== "")));
+
+  const usedValues = FACET_GROUPS.flatMap((g) => clean(raw[g]));
+  const attributes = await Attribute.find({ value: { $in: usedValues } });
+
+  const groups = { ...emptyGroups };
+  FACET_GROUPS.forEach((group) => {
+    groups[group] = clean(raw[group])
+      .map((value) => {
+        const attr = attributes.find((a) => a.group === group && a.value === value);
+        return { value, label: attr ? attr.label : value, hex: attr ? attr.hex : undefined, sortOrder: attr ? attr.sortOrder : 0 };
+      })
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label));
+  });
+
+  res.json({
+    groups,
+    subCategories: clean(raw.subCategory).sort(),
+    priceBounds: [raw.minPrice ?? 0, raw.maxPrice ?? 0],
+  });
+});
+
 module.exports = {
   getProducts,
+  getProductFacets,
   getProductBySlug,
   createProduct,
   updateProduct,

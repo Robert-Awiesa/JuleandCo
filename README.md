@@ -74,8 +74,9 @@ julesandco/
 # from the repo root
 npm install
 
-# copy env template and fill in values
+# copy env templates and fill in values
 cp backend/.env.example backend/.env
+cp frontend/.env.local.example frontend/.env.local
 
 # seed MongoDB with sample eyewear + apparel products
 npm run seed
@@ -85,6 +86,12 @@ npm run dev
 ```
 
 Requires Node 18+ and a running MongoDB instance (local or Atlas — set `MONGO_URI` in `backend/.env`).
+
+> **`JWT_SECRET` must be identical in `backend/.env` and `frontend/.env.local`.** The backend signs the auth
+> cookie with it and `frontend/middleware.ts` verifies that cookie itself, so if the two differ — or the
+> frontend value is missing — admin login appears to succeed but every `/admin/*` route redirects straight
+> back to `/admin/login`. Restart `next dev` after changing either file; env changes are not hot-reloaded
+> into middleware.
 
 The frontend ships with a local mock data layer (`frontend/lib/mockData.ts`) so the UI is fully browsable **before** the backend/database is wired up — see Phase 2 vs. Phase 3 in the roadmap below.
 

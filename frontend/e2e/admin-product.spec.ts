@@ -1,0 +1,95 @@
+import { test, expect, request as playwrightRequest } from "@playwright/test";
+
+const API = process.env.E2E_API_URL || "http://localhost:5000/api";
+const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || "admin@julesandco.com";
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || "changeme123";
+const FIXTURE_NAME = "E2E Test Frame";
+
+/**
+ * The create test writes a product with a unique slug, so a fixture left behind
+ * by an earlier run makes every subsequent run fail on a duplicate slug. Clear
+ * it up front, and again at the end so the catalogue is left as we found it.
+ */
+async function removeFixtureProduct() {
+  const api = await playwrightRequest.newContext();
+  const login = await api.post(`${API}/auth/login`, {
+    data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+  });
+  const { token } = await login.json();
+
+  const listed = await api.get(`${API}/products/admin?limit=100`, {
+    headers: { cookie: `token=${token}` },
+  });
+  const { items } = await listed.json();
+
+  for (const product of items.filter((p: { name: string }) => p.name === FIXTURE_NAME)) {
+    await api.delete(`${API}/products/${product._id}`, { headers: { cookie: `token=${token}` } });
+  }
+  await api.dispose();
+}
+
+test.describe.configure({ mode: "serial" });
+
+test.describe("admin product management", () => {
+  test.beforeAll(removeFixtureProduct);
+  test.afterAll(removeFixtureProduct);
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/admin/login");
+    await page.getByLabel("Email").fill(ADMIN_EMAIL);
+    await page.getByLabel("Password").fill(ADMIN_PASSWORD);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL("**/admin/dashboard");
+  });
+
+  test("creates a product with an image, a color, and stock, then it appears in the list", async ({ page }) => {
+    await page.goto("/admin/products/new");
+
+    await page.locator("#product-name").fill(FIXTURE_NAME);
+    await page.locator("#product-subcategory").selectOption({ index: 1 });
+    await page.locator("#product-description").fill("Created by the Playwright smoke test.");
+    await page.locator("#product-price").fill("199");
+    // Publish it, otherwise it stays a draft and never reaches the storefront.
+    await page.locator("#publish-status").selectOption("published");
+
+    await page.getByRole("tab", { name: "Colors & Images" }).click();
+    await page.setInputFiles('input[type="file"]', "e2e/fixtures/test-product.jpg");
+    await expect(page.getByText("Primary")).toBeVisible({ timeout: 15000 });
+
+    await page.getByRole("button", { name: "+ Add colour" }).click();
+    await page.getByPlaceholder("Frame colour, e.g. Tortoise").fill("Test Black");
+
+    await page.getByRole("tab", { name: "Inventory" }).click();
+    await page.locator('input[name="variants.0.stock"]').fill("5");
+
+    await page.getByRole("button", { name: "Save product" }).click();
+    await page.waitForURL("**/admin/products");
+
+    await expect(page.getByText(FIXTURE_NAME)).toBeVisible();
+  });
+
+  test("a published product reaches the public storefront", async ({ page }) => {
+    await page.goto("/shop");
+    await expect(page.getByText(FIXTURE_NAME)).toBeVisible();
+  });
+
+  test("setting a product back to draft removes it from the storefront", async ({ page }) => {
+    await page.goto("/admin/products");
+    await page.locator("tr", { hasText: FIXTURE_NAME }).getByRole("link", { name: "Edit" }).click();
+    await page.waitForURL("**/edit");
+
+    await page.locator("#publish-status").selectOption("draft");
+    await page.getByRole("button", { name: "Save product" }).click();
+    await page.waitForURL("**/admin/products");
+
+    await page.goto("/shop");
+    await expect(page.getByText(FIXTURE_NAME)).toHaveCount(0);
+  });
+
+  test("marks a product out of stock from the list", async ({ page }) => {
+    await page.goto("/admin/products");
+    const row = page.locator("tr", { hasText: FIXTURE_NAME });
+    await row.getByRole("button", { name: "Mark out of stock" }).click();
+    await expect(row.getByText("0 in stock")).toBeVisible();
+  });
+});
