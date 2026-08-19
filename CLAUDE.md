@@ -5,7 +5,7 @@ Guidance for Claude Code sessions working in this repo. See [README.md](README.m
 ## Working conventions
 
 - This is an **npm workspaces** monorepo (`frontend`, `backend`). Install/build/test from the repo root using `-w frontend` / `-w backend` flags, not inside the subfolders.
-- `backend/.env.example` is **tracked** — it must only ever contain placeholder values. Real secrets (MongoDB URI, JWT secret, Cloudinary keys, etc.) go in `backend/.env`, which is gitignored. Same rule applies to `frontend/.env.local` vs `frontend/.env.local.example`.
+- **There is no committed env template.** `backend/.env.example` was deliberately removed on 2026-08-19 — do not recreate it. All configuration lives in `backend/.env` (gitignored), and the required variables are documented in [README.md](README.md#5-getting-started). Never commit real secrets; `.env*` files other than the documented list stay out of git.
 - Large feature work happens on a dedicated branch in a git worktree under `.claude/worktrees/<name>/`, driven by a plan file in `docs/superpowers/plans/`. Check `.claude/worktrees/` for in-progress work before starting something that might duplicate it.
 - Plans under `docs/superpowers/plans/` use TDD, task-by-task commits via the `subagent-driven-development` or `executing-plans` skill.
 
@@ -88,3 +88,9 @@ Plan: `docs/superpowers/plans/2026-08-19-catalog-depth-and-storefront-wiring.md`
 - Playwright is now **4 tests**, covering admin→storefront round-trip: create+publish, appears on the shop, set to draft, disappears. Config raised to a 90s timeout (Next dev route compilation blew the old 30s on a cold server) and pinned to serial, since the specs share one fixture product which is now cleaned up in `beforeAll`/`afterAll`.
 - Verified: backend 81/81, `tsc --noEmit` clean, e2e 4/4, catalogue left at 20 published products with no test residue.
 - **Still open:** `rating`/`reviewCount` remain modelled but unrendered and uneditable, pending a real review system. Orders/Customers/Settings are still Phase 2–3 stubs.
+
+### 2026-08-19 — Removed the committed env template
+- Deleted `backend/.env.example` at the user's request. It had been deleted twice by the user and restored twice by me during the commit prep, on the assumption it was accidental — it was not. **Do not recreate it.**
+- Nothing ever read it at runtime: `backend/src/app.js` and the seed/migration scripts all load `backend/.env` directly. Its only consumer was an error string in `backend/src/config/db.js` telling you to copy it, now reworded to point at the README.
+- Because the template was the only record of which variables the app needs, that list moved into `README.md`'s Getting Started as a table. The `cp backend/.env.example backend/.env` step is gone — it would now fail.
+- The `frontend/.env.local.example` template is still present, still tracked, and still referenced by the README's shared-`JWT_SECRET` callout. Left in place deliberately — the instruction named `env.example`, and removing the frontend one too was not asked for.

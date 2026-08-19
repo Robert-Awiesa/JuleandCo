@@ -74,9 +74,7 @@ julesandco/
 # from the repo root
 npm install
 
-# copy env templates and fill in values
-cp backend/.env.example backend/.env
-cp frontend/.env.local.example frontend/.env.local
+# create backend/.env with your own values (see the variable list below)
 
 # seed MongoDB with sample eyewear + apparel products
 npm run seed
@@ -86,6 +84,21 @@ npm run dev
 ```
 
 Requires Node 18+ and a running MongoDB instance (local or Atlas — set `MONGO_URI` in `backend/.env`).
+
+There is no committed `.env` template — real values live only in `backend/.env`, which is gitignored.
+Create it with:
+
+| Variable | Purpose |
+| --- | --- |
+| `PORT` | API port (5000) |
+| `MONGO_URI` | MongoDB connection string |
+| `JWT_SECRET` | Signs the auth cookie |
+| `JWT_EXPIRES_IN` | Token lifetime (e.g. `30d`) |
+| `CLIENT_URL` | Storefront origin, for CORS (`http://localhost:3000`) |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Product image uploads |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Seeded admin account |
+
+`frontend/.env.local` needs `NEXT_PUBLIC_API_URL` and `JWT_SECRET`.
 
 > **`JWT_SECRET` must be identical in `backend/.env` and `frontend/.env.local`.** The backend signs the auth
 > cookie with it and `frontend/middleware.ts` verifies that cookie itself, so if the two differ — or the
