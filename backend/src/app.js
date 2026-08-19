@@ -14,6 +14,7 @@ const authRoutes = require("./routes/authRoutes");
 const subcategoryRoutes = require("./routes/subcategoryRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const attributeRoutes = require("./routes/attributeRoutes");
+const attributeGroupRoutes = require("./routes/attributeGroupRoutes");
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/subcategories", subcategoryRoutes);
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/attributes", attributeRoutes);
+app.use("/api/attribute-groups", attributeGroupRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
