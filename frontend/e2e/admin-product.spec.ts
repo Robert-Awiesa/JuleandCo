@@ -1,8 +1,10 @@
 import { test, expect, request as playwrightRequest } from "@playwright/test";
 
 const API = process.env.E2E_API_URL || "http://localhost:5000/api";
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || "admin@julesandco.com";
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || "changeme123";
+const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || process.env.ADMIN_EMAIL || "admin@julesandco.com";
+// No hardcoded fallback: the seeded password is whatever backend/.env says,
+// and a stale default here fails as an opaque login timeout mid-suite.
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || "";
 const FIXTURE_NAME = "E2E Test Frame";
 
 /**

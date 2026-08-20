@@ -1,4 +1,11 @@
+import path from "path";
+import dotenv from "dotenv";
 import { defineConfig } from "@playwright/test";
+
+// The admin credentials live in backend/.env and are changed there. Loading it
+// here keeps the specs working after a password change without duplicating the
+// secret into a second file or a CI variable.
+dotenv.config({ path: path.resolve(__dirname, "../backend/.env") });
 
 export default defineConfig({
   testDir: "./e2e",
@@ -11,7 +18,9 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   use: {
-    baseURL: "http://localhost:3000",
+    // Next falls back to 3001 (and up) whenever 3000 is occupied, which made
+    // the whole suite fail at the login step with an opaque timeout.
+    baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",
     headless: true,
   },
 });
