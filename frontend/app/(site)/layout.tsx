@@ -20,7 +20,7 @@ const serif = Playfair_Display({
 export const metadata: Metadata = {
   title: "JULES & CO — Wear the Difference",
   description:
-    "Curated eyewear and apparel with a signature gold edge — JULES & CO is designed for those who wear the difference.",
+    "Curated eyewear, jewellery and bags with a signature gold edge — JULES & CO is designed for those who wear the difference.",
   icons: {
     icon: [
       { url: "/images/brand/favicon-32.png", sizes: "32x32", type: "image/png" },
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "JULES & CO — Wear the Difference",
     description:
-      "Curated eyewear and apparel with a signature gold edge — JULES & CO is designed for those who wear the difference.",
+      "Curated eyewear, jewellery and bags with a signature gold edge — JULES & CO is designed for those who wear the difference.",
     images: ["/images/brand/og-image.jpg"],
   },
 };

@@ -77,7 +77,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                     autoFocus
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search eyewear, apparel, fabrics, shapes…"
+                    placeholder="Search eyewear, jewellery, bags…"
                     className="w-full bg-transparent text-sm placeholder:text-obsidian/40 focus:outline-none"
                   />
                   <button

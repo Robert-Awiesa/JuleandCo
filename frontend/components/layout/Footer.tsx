@@ -10,7 +10,8 @@ const columns = [
     title: "Shop",
     links: [
       { label: "Eyewear", href: "/shop?category=eyewear" },
-      { label: "Apparel", href: "/shop?category=apparel" },
+      { label: "Jewellery", href: "/shop?category=jewellery" },
+      { label: "Bags", href: "/shop?category=bags" },
       { label: "New Arrivals", href: "/shop?sort=new" },
       { label: "Best Sellers", href: "/shop?sort=bestseller" },
     ],
@@ -51,7 +52,7 @@ export function Footer() {
             className="h-14 w-auto"
           />
           <p className="mt-4 max-w-xs text-sm text-alabaster/60">
-            Curated eyewear and apparel for those who wear the difference. Designed
+            Curated eyewear, jewellery and bags for those who wear the difference. Designed
             in-house, crafted to last.
           </p>
           <form

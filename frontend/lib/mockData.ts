@@ -17,17 +17,18 @@ export const collections: Collection[] = [
   {
     id: "c1",
     title: "The Aviator Edit",
-    subtitle: "Polarized gold-mirror silhouettes for high summer",
+    subtitle: "Polarised gold-mirror silhouettes for high summer",
     image: img("collection-aviator", 1200, 1500),
-    href: "/shop?category=eyewear&frameShape=Aviator",
+    href: "/shop?category=eyewear&frameShape=aviator",
     span: "tall",
   },
   {
+    // TODO(copy): placeholder wording and imagery — refine before launch.
     id: "c2",
-    title: "Minimalist Knitwear",
-    subtitle: "Cashmere and merino, cut for quiet luxury",
-    image: img("collection-knitwear", 1400, 1000),
-    href: "/shop?category=apparel&subCategory=Knitwear",
+    title: "Everyday Gold",
+    subtitle: "Vermeil and solid gold layers, made to never come off",
+    image: img("collection-gold-jewellery", 1400, 1000),
+    href: "/shop?category=jewellery&metal=yellow-gold",
     span: "wide",
   },
   {
@@ -35,14 +36,15 @@ export const collections: Collection[] = [
     title: "The Optical Archive",
     subtitle: "Clear-lens frames for the studio and the boardroom",
     image: img("collection-optical", 1000, 1250),
-    href: "/shop?category=eyewear&subCategory=Optical",
+    href: "/shop?category=eyewear&subCategory=optical",
   },
   {
+    // TODO(copy): placeholder wording and imagery — refine before launch.
     id: "c4",
-    title: "Outerwear Season",
-    subtitle: "Tailored coats and blazers for transitional weather",
-    image: img("collection-outerwear", 1000, 1250),
-    href: "/shop?category=apparel&subCategory=Outerwear",
+    title: "Carry Everything",
+    subtitle: "Structured leather totes for the working week",
+    image: img("collection-totes", 1000, 1250),
+    href: "/shop?category=bags&subCategory=totes",
   },
 ];
 
@@ -57,7 +59,7 @@ export const testimonials: Testimonial[] = [
   {
     id: "t2",
     quote:
-      "Finally a size guide that actually works. Ordering apparel online has never felt this safe.",
+      "The anklet has not left my ankle since it arrived — still bright, still perfect.",
     author: "Kwame B.",
     role: "Kumasi",
   },

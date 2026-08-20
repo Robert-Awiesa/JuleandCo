@@ -55,7 +55,8 @@ export function ShopView({ products, facets, categories }: ShopViewProps) {
     <div className="container-elevated py-12">
       <div className="mb-10">
         <p className="eyebrow mb-2">Full Collection</p>
-        <h1 className="font-serif text-4xl">Shop Eyewear &amp; Apparel</h1>
+        {/* TODO(copy): placeholder heading — refine before launch. */}
+        <h1 className="font-serif text-4xl">Shop the Collection</h1>
       </div>
 
       <div className="flex items-center justify-between border-y border-obsidian/10 py-4">

@@ -1,18 +1,16 @@
 import { collections } from "./mockData";
 
-// Curated navigation, not an exhaustive facet list — the shop sidebar renders
-// the full set from /api/products/facets. These values are Attribute `value`
-// slugs and must match the vocabulary seeded by backend/src/scripts/seedAttributes.js;
-// they were previously display names ("Cashmere"), which no longer match anything
-// now that products store slugs.
-const FEATURED_FRAME_SHAPES = [
-  { label: "Aviator", value: "aviator" },
-  { label: "Round", value: "round" },
-  { label: "Square", value: "square" },
-  { label: "Cat-Eye", value: "cat-eye" },
-  { label: "Oversized", value: "oversized" },
-  { label: "Rectangle", value: "rectangle" },
-];
+/**
+ * The header mega menu.
+ *
+ * Curated navigation, not an exhaustive facet list — the shop sidebar renders
+ * the full set from /api/products/facets. The values here are Attribute `value`
+ * slugs and sub-category slugs, and must match what
+ * backend/src/scripts/pivotToJewelleryAndBags.js seeds.
+ *
+ * TODO(copy): the section headings and featured tiles are placeholders — refine
+ * the wording and swap in real photography before launch.
+ */
 
 export interface MegaMenuLink {
   label: string;
@@ -31,7 +29,16 @@ export interface MegaMenuSection {
   featured: { title: string; subtitle: string; image: string; href: string };
 }
 
-export const megaMenu: Record<"eyewear" | "apparel", MegaMenuSection> = {
+const FEATURED_FRAME_SHAPES = [
+  { label: "Aviator", value: "aviator" },
+  { label: "Round", value: "round" },
+  { label: "Square", value: "square" },
+  { label: "Cat-Eye", value: "cat-eye" },
+  { label: "Oversized", value: "oversized" },
+  { label: "Rectangle", value: "rectangle" },
+];
+
+export const megaMenu: Record<"eyewear" | "jewellery" | "bags", MegaMenuSection> = {
   eyewear: {
     label: "Eyewear",
     href: "/shop?category=eyewear",
@@ -60,26 +67,27 @@ export const megaMenu: Record<"eyewear" | "apparel", MegaMenuSection> = {
       href: collections[0].href,
     },
   },
-  apparel: {
-    label: "Apparel",
-    href: "/shop?category=apparel",
+  jewellery: {
+    label: "Jewellery",
+    href: "/shop?category=jewellery",
     columns: [
       {
-        title: "Shop by Category",
+        title: "Shop by Piece",
         links: [
-          { label: "Knitwear", href: "/shop?category=apparel&subCategory=knitwear" },
-          { label: "Outerwear", href: "/shop?category=apparel&subCategory=outerwear" },
-          { label: "Shirting", href: "/shop?category=apparel&subCategory=shirting" },
-          { label: "Bottoms", href: "/shop?category=apparel&subCategory=bottoms" },
+          { label: "Necklaces", href: "/shop?category=jewellery&subCategory=necklaces" },
+          { label: "Anklets", href: "/shop?category=jewellery&subCategory=anklets" },
+          { label: "Bracelets", href: "/shop?category=jewellery&subCategory=bracelets" },
+          { label: "Rings", href: "/shop?category=jewellery&subCategory=rings" },
+          { label: "Earrings", href: "/shop?category=jewellery&subCategory=earrings" },
         ],
       },
       {
-        title: "Shop by Fabric",
+        title: "Shop by Metal",
         links: [
-          { label: "Cashmere", href: "/shop?category=apparel&fabric=100-cashmere" },
-          { label: "Merino Wool", href: "/shop?category=apparel&fabric=100-merino-wool" },
-          { label: "Linen", href: "/shop?category=apparel&fabric=100-linen" },
-          { label: "Silk", href: "/shop?category=apparel&fabric=100-mulberry-silk" },
+          { label: "Yellow Gold", href: "/shop?category=jewellery&metal=yellow-gold" },
+          { label: "Rose Gold", href: "/shop?category=jewellery&metal=rose-gold" },
+          { label: "Sterling Silver", href: "/shop?category=jewellery&metal=sterling-silver" },
+          { label: "Gold Vermeil", href: "/shop?category=jewellery&metal=gold-vermeil" },
         ],
       },
     ],
@@ -90,11 +98,42 @@ export const megaMenu: Record<"eyewear" | "apparel", MegaMenuSection> = {
       href: collections[1].href,
     },
   },
+  bags: {
+    label: "Bags",
+    href: "/shop?category=bags",
+    columns: [
+      {
+        title: "Shop by Style",
+        links: [
+          { label: "Totes", href: "/shop?category=bags&subCategory=totes" },
+          { label: "Shoulder Bags", href: "/shop?category=bags&subCategory=shoulder-bags" },
+          { label: "Crossbody Bags", href: "/shop?category=bags&subCategory=crossbody-bags" },
+          { label: "Clutches", href: "/shop?category=bags&subCategory=clutches" },
+        ],
+      },
+      {
+        title: "Shop by Material",
+        links: [
+          { label: "Full-Grain Leather", href: "/shop?category=bags&bagMaterial=full-grain-leather" },
+          { label: "Suede", href: "/shop?category=bags&bagMaterial=suede" },
+          { label: "Canvas", href: "/shop?category=bags&bagMaterial=canvas" },
+          { label: "Raffia", href: "/shop?category=bags&bagMaterial=raffia" },
+        ],
+      },
+    ],
+    featured: {
+      title: collections[3].title,
+      subtitle: collections[3].subtitle,
+      image: collections[3].image,
+      href: collections[3].href,
+    },
+  },
 };
 
 export const primaryNav = [
   { label: "New Arrivals", href: "/shop?sort=new" },
   { label: "Eyewear", href: "/shop?category=eyewear", mega: "eyewear" as const },
-  { label: "Apparel", href: "/shop?category=apparel", mega: "apparel" as const },
+  { label: "Jewellery", href: "/shop?category=jewellery", mega: "jewellery" as const },
+  { label: "Bags", href: "/shop?category=bags", mega: "bags" as const },
   { label: "Journal", href: "/#brand-story" },
 ];

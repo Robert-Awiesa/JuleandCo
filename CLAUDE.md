@@ -95,9 +95,9 @@ Plan: `docs/superpowers/plans/2026-08-19-catalog-depth-and-storefront-wiring.md`
 - Because the template was the only record of which variables the app needs, that list moved into `README.md`'s Getting Started as a table. The `cp backend/.env.example backend/.env` step is gone — it would now fail.
 - The `frontend/.env.local.example` template is still present, still tracked, and still referenced by the README's shared-`JWT_SECRET` callout. Left in place deliberately — the instruction named `env.example`, and removing the frontend one too was not asked for.
 
-### 2026-08-19 — Apparel → Jewellery/Bags pivot: Phases 1–3 done, Phase 4 remaining (IN PROGRESS)
+### 2026-08-19 — Apparel → Jewellery/Bags pivot (all four phases complete)
 
-**Branch: `category-model-pivot`. Not merged.** Phases 1–3 are complete and the whole stack is green (backend 112/112, tsc clean, Playwright 7/7). Phase 4 — the content pivot itself — is what remains.
+**Branch: `category-model-pivot`. Not merged.** All four phases are complete and the stack is green: backend 112/112, `tsc` clean, Playwright 7/7.
 
 Plan: `docs/superpowers/plans/2026-08-19-catalog-depth-and-storefront-wiring.md` covered the previous pass; this pivot's plan lives at `C:\Users\Robert\.claude\plans\so-we-will-not-peaceful-beacon.md`.
 
@@ -136,11 +136,26 @@ Phase 1 changed the API shape and `/shop` was returning **500** until this lande
 - **Cart lines are keyed by variant id**, not `productId__color__size` — that key assumed every product varied by exactly those two things. `CartLine` now carries `variantId`, `options` and `selections`; `describeCartLine`/`cartLineKey` in `lib/utils.ts` render them. The persisted store is `version: 2` with a migrate that **empties old carts** — an old line cannot be re-keyed reliably, and silently mispricing someone's basket is worse than asking them to re-add.
 - Verified: `/`, `/shop`, `/product/:slug`, `/account/wishlist` all 200; `?frameShape=aviator` narrows 20 → 1 and the sidebar renders that section from data.
 
-#### Then Phase 4 — the pivot itself
-- Draft the 7 apparel products, retire the Apparel category (records kept). Back up first.
-- Seed **Jewellery** (necklaces, anklets, bracelets, rings, earrings) and **Bags** (totes, shoulder, crossbody, clutches) with vocabularies: metal, purity (925/14k/18k), gemstone, chain length, ring size, bag material, closure, strap type, plus shared colour/gender/occasion. Bag dimensions via `combinedSpecs`.
-- Rewrite copy: `lib/navigation.ts` mega menu, `ShopView`'s "Shop Eyewear & Apparel" heading, `mockData.ts` collection tiles, Hero, BrandStory, Footer, page metadata. Mark each `TODO(copy)`.
-- **`npm run seed -w backend` is broken** — `seedData.js` and `seed/toVariants.js` still write the old variant shape and would create products with no variants. Rewrite as part of this phase; do not run it before then.
+#### Phase 4 — the pivot itself (done)
+`backend/src/scripts/pivotToJewelleryAndBags.js` (idempotent; second run reports "No changes"):
+- Backs up all apparel products + sub-categories to `backend/backups/apparel-<timestamp>.json` **before touching anything**, then sets the 7 products to draft and marks the Apparel category `isActive: false`. **Nothing is deleted** — the products stay editable and republish by reactivating the category.
+- Seeds **Jewellery** (necklaces, anklets, bracelets, rings, earrings) and **Bags** (totes, shoulder, crossbody, clutches) plus 14 attribute groups and 55 vocabulary options: metal, purity, gemstone, chain length, ring size, clasp, bag material, closure, strap type, strap drop, H/W/D, and a shared occasion.
+- Bag dimensions render through the category's `combinedSpecs` template `{heightCm} × {widthCm} × {depthCm} cm`, so the three numbers are one spec row rather than three.
+- Uses `$setOnInsert` throughout, so re-running never clobbers later hand-edits in the admin.
+- Backfills `isActive` on categories via the raw driver — the field post-dates those documents and Mongoose fills the default on read, so a raw query would have missed them (same trap as the `publishStatus` backfill).
+
+**Bug this surfaced:** `fetchCategories()` sent `?active=true` but `categoryController` reads `activeOnly`. The param was silently ignored, so the retired Apparel category would still have been offered as a shop filter with nothing behind it. Fixed in `lib/api.ts`.
+
+Copy rewritten with `TODO(copy)` markers for refinement: `lib/navigation.ts` (mega menu now Eyewear/Jewellery/Bags with metal and material columns), `ShopView` heading, Hero, Footer, site metadata, search placeholder, and the homepage collection tiles.
+
+**Acceptance test passed** — created a jewellery anklet with *two* stocked axes (Metal × Length, 4 variants, stock 10), specs resolving to "Purity=925 Sterling Silver, Gemstone=None, Occasion=Everyday", rendering on its product page. **No code was written for jewellery** — it is all category data.
+
+Final state: backend **112/112**, `tsc --noEmit` clean, Playwright **7/7**, 13 published (eyewear) + 7 draft (apparel).
+
+#### Still to do
+- Add the real jewellery and bag products — the structure, vocabularies and sub-categories are in place, the catalogue is not.
+- **`npm run seed -w backend` is still broken**: `seedData.js` and `seed/toVariants.js` write the pre-pivot variant shape and would create products with no variants. Rewrite before running it.
+- Orders/Customers/Settings remain Phase 2–3 stubs; reviews (`rating`/`reviewCount`) still modelled but unrendered.
 
 #### Gotchas worth keeping
 - A raw NUL byte got written into `publicProduct.js` as a sentinel character. It worked and passed tests, but made git treat the source as binary. Rewritten without a sentinel; check `git diff --stat` for `Bin` markers.

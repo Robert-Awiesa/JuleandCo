@@ -40,7 +40,7 @@ export function Hero() {
           transition={{ duration: 0.7, delay: 0.2 }}
           className="mt-6 max-w-md text-alabaster/80"
         >
-          Curated eyewear and apparel, designed in-house and crafted to outlast the season.
+          Curated eyewear, jewellery and bags — designed in-house and made to outlast the season.
         </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -55,10 +55,10 @@ export function Hero() {
             Shop Eyewear
           </Link>
           <Link
-            href="/shop?category=apparel"
+            href="/shop?category=jewellery"
             className="btn-secondary border-alabaster/40 text-alabaster hover:bg-alabaster hover:text-obsidian"
           >
-            Explore Apparel
+            Explore Jewellery
           </Link>
         </motion.div>
       </div>

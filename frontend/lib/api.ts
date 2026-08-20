@@ -97,5 +97,8 @@ export function fetchFacets(category?: string): Promise<FacetResponse> {
 
 /** Active categories, for the shop filters and navigation. */
 export function fetchCategories(): Promise<StoreCategory[]> {
-  return getJson<StoreCategory[]>("/categories?active=true", []);
+  // Param name must match categoryController: activeOnly, not active. With the
+// wrong key the filter is silently ignored and retired categories show up as
+// shop filters with nothing behind them.
+  return getJson<StoreCategory[]>("/categories?activeOnly=true", []);
 }
