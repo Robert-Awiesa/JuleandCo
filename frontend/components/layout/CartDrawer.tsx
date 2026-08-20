@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, X } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
-import { formatCurrency } from "@/lib/utils";
+import { cartLineKey, describeCartLine, formatCurrency } from "@/lib/utils";
 
 export function CartDrawer() {
   const { lines, isOpen, close, updateQuantity, removeLine, subtotal } = useCartStore();
@@ -49,7 +49,7 @@ export function CartDrawer() {
                 <ul className="space-y-6">
                   {lines.map((line) => (
                     <li
-                      key={`${line.productId}-${line.color}-${line.size}`}
+                      key={cartLineKey(line)}
                       className="flex gap-4"
                     >
                       <div className="relative h-28 w-24 shrink-0 overflow-hidden bg-obsidian/5">
@@ -66,7 +66,7 @@ export function CartDrawer() {
                               {line.name}
                             </Link>
                             <button
-                              onClick={() => removeLine(line.productId, line.color, line.size)}
+                              onClick={() => removeLine(line.productId, line.variantId, line.selections)}
                               className="text-obsidian/40 hover:text-obsidian"
                               aria-label="Remove item"
                             >
@@ -74,7 +74,7 @@ export function CartDrawer() {
                             </button>
                           </div>
                           <p className="mt-1 text-xs text-obsidian/50">
-                            {[line.color, line.size].filter(Boolean).join(" / ")}
+                            {describeCartLine(line)}
                           </p>
                         </div>
                         <div className="flex items-center justify-between">
@@ -82,7 +82,7 @@ export function CartDrawer() {
                             <button
                               className="p-1.5 hover:bg-obsidian/5"
                               onClick={() =>
-                                updateQuantity(line.productId, line.quantity - 1, line.color, line.size)
+                                updateQuantity(line.productId, line.quantity - 1, line.variantId, line.selections)
                               }
                               aria-label="Decrease quantity"
                             >
@@ -92,7 +92,7 @@ export function CartDrawer() {
                             <button
                               className="p-1.5 hover:bg-obsidian/5"
                               onClick={() =>
-                                updateQuantity(line.productId, line.quantity + 1, line.color, line.size)
+                                updateQuantity(line.productId, line.quantity + 1, line.variantId, line.selections)
                               }
                               aria-label="Increase quantity"
                             >

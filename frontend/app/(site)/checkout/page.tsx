@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Check, CreditCard, Smartphone } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 import { Button } from "@/components/ui/Button";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cartLineKey, cn, describeCartLine, formatCurrency } from "@/lib/utils";
 
 type Step = "shipping" | "payment" | "review" | "confirmation";
 type PaymentMethod = "mobile_money" | "card";
@@ -254,14 +254,14 @@ export default function CheckoutPage() {
           <p className="mb-5 font-serif text-xl">Order Summary</p>
           <ul className="space-y-4">
             {lines.map((line) => (
-              <li key={`${line.productId}-${line.color}-${line.size}`} className="flex gap-3">
+              <li key={cartLineKey(line)} className="flex gap-3">
                 <div className="relative h-16 w-14 shrink-0 overflow-hidden bg-obsidian/5">
                   <Image src={line.image} alt={line.name} fill sizes="56px" className="object-cover" />
                 </div>
                 <div className="flex-1 text-sm">
                   <p className="font-medium">{line.name}</p>
                   <p className="text-xs text-obsidian/50">
-                    {[line.color, line.size].filter(Boolean).join(" / ")} &times; {line.quantity}
+                    {describeCartLine(line)} &times; {line.quantity}
                   </p>
                 </div>
                 <p className="text-sm">{formatCurrency(line.price * line.quantity)}</p>

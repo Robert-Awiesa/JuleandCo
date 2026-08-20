@@ -3,33 +3,45 @@
 import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { buildVariantMatrix } from "./variantMatrix";
+import type { ProductOption } from "../../_lib/types";
 import type { ProductFormInput } from "./schema";
 
+/**
+ * The stock grid, one row per combination of option values.
+ *
+ * The axes used to come from `category === "apparel" ? clothingSize : []`, so
+ * a second axis was unreachable for anything that was not clothing — a ring
+ * with sizes could not be expressed at all. Columns are now derived from
+ * whatever options the product defines.
+ */
 export function InventoryTab() {
   const { control, register, watch, setValue } = useFormContext<ProductFormInput>();
-  const colors = useWatch({ control, name: "colors" });
-  const clothingSize = useWatch({ control, name: "clothingSize" }) ?? [];
-  const category = useWatch({ control, name: "category" });
-  const variants = watch("variants");
+  const options = (useWatch({ control, name: "options" }) ?? []) as ProductOption[];
+  const variants = watch("variants") ?? [];
 
+  // Rebuild the grid whenever the axes change, preserving stock and SKUs that
+  // have already been entered against surviving combinations.
   useEffect(() => {
-    const validColors = colors.filter((c) => c.colorLabel.trim().length > 0);
-    const sizes = category === "apparel" ? clothingSize : [];
-    const next = buildVariantMatrix(validColors, sizes, variants);
-    setValue("variants", next);
+    setValue("variants", buildVariantMatrix(options, variants), { shouldDirty: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(colors), JSON.stringify(clothingSize), category]);
+  }, [JSON.stringify(options)]);
 
+  const axes = options.filter((option) => (option.values || []).length > 0);
   const total = variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
 
   function setAll(value: number) {
-    variants.forEach((_, i) => setValue(`variants.${i}.stock`, value));
+    variants.forEach((_, i) => setValue(`variants.${i}.stock`, value, { shouldDirty: true }));
+  }
+
+  function valueLabel(optionName: string, value: string) {
+    const option = axes.find((o) => o.name === optionName);
+    return option?.values.find((v) => v.value === value)?.label || value;
   }
 
   if (variants.length === 0) {
     return (
       <p className="max-w-3xl text-sm text-obsidian/50">
-        Add at least one color on the Colors &amp; Images tab to build the inventory grid.
+        Add at least one option value on the Options &amp; Images tab to build the inventory grid.
       </p>
     );
   }
@@ -39,6 +51,9 @@ export function InventoryTab() {
       <div className="flex items-center justify-between">
         <p className="text-sm text-obsidian">
           Total stock: <span className="font-medium">{total}</span>
+          <span className="ml-2 text-obsidian/45">
+            ({variants.length} {variants.length === 1 ? "combination" : "combinations"})
+          </span>
         </p>
         <div className="flex items-center gap-2 text-xs">
           <span className="text-obsidian/50">Set all to</span>
@@ -56,12 +71,16 @@ export function InventoryTab() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-obsidian/10">
+      <div className="overflow-x-auto rounded-lg border border-obsidian/10">
         <table className="w-full text-sm">
           <thead className="border-b border-obsidian/10 bg-obsidian/[0.02] text-left text-xs uppercase tracking-wide text-obsidian/50">
             <tr>
-              <th className="px-4 py-2">Color</th>
-              {category === "apparel" && <th className="px-4 py-2">Size</th>}
+              {axes.map((option) => (
+                <th key={option.name} className="px-4 py-2">
+                  {option.name}
+                </th>
+              ))}
+              {axes.length === 0 && <th className="px-4 py-2">Item</th>}
               <th className="px-4 py-2">SKU</th>
               <th className="px-4 py-2">Stock</th>
               <th className="px-4 py-2">Status</th>
@@ -70,8 +89,16 @@ export function InventoryTab() {
           <tbody className="divide-y divide-obsidian/10">
             {variants.map((variant, index) => (
               <tr key={variant.id}>
-                <td className="px-4 py-2 text-obsidian">{variant.colorLabel}</td>
-                {category === "apparel" && <td className="px-4 py-2 text-obsidian/70">{variant.sizeLabel}</td>}
+                {axes.map((option) => {
+                  const chosen = variant.optionValues.find((ov) => ov.name === option.name);
+                  return (
+                    <td key={option.name} className="px-4 py-2 text-obsidian">
+                      {chosen ? valueLabel(option.name, chosen.value) : "—"}
+                    </td>
+                  );
+                })}
+                {axes.length === 0 && <td className="px-4 py-2 text-obsidian/70">Single item</td>}
+
                 <td className="px-4 py-2">
                   <input
                     {...register(`variants.${index}.sku`)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment } from "react";
 import Link from "next/link";
 import { Heart, RefreshCw, ShieldCheck, Truck } from "lucide-react";
 import { Product } from "@/lib/types";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { PriceTag } from "@/components/ui/PriceTag";
 import { ImageGallery } from "./ImageGallery";
 import { VariantSelector } from "./VariantSelector";
+import { useVariantSelection } from "./useVariantSelection";
 import { CompleteTheLook } from "./CompleteTheLook";
 import { useCartStore } from "@/store/useCartStore";
 import { useWishlistStore } from "@/store/useWishlistStore";
@@ -20,9 +21,17 @@ interface ProductDetailViewProps {
 }
 
 export function ProductDetailView({ product, related }: ProductDetailViewProps) {
-  const [color, setColor] = useState(product.colors[0]?.label);
-  const [size, setSize] = useState(product.sizes?.[0]?.label);
-  const [lens, setLens] = useState(product.lensOptions?.[0]?.value);
+  const {
+    options,
+    selections,
+    setOption,
+    setSelection,
+    variant,
+    image,
+    optionLabels,
+    selectionLabels,
+    isAvailable,
+  } = useVariantSelection(product);
   const addLine = useCartStore((s) => s.addLine);
   const wishlisted = useWishlistStore((s) => s.has(product.id));
   const toggleWishlist = useWishlistStore((s) => s.toggle);
@@ -86,33 +95,31 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
           <div className="mt-6 border-t border-obsidian/10 pt-6">
             <VariantSelector
               product={product}
-              color={color}
-              size={size}
-              lens={lens}
-              onColorChange={setColor}
-              onSizeChange={setSize}
-              onLensChange={setLens}
+              options={options}
+              selections={selections}
+              onOptionChange={setOption}
+              onSelectionChange={setSelection}
             />
           </div>
 
           <div className="mt-8 flex gap-3">
             <Button
               className="flex-1"
-              disabled={product.stock === 0}
+              disabled={!isAvailable}
               onClick={() =>
                 addLine({
                   productId: product.id,
+                  variantId: variant?.id,
                   slug: product.slug,
                   name: product.name,
-                  image: product.images[0],
+                  image,
                   price: product.price,
-                  color,
-                  size,
-                  lens: product.lensOptions?.find((o) => o.value === lens)?.label,
+                  options: optionLabels,
+                  selections: selectionLabels,
                 })
               }
             >
-              {product.stock === 0 ? "Sold Out" : "Add to Bag"}
+              {isAvailable ? "Add to Bag" : "Sold Out"}
             </Button>
             <button
               onClick={() => toggleWishlist(product.id)}

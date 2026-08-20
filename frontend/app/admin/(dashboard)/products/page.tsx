@@ -10,6 +10,7 @@ import { Badge } from "@/components/admin-ui/badge";
 import { Button } from "@/components/admin-ui/button";
 import { Input } from "@/components/admin-ui/input";
 import { api } from "../../_lib/api";
+import { useCategories } from "../../_lib/useCatalogConfig";
 import { formatCurrency, stockTone } from "../../_lib/format";
 import type { AdminProduct, PaginatedResult } from "../../_lib/types";
 
@@ -35,6 +36,7 @@ function useAdminProducts(filters: Filters) {
 export default function ProductsPage() {
   const [filters, setFilters] = useState<Filters>({ category: "all", stockStatus: "all", search: "" });
   const { data, isLoading } = useAdminProducts(filters);
+  const { data: categories = [] } = useCategories();
   const queryClient = useQueryClient();
 
   function invalidate() {
@@ -86,8 +88,11 @@ export default function ProductsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All categories</SelectItem>
-            <SelectItem value="eyewear">Eyewear</SelectItem>
-            <SelectItem value="apparel">Apparel</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category._id} value={category.slug}>
+                {category.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={filters.stockStatus} onValueChange={(v) => setFilters((f) => ({ ...f, stockStatus: v }))}>

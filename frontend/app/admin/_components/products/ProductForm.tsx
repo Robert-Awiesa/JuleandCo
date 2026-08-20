@@ -12,7 +12,7 @@ import type { AdminProduct } from "../../_lib/types";
 import { productFormSchema, type ProductFormInput, type ProductFormValues } from "./schema";
 import { DetailsTab } from "./DetailsTab";
 import { AttributesTab } from "./AttributesTab";
-import { ColorsImagesTab } from "./ColorsImagesTab";
+import { OptionsImagesTab } from "./OptionsImagesTab";
 import { InventoryTab } from "./InventoryTab";
 import { CrossSellTab } from "./CrossSellTab";
 
@@ -21,35 +21,21 @@ function toFormValues(product?: AdminProduct): ProductFormInput {
     return {
       name: "",
       slug: "",
-      category: "eyewear",
+      // Left blank so the admin must choose. There is no sensible default now
+      // that categories are data rather than a two-value enum.
+      category: "",
       subCategory: "",
       description: "",
       price: 0,
       images: [],
-      clothingSize: [],
-      lensOptions: [],
-      tags: [],
-      colors: [],
+      attributes: {},
+      options: [],
       variants: [],
+      tags: [],
       pairsWith: [],
       publishStatus: "draft",
     };
   }
-
-  const colorMap = new Map<
-    string,
-    { colorId: string; colorLabel: string; colorHex?: string; colorImage?: string }
-  >();
-  product.variants.forEach((v) => {
-    if (!colorMap.has(v.colorId)) {
-      colorMap.set(v.colorId, {
-        colorId: v.colorId,
-        colorLabel: v.colorLabel,
-        colorHex: v.colorHex,
-        colorImage: v.colorImage,
-      });
-    }
-  });
 
   return {
     name: product.name,
@@ -60,28 +46,21 @@ function toFormValues(product?: AdminProduct): ProductFormInput {
     price: product.price,
     compareAtPrice: product.compareAtPrice,
     images: product.images,
-    frameShape: product.frameShape,
-    frameMaterial: product.frameMaterial,
-    lensColor: product.lensColor,
-    lensOptions: product.lensOptions ?? [],
-    measurements: product.measurements ?? {},
-    fabric: product.fabric,
-    clothingSize: product.clothingSize ?? [],
-    composition: product.composition,
-    fit: product.fit,
-    gender: product.gender,
-    careInstructions: product.careInstructions,
+
+    attributes: product.attributes ?? {},
+    options: product.options ?? [],
+    variants: product.variants ?? [],
+
     isNewArrival: product.isNewArrival,
     isBestSeller: product.isBestSeller,
     tags: product.tags ?? [],
+    pairsWith: product.pairsWith ?? [],
+
     publishStatus: product.publishStatus ?? "draft",
     costPrice: product.costPrice,
     barcode: product.barcode,
     weightGrams: product.weightGrams,
     seo: product.seo ?? {},
-    colors: Array.from(colorMap.values()),
-    variants: product.variants,
-    pairsWith: product.pairsWith ?? [],
   };
 }
 
@@ -106,13 +85,10 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
   }, [form.formState.isDirty]);
 
   const saveMutation = useMutation({
-    mutationFn: (values: ProductFormValues) => {
-      const { colors, ...payload } = values;
-      void colors;
-      return isEditing
-        ? api.put<AdminProduct>(`/products/${product!._id}`, payload)
-        : api.post<AdminProduct>("/products", payload);
-    },
+    mutationFn: (values: ProductFormValues) =>
+      isEditing
+        ? api.put<AdminProduct>(`/products/${product!._id}`, values)
+        : api.post<AdminProduct>("/products", values),
     onSuccess: () => {
       toast.success(isEditing ? "Product updated" : "Product created");
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
@@ -155,7 +131,7 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
           <TabsList>
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="attributes">Attributes</TabsTrigger>
-            <TabsTrigger value="colors">Colors &amp; Images</TabsTrigger>
+            <TabsTrigger value="options">Options &amp; Images</TabsTrigger>
             <TabsTrigger value="inventory">Inventory</TabsTrigger>
             <TabsTrigger value="cross-sell">Cross-sell</TabsTrigger>
           </TabsList>
@@ -165,8 +141,8 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
           <TabsContent value="attributes">
             <AttributesTab />
           </TabsContent>
-          <TabsContent value="colors">
-            <ColorsImagesTab />
+          <TabsContent value="options">
+            <OptionsImagesTab />
           </TabsContent>
           <TabsContent value="inventory">
             <InventoryTab />

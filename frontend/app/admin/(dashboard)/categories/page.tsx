@@ -3,33 +3,34 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { X } from "lucide-react";
 import { api } from "../../_lib/api";
-import type { Subcategory } from "../../_lib/types";
+import { useCategories } from "../../_lib/useCatalogConfig";
+import type { Category, Subcategory } from "../../_lib/types";
 
-type CategoryType = "eyewear" | "apparel";
-
-function useSubcategories(categoryType: CategoryType) {
-  return useQuery({
-    queryKey: ["subcategories", categoryType],
-    queryFn: () => api.get<Subcategory[]>(`/subcategories?categoryType=${categoryType}`),
-  });
+function slugify(value: string) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-function CategoryPanel({ categoryType, title }: { categoryType: CategoryType; title: string }) {
+function CategoryPanel({ category }: { category: Category }) {
   const queryClient = useQueryClient();
-  const { data: subcategories = [], isLoading } = useSubcategories(categoryType);
   const [newName, setNewName] = useState("");
 
+  const { data: subcategories = [], isLoading } = useQuery({
+    queryKey: ["subcategories", category.slug],
+    queryFn: () => api.get<Subcategory[]>(`/subcategories?categoryType=${category.slug}`),
+  });
+
   function invalidate() {
-    queryClient.invalidateQueries({ queryKey: ["subcategories", categoryType] });
+    queryClient.invalidateQueries({ queryKey: ["subcategories"] });
   }
 
   const createMutation = useMutation({
     mutationFn: (name: string) =>
       api.post<Subcategory>("/subcategories", {
         name,
-        slug: name.toLowerCase().trim().replace(/\s+/g, "-"),
-        categoryType,
+        slug: slugify(name),
+        categoryType: category.slug,
         sortOrder: subcategories.length,
       }),
     onSuccess: () => {
@@ -59,67 +60,235 @@ function CategoryPanel({ categoryType, title }: { categoryType: CategoryType; ti
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const retireMutation = useMutation({
+    mutationFn: (isActive: boolean) =>
+      api.put<Category>(`/categories/id/${category._id}`, { isActive }),
+    onSuccess: () => {
+      toast.success(category.isActive ? "Category retired" : "Category reactivated");
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   return (
-    <div className="rounded-lg border border-obsidian/10 bg-white">
-      <div className="border-b border-obsidian/10 px-5 py-4">
-        <h2 className="text-sm font-medium text-obsidian">{title}</h2>
+    <section
+      className={
+        category.isActive
+          ? "rounded-lg border border-obsidian/10 bg-white p-5"
+          : "rounded-lg border border-dashed border-obsidian/20 bg-obsidian/[0.02] p-5"
+      }
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-serif text-lg text-obsidian">
+            {category.name}
+            {!category.isActive && (
+              <span className="ml-2 rounded-full bg-obsidian/10 px-2 py-0.5 text-xs uppercase tracking-wide text-obsidian/60">
+                Retired
+              </span>
+            )}
+          </h2>
+          <p className="mt-1 text-xs text-obsidian/50">
+            {category.optionDefaults.length > 0
+              ? `Varies by ${category.optionDefaults.map((o) => o.label).join(" × ")}`
+              : "No variant axes configured"}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => retireMutation.mutate(!category.isActive)}
+          className="shrink-0 text-xs uppercase tracking-wide text-obsidian/50 underline-offset-4 hover:text-obsidian hover:underline"
+        >
+          {category.isActive ? "Retire" : "Reactivate"}
+        </button>
       </div>
-      <ul className="divide-y divide-obsidian/10">
-        {isLoading && <li className="px-5 py-4 text-sm text-obsidian/50">Loading…</li>}
+
+      {!category.isActive && (
+        <p className="mt-3 rounded bg-obsidian/5 px-3 py-2 text-xs text-obsidian/60">
+          Hidden from the storefront. Its products are kept and stay editable here.
+        </p>
+      )}
+
+      <div className="mt-4 space-y-2">
+        {isLoading && <p className="text-sm text-obsidian/40">Loading…</p>}
+        {!isLoading && subcategories.length === 0 && (
+          <p className="text-sm text-obsidian/40">No sub-categories yet.</p>
+        )}
         {subcategories.map((sub) => (
-          <li key={sub._id} className="flex items-center justify-between px-5 py-3">
+          <div key={sub._id} className="flex items-center gap-3">
             <input
               defaultValue={sub.name}
               onBlur={(e) => {
-                if (e.target.value.trim() && e.target.value !== sub.name) {
-                  renameMutation.mutate({ id: sub._id, name: e.target.value.trim() });
-                }
+                const name = e.target.value.trim();
+                if (name && name !== sub.name) renameMutation.mutate({ id: sub._id, name });
               }}
-              className="w-full bg-transparent text-sm text-obsidian outline-none focus:underline"
+              className="flex-1 rounded border border-transparent px-2 py-1.5 text-sm hover:border-obsidian/15 focus:border-obsidian/40 focus:outline-none"
             />
+            <code className="shrink-0 text-xs text-obsidian/35">{sub.slug}</code>
             <button
+              type="button"
               onClick={() => {
                 if (confirm(`Delete "${sub.name}"?`)) deleteMutation.mutate(sub._id);
               }}
-              className="ml-4 text-xs uppercase tracking-wide text-obsidian/40 hover:text-red-600"
+              aria-label={`Delete ${sub.name}`}
+              className="shrink-0 text-obsidian/30 hover:text-red-600"
             >
-              Remove
+              <X size={15} />
             </button>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (newName.trim()) createMutation.mutate(newName.trim());
+          if (newName.trim()) createMutation.mutate(newName);
         }}
-        className="flex gap-2 border-t border-obsidian/10 px-5 py-3"
+        className="mt-4 flex gap-2 border-t border-obsidian/10 pt-4"
       >
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="New sub-category name"
-          className="flex-1 rounded border border-obsidian/15 px-3 py-1.5 text-sm outline-none focus:border-obsidian/40"
+          placeholder="Add a sub-category…"
+          className="flex-1 rounded border border-obsidian/15 px-3 py-2 text-sm outline-none focus:border-obsidian/40"
         />
         <button
           type="submit"
-          className="rounded bg-obsidian px-4 py-1.5 text-xs uppercase tracking-wide text-alabaster hover:bg-gold hover:text-obsidian"
+          disabled={createMutation.isPending || !newName.trim()}
+          className="rounded bg-obsidian px-4 py-2 text-xs uppercase tracking-wide text-alabaster hover:bg-gold hover:text-obsidian disabled:opacity-40"
         >
           Add
         </button>
       </form>
-    </div>
+    </section>
+  );
+}
+
+/**
+ * Creating a category used to require editing a Mongoose enum, two TypeScript
+ * unions and a Zod schema. It is a form now.
+ */
+function NewCategoryForm() {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [primaryAxis, setPrimaryAxis] = useState("Colour");
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      api.post<Category>("/categories", {
+        name: name.trim(),
+        slug: slugify(name),
+        isActive: true,
+        // A category needs at least one axis or its products cannot be stocked.
+        optionDefaults: primaryAxis.trim()
+          ? [{ label: primaryAxis.trim(), swatch: true }]
+          : [],
+        combinedSpecs: [],
+      }),
+    onSuccess: () => {
+      toast.success("Category created");
+      setName("");
+      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="rounded border border-dashed border-obsidian/25 px-4 py-2 text-xs uppercase tracking-wide text-obsidian/60 hover:border-obsidian/50 hover:text-obsidian"
+      >
+        + New category
+      </button>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (name.trim()) createMutation.mutate();
+      }}
+      className="rounded-lg border border-obsidian/15 bg-white p-5"
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="nc-name" className="text-xs uppercase tracking-widest2 text-obsidian/60">
+            Name
+          </label>
+          <input
+            id="nc-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Jewellery"
+            className="mt-1 w-full rounded border border-obsidian/15 px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
+          <label htmlFor="nc-axis" className="text-xs uppercase tracking-widest2 text-obsidian/60">
+            Main variant axis
+          </label>
+          <input
+            id="nc-axis"
+            value={primaryAxis}
+            onChange={(e) => setPrimaryAxis(e.target.value)}
+            placeholder="e.g. Metal"
+            className="mt-1 w-full rounded border border-obsidian/15 px-3 py-2 text-sm"
+          />
+          <p className="mt-1 text-xs text-obsidian/45">
+            What products in this category vary by. Add more axes per product on the Options tab.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <button
+          type="submit"
+          disabled={!name.trim() || createMutation.isPending}
+          className="rounded bg-obsidian px-4 py-2 text-xs uppercase tracking-wide text-alabaster hover:bg-gold hover:text-obsidian disabled:opacity-40"
+        >
+          Create
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="rounded border border-obsidian/20 px-4 py-2 text-xs uppercase tracking-wide text-obsidian/60"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }
 
 export default function CategoriesPage() {
+  const { data: categories = [], isLoading } = useCategories();
+
   return (
-    <div className="space-y-8">
-      <h1 className="font-serif text-2xl text-obsidian">Categories</h1>
-      <div className="grid gap-6 md:grid-cols-2">
-        <CategoryPanel categoryType="eyewear" title="Eyewear" />
-        <CategoryPanel categoryType="apparel" title="Apparel" />
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-serif text-2xl text-obsidian">Categories</h1>
+        <p className="mt-2 max-w-2xl text-sm text-obsidian/60">
+          Top-level categories and the sub-categories beneath them. Retiring a category hides it and
+          its products from the storefront without deleting anything; a category still holding
+          products cannot be deleted outright.
+        </p>
       </div>
+
+      <NewCategoryForm />
+
+      {isLoading ? (
+        <p className="text-sm text-obsidian/40">Loading…</p>
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-2">
+          {categories.map((category) => (
+            <CategoryPanel key={category._id} category={category} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

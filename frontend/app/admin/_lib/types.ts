@@ -1,69 +1,91 @@
-export type ProductCategory = "eyewear" | "apparel";
+/**
+ * A category slug. Deliberately a plain string rather than a union: categories
+ * are records in the database now, so pinning them in the type system would put
+ * the two-category assumption straight back.
+ */
+export type CategorySlug = string;
 
+/** How a group is captured in the admin form. */
+export type AttributeInputType = "select" | "multiselect" | "text" | "number";
+
+/**
+ * spec        — appears in the product's spec list on the storefront.
+ * selection   — customer picks one, but it carries no stock (lens type).
+ * variantAxis — a stock-bearing option (metal, chain length, ring size).
+ * internal    — admin-only, or a component of a combined spec.
+ */
+export type AttributeRole = "spec" | "selection" | "variantAxis" | "internal";
+
+/** Defines a vocabulary: what it is called, where it applies, how it behaves. */
+export interface AttributeGroup {
+  _id: string;
+  key: string;
+  label: string;
+  description?: string;
+  categories: CategorySlug[];
+  inputType: AttributeInputType;
+  role: AttributeRole;
+  showInFilters: boolean;
+  filterStyle: "chips" | "checkbox";
+  swatch: boolean;
+  unit?: string;
+  placeholder?: string;
+  sortOrder: number;
+}
+
+/** One option inside a vocabulary. Products store `value`, never `label`. */
+export interface Attribute {
+  _id: string;
+  group: string;
+  value: string;
+  label: string;
+  hex?: string;
+  description?: string;
+  sortOrder: number;
+}
+
+/** A selectable value on a variant axis. */
+export interface OptionValue {
+  value: string;
+  label: string;
+  hex?: string;
+  image?: string;
+}
+
+/** A variant axis. Replaces the old fixed colour/size pair. */
+export interface ProductOption {
+  name: string;
+  groupKey?: string;
+  values: OptionValue[];
+}
+
+/** One sellable combination. Stock and SKU live here and nowhere else. */
 export interface Variant {
   id: string;
-  colorId: string;
-  colorLabel: string;
-  colorHex?: string;
-  colorImage?: string;
-  sizeId?: string;
-  sizeLabel?: string;
+  optionValues: { name: string; value: string }[];
   stock: number;
   sku?: string;
 }
 
-export type AttributeGroup =
-  | "frameShape"
-  | "lensType"
-  | "frameMaterial"
-  | "fabric"
-  | "clothingSize"
-  | "fit"
-  | "gender";
-
-/** One option in an admin-managed vocabulary. Products store `value`, never `label`. */
-export interface Attribute {
-  _id: string;
-  group: AttributeGroup;
-  value: string;
-  label: string;
-  hex?: string;
-  categoryType?: ProductCategory;
-  description?: string;
-  sortOrder: number;
-}
+/** Category-specific values, keyed by AttributeGroup.key. */
+export type ProductAttributes = Record<string, string | string[] | number | undefined>;
 
 export interface AdminProduct {
   _id: string;
   slug: string;
   name: string;
-  category: ProductCategory;
+  category: CategorySlug;
   subCategory: string;
   price: number;
   compareAtPrice?: number;
   description: string;
   images: string[];
-  // Eyewear
-  frameShape?: string;
-  frameMaterial?: string;
-  lensColor?: string;
-  lensOptions?: string[];
-  measurements?: {
-    lensWidthMm?: number;
-    bridgeWidthMm?: number;
-    templeLengthMm?: number;
-  };
-  // Apparel
-  fabric?: string;
-  clothingSize?: string[];
-  composition?: string;
-  fit?: string;
-  // Shared
-  gender?: string;
-  careInstructions?: string;
 
+  attributes: ProductAttributes;
+  options: ProductOption[];
   variants: Variant[];
   stock: number;
+
   isNewArrival?: boolean;
   isBestSeller?: boolean;
   tags?: string[];
@@ -83,17 +105,33 @@ export interface Subcategory {
   _id: string;
   name: string;
   slug: string;
-  categoryType: ProductCategory;
+  categoryType: CategorySlug;
   sortOrder: number;
+}
+
+/** Names a variant axis for a category, e.g. "Metal" drawn from the metal group. */
+export interface CategoryOptionDefault {
+  groupKey?: string;
+  label: string;
+  swatch?: boolean;
+}
+
+/** A spec composed from several attributes, e.g. "{h} × {w} × {d} cm". */
+export interface CategoryCombinedSpec {
+  label: string;
+  template: string;
 }
 
 export interface Category {
   _id: string;
   name: string;
-  slug: string;
-  type: ProductCategory;
+  slug: CategorySlug;
   description?: string;
   heroImage?: string;
+  isActive: boolean;
+  sortOrder: number;
+  optionDefaults: CategoryOptionDefault[];
+  combinedSpecs: CategoryCombinedSpec[];
 }
 
 export interface PaginatedResult<T> {

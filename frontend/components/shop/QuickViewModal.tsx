@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,6 +8,8 @@ import { Product } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { PriceTag } from "@/components/ui/PriceTag";
+import { VariantSelector } from "@/components/product/VariantSelector";
+import { useVariantSelection } from "@/components/product/useVariantSelection";
 import { useCartStore } from "@/store/useCartStore";
 import { cn, stockLabel } from "@/lib/utils";
 
@@ -19,20 +20,30 @@ interface QuickViewModalProps {
 }
 
 export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps) {
-  const [color, setColor] = useState(product.colors[0]?.label);
-  const [size, setSize] = useState(product.sizes?.[0]?.label);
+  const {
+    options,
+    selections,
+    setOption,
+    setSelection,
+    variant,
+    image,
+    optionLabels,
+    selectionLabels,
+    isAvailable,
+  } = useVariantSelection(product);
   const addLine = useCartStore((s) => s.addLine);
   const stock = stockLabel(product.stock);
 
   const handleAdd = () => {
     addLine({
       productId: product.id,
+      variantId: variant?.id,
       slug: product.slug,
       name: product.name,
-      image: product.images[0],
+      image,
       price: product.price,
-      color,
-      size,
+      options: optionLabels,
+      selections: selectionLabels,
     });
     onClose();
   };
@@ -110,58 +121,23 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                       </div>
                     )}
 
-                    {product.colors.length > 0 && (
-                      <div className="mt-4">
-                        <p className="mb-2 text-xs uppercase tracking-widest2 text-obsidian/50">
-                          Color — {color}
-                        </p>
-                        <div className="flex gap-2">
-                          {product.colors.map((c) => (
-                            <button
-                              key={c.id}
-                              disabled={!c.inStock}
-                              onClick={() => setColor(c.label)}
-                              title={c.label}
-                              className={cn(
-                                "h-8 w-8 rounded-full border-2 transition-transform disabled:cursor-not-allowed disabled:opacity-30",
-                                color === c.label ? "border-obsidian scale-110" : "border-transparent"
-                              )}
-                              style={{ backgroundColor: c.hex }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {product.sizes && product.sizes.length > 0 && (
-                      <div className="mt-4">
-                        <p className="mb-2 text-xs uppercase tracking-widest2 text-obsidian/50">
-                          Size — {size}
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {product.sizes.map((s) => (
-                            <button
-                              key={s.id}
-                              disabled={!s.inStock}
-                              onClick={() => setSize(s.label)}
-                              className={cn(
-                                "border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-30 disabled:line-through",
-                                size === s.label
-                                  ? "border-obsidian bg-obsidian text-alabaster"
-                                  : "border-obsidian/20 hover:border-obsidian"
-                              )}
-                            >
-                              {s.label}
-                            </button>
-                          ))}
-                        </div>
+                    {(product.options.length > 0 || product.selections.length > 0) && (
+                      <div className="mt-5">
+                        <VariantSelector
+                          product={product}
+                          options={options}
+                          selections={selections}
+                          onOptionChange={setOption}
+                          onSelectionChange={setSelection}
+                          compact
+                        />
                       </div>
                     )}
                   </div>
 
                   <div className="sticky bottom-0 flex flex-col gap-3 border-t border-obsidian/10 bg-alabaster p-7 pt-4">
-                    <Button onClick={handleAdd} disabled={product.stock === 0}>
-                      {product.stock === 0 ? "Sold Out" : "Add to Bag"}
+                    <Button onClick={handleAdd} disabled={!isAvailable}>
+                      {isAvailable ? "Add to Bag" : "Sold Out"}
                     </Button>
                     <Link
                       href={`/product/${product.slug}`}

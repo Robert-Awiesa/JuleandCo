@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface FilterSidebarProps {
   /** Options actually present in the published catalogue, already labelled by the API. */
   facets: FacetResponse;
+  categories: { slug: string; name: string }[];
   onChange: (patch: Record<string, string | string[] | null>) => void;
   onReset: () => void;
 }
@@ -20,7 +21,15 @@ function FilterSection({ title, children }: { title: string; children: React.Rea
   );
 }
 
-export function FilterSidebar({ facets, onChange, onReset }: FilterSidebarProps) {
+/**
+ * Renders whatever facets the API advertises.
+ *
+ * This previously carried a hardcoded category list, a hardcoded reset patch, a
+ * hardcoded active-filter counter and one JSX block per attribute group — so a
+ * new filter was invisible until four separate edits were made here. The groups
+ * and their control style now come from `facets.groupMeta`.
+ */
+export function FilterSidebar({ facets, categories, onChange, onReset }: FilterSidebarProps) {
   const searchParams = useSearchParams();
 
   const selected = (key: string): string[] => {
@@ -30,25 +39,15 @@ export function FilterSidebar({ facets, onChange, onReset }: FilterSidebarProps)
 
   const toggle = (key: string, value: string) => {
     const current = selected(key);
-    const next = current.includes(value)
-      ? current.filter((v) => v !== value)
-      : [...current, value];
+    const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
     onChange({ [key]: next.length > 0 ? next : null });
   };
 
   const category = searchParams.get("category") ?? "all";
-  const activeCount = [
-    "frameShape",
-    "frameMaterial",
-    "lensType",
-    "gender",
-    "fit",
-    "fabric",
-    "size",
-    "subCategory",
-  ].reduce((sum, key) => sum + selected(key).length, 0);
 
-  /** Chip group — used for anything with a short label, plus a swatch when the option has one. */
+  const facetKeys = [...facets.groupMeta.map((g) => g.key), "subCategory"];
+  const activeCount = facetKeys.reduce((sum, key) => sum + selected(key).length, 0);
+
   const chips = (key: string, options: FacetOption[]) => (
     <div className="flex flex-wrap gap-2">
       {options.map((option) => {
@@ -59,9 +58,7 @@ export function FilterSidebar({ facets, onChange, onReset }: FilterSidebarProps)
             onClick={() => toggle(key, option.value)}
             className={cn(
               "flex items-center gap-1.5 border px-3 py-1.5 text-sm transition-colors",
-              active
-                ? "border-obsidian bg-obsidian text-alabaster"
-                : "border-obsidian/20 hover:border-obsidian"
+              active ? "border-obsidian bg-obsidian text-alabaster" : "border-obsidian/20 hover:border-obsidian"
             )}
           >
             {option.hex && (
@@ -93,8 +90,6 @@ export function FilterSidebar({ facets, onChange, onReset }: FilterSidebarProps)
     </div>
   );
 
-  const { groups } = facets;
-
   return (
     <div>
       <div className="flex items-center justify-between pb-2">
@@ -108,33 +103,24 @@ export function FilterSidebar({ facets, onChange, onReset }: FilterSidebarProps)
 
       <FilterSection title="Category">
         <div className="space-y-2">
-          {[
-            { label: "All", value: "all" },
-            { label: "Eyewear", value: "eyewear" },
-            { label: "Apparel", value: "apparel" },
-          ].map((c) => (
-            <label key={c.value} className="flex cursor-pointer items-center gap-2 text-sm">
+          {[{ slug: "all", name: "All" }, ...categories].map((option) => (
+            <label key={option.slug} className="flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="radio"
                 name="category"
-                checked={category === c.value}
-                // Changing category invalidates every category-specific facet,
-                // so those params are dropped rather than left dangling.
+                checked={category === option.slug}
+                // Category-specific facets are dropped wholesale on a switch,
+                // so no filter from the previous category is left dangling.
                 onChange={() =>
                   onChange({
-                    category: c.value === "all" ? null : c.value,
-                    frameShape: null,
-                    frameMaterial: null,
-                    lensType: null,
-                    fabric: null,
-                    fit: null,
-                    size: null,
+                    category: option.slug === "all" ? null : option.slug,
                     subCategory: null,
+                    ...Object.fromEntries(facets.groupMeta.map((g) => [g.key, null])),
                   })
                 }
                 className="accent-obsidian"
               />
-              {c.label}
+              {option.name}
             </label>
           ))}
         </div>
@@ -152,33 +138,19 @@ export function FilterSidebar({ facets, onChange, onReset }: FilterSidebarProps)
         </FilterSection>
       )}
 
-      {groups.frameShape.length > 0 && (
-        <FilterSection title="Frame Shape">{chips("frameShape", groups.frameShape)}</FilterSection>
-      )}
-
-      {groups.frameMaterial.length > 0 && (
-        <FilterSection title="Frame Material">
-          {checkboxes("frameMaterial", groups.frameMaterial)}
-        </FilterSection>
-      )}
-
-      {groups.lensType.length > 0 && (
-        <FilterSection title="Lens">{chips("lensType", groups.lensType)}</FilterSection>
-      )}
-
-      {groups.clothingSize.length > 0 && (
-        <FilterSection title="Size">{chips("size", groups.clothingSize)}</FilterSection>
-      )}
-
-      {groups.fabric.length > 0 && (
-        <FilterSection title="Fabric">{checkboxes("fabric", groups.fabric)}</FilterSection>
-      )}
-
-      {groups.fit.length > 0 && <FilterSection title="Fit">{chips("fit", groups.fit)}</FilterSection>}
-
-      {groups.gender.length > 0 && (
-        <FilterSection title="Designed For">{chips("gender", groups.gender)}</FilterSection>
-      )}
+      {[...facets.groupMeta]
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+        .map((meta) => {
+          const options = facets.groups[meta.key] ?? [];
+          if (options.length === 0) return null;
+          return (
+            <FilterSection key={meta.key} title={meta.label}>
+              {meta.filterStyle === "checkbox"
+                ? checkboxes(meta.key, options)
+                : chips(meta.key, options)}
+            </FilterSection>
+          );
+        })}
 
       <FilterSection title="Price">
         <p className="text-sm text-obsidian/60">

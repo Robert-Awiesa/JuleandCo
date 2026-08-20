@@ -1,4 +1,4 @@
-import type { FacetResponse, Product } from "./types";
+import type { FacetResponse, Product, StoreCategory } from "./types";
 
 /**
  * Storefront data layer.
@@ -42,20 +42,20 @@ async function getJson<T>(path: string, fallback: T): Promise<T> {
   }
 }
 
+/**
+ * Filter params. The fixed facet keys are gone: which attributes are filterable
+ * is defined by AttributeGroup records, so the shop passes through whatever the
+ * facets endpoint advertised rather than a hardcoded list.
+ */
 export interface ProductQuery {
   category?: string;
   subCategory?: string[];
-  frameShape?: string[];
-  frameMaterial?: string[];
-  lensType?: string[];
-  gender?: string[];
-  fit?: string[];
-  fabric?: string[];
-  size?: string[];
   minPrice?: number;
   maxPrice?: number;
   search?: string;
   sort?: string;
+  /** Any attribute group key advertised by /products/facets. */
+  [attributeGroup: string]: string | string[] | number | undefined;
 }
 
 function toQueryString(query: ProductQuery): string {
@@ -86,17 +86,16 @@ export function fetchProductBySlug(
 /** Filter options actually present in the published catalogue, already labelled. */
 export function fetchFacets(category?: string): Promise<FacetResponse> {
   const qs = category && category !== "all" ? `?category=${category}` : "";
+  // An open shape, so a facet added in the admin needs no change here.
   return getJson<FacetResponse>(`/products/facets${qs}`, {
-    groups: {
-      frameShape: [],
-      frameMaterial: [],
-      lensType: [],
-      gender: [],
-      fit: [],
-      fabric: [],
-      clothingSize: [],
-    },
+    groups: {},
+    groupMeta: [],
     subCategories: [],
     priceBounds: [0, 0],
   });
+}
+
+/** Active categories, for the shop filters and navigation. */
+export function fetchCategories(): Promise<StoreCategory[]> {
+  return getJson<StoreCategory[]>("/categories?active=true", []);
 }

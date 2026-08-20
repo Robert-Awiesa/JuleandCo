@@ -94,3 +94,54 @@ Plan: `docs/superpowers/plans/2026-08-19-catalog-depth-and-storefront-wiring.md`
 - Nothing ever read it at runtime: `backend/src/app.js` and the seed/migration scripts all load `backend/.env` directly. Its only consumer was an error string in `backend/src/config/db.js` telling you to copy it, now reworded to point at the README.
 - Because the template was the only record of which variables the app needs, that list moved into `README.md`'s Getting Started as a table. The `cp backend/.env.example backend/.env` step is gone — it would now fail.
 - The `frontend/.env.local.example` template is still present, still tracked, and still referenced by the README's shared-`JWT_SECRET` callout. Left in place deliberately — the instruction named `env.example`, and removing the frontend one too was not asked for.
+
+### 2026-08-19 — Apparel → Jewellery/Bags pivot: Phases 1–3 done, Phase 4 remaining (IN PROGRESS)
+
+**Branch: `category-model-pivot`. Not merged.** Phases 1–3 are complete and the whole stack is green (backend 112/112, tsc clean, Playwright 7/7). Phase 4 — the content pivot itself — is what remains.
+
+Plan: `docs/superpowers/plans/2026-08-19-catalog-depth-and-storefront-wiring.md` covered the previous pass; this pivot's plan lives at `C:\Users\Robert\.claude\plans\so-we-will-not-peaceful-beacon.md`.
+
+#### Why
+Apparel is being dropped entirely for jewellery and bags, with room for more item types. The catalogue hardcoded exactly two categories across ~30 sites. Three were structural: `Product.category` was a Mongoose enum (a hard write gate), `AttributesTab` was a binary ternary whose `else` branch *was* apparel (so a third category silently rendered clothing fields), and `InventoryTab` sourced the second variant axis only when `category === "apparel"` (so a ring with sizes was impossible). All 7 apparel products used that second axis and zero eyewear products did, so retiring apparel would have deleted the only code path jewellery needs.
+
+#### Decisions (confirmed with the user)
+- Categories are **admin-managed data**, not a code enum.
+- Apparel products get **set to draft and kept**, never deleted.
+- Variants must cover metal/finish, one-size-colour-only, and axes not yet known.
+- I write placeholder storefront copy, flagged for their refinement.
+
+#### Phase 1 — backend (commit `6830b0d`, done)
+- `Category` is now the source of truth: it owns its variant axis labels (`optionDefaults`) and composed spec lines (`combinedSpecs`, e.g. eyewear `52-18-145 mm`, bags `30 × 20 × 12 cm`). Enums dropped from `Product`/`Subcategory`/`Attribute` in favour of controller validation.
+- New `AttributeGroup` collection defines each vocabulary — which categories it applies to, `inputType`, and `role` (`spec` | `selection` | `variantAxis` | `internal`). **`selection` is how lens type is modelled**: customers choose one, but it carries no stock, so it does not multiply the inventory grid.
+- Product attribute values live in an `attributes` Map keyed by group. This is what removed the ~10-sites-per-attribute code tax.
+- Variants adopt the standard `options[]`/`variants[]` shape — any number of axes, colour no longer mandatory.
+- Filter queries and the facets aggregation are built from group records; facets also return `groupMeta` so the storefront can render a facet nobody coded.
+- `scripts/migrateToCategoryModel.js` — **works entirely through the raw driver on purpose**: the legacy fields are no longer on the schema, so a Mongoose read silently drops them and copies nothing (same trap as the `publishStatus` backfill). Verified live: 20 products migrated, total stock 126 before and after, zero legacy variants, second run a no-op. Backup in `backend/backups/` (gitignored).
+- Backend tests **81 → 112**.
+
+#### Phase 2 — admin (done, uncommitted at time of writing)
+- `AttributesTab` ternary **deleted**; fields render from the category's groups by `inputType`. Verified in a browser: eyewear shows Frame Shape/Material, and `#attr-fabric` is absent.
+- `InventoryTab` columns come from the product's options; `buildVariantMatrix` does an N-axis cartesian product preserving stock/SKU by id.
+- `ColorsImagesTab` → `OptionsImagesTab`: edits the axes themselves. Vocabulary-backed axes pick from their group; free-form axes keep the colour-name→hex resolution.
+- `/admin/categories` manages categories + sub-categories, with retire/reactivate. `/admin/attributes` renders from `AttributeGroup` and can create new groups. Both previously had hardcoded two-category panels.
+- New `_lib/useCatalogConfig.ts` (categories, groups, attributes). Deleted `_lib/useAttributes.ts` and `ColorsImagesTab.tsx`.
+- New e2e `admin-generic-form.spec.ts` — **3/3 passing**, asserts the fields are data-driven and fails if the ternary returns.
+
+#### Phase 3 — storefront (done)
+Phase 1 changed the API shape and `/shop` was returning **500** until this landed: `QuickViewModal` renders inside every product card and read `product.colors[0]`, which no longer exists. The API now returns `options`, `variants`, `selections`, `specs` and `attributes`, and no longer returns `colors`, `sizes` or `lensOptions`.
+- `lib/types.ts`: `ProductCategory` is a plain string; `FacetResponse.groups` is an open record plus `groupMeta`.
+- New `components/product/useVariantSelection.ts` — resolves chosen option values to a variant, picks the per-value image, and reports availability. Shared by the product page and quick view, which each previously kept their own `color`/`size` state.
+- `VariantSelector` renders one control per `product.options` entry (swatches when values carry a hex, buttons otherwise) plus `product.selections`. No category branching left.
+- `FilterSidebar` renders from `facets.groupMeta`, replacing a hardcoded category list, reset patch, counter and one JSX block per group. `shop/page.tsx` forwards any non-reserved query param straight through, so **a filter added in the admin works with no frontend edit**.
+- **Cart lines are keyed by variant id**, not `productId__color__size` — that key assumed every product varied by exactly those two things. `CartLine` now carries `variantId`, `options` and `selections`; `describeCartLine`/`cartLineKey` in `lib/utils.ts` render them. The persisted store is `version: 2` with a migrate that **empties old carts** — an old line cannot be re-keyed reliably, and silently mispricing someone's basket is worse than asking them to re-add.
+- Verified: `/`, `/shop`, `/product/:slug`, `/account/wishlist` all 200; `?frameShape=aviator` narrows 20 → 1 and the sidebar renders that section from data.
+
+#### Then Phase 4 — the pivot itself
+- Draft the 7 apparel products, retire the Apparel category (records kept). Back up first.
+- Seed **Jewellery** (necklaces, anklets, bracelets, rings, earrings) and **Bags** (totes, shoulder, crossbody, clutches) with vocabularies: metal, purity (925/14k/18k), gemstone, chain length, ring size, bag material, closure, strap type, plus shared colour/gender/occasion. Bag dimensions via `combinedSpecs`.
+- Rewrite copy: `lib/navigation.ts` mega menu, `ShopView`'s "Shop Eyewear & Apparel" heading, `mockData.ts` collection tiles, Hero, BrandStory, Footer, page metadata. Mark each `TODO(copy)`.
+- **`npm run seed -w backend` is broken** — `seedData.js` and `seed/toVariants.js` still write the old variant shape and would create products with no variants. Rewrite as part of this phase; do not run it before then.
+
+#### Gotchas worth keeping
+- A raw NUL byte got written into `publicProduct.js` as a sentinel character. It worked and passed tests, but made git treat the source as binary. Rewritten without a sentinel; check `git diff --stat` for `Bin` markers.
+- `.claude/settings.local.json` picked up an auto-added `Bash(node -e ' *)` permission. Deliberately left uncommitted — it is a policy loosening, not part of this work.

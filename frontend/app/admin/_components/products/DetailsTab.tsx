@@ -4,6 +4,7 @@ import { useFormContext } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../_lib/api";
 import type { Subcategory } from "../../_lib/types";
+import { useCategories } from "../../_lib/useCatalogConfig";
 import { TagsInput } from "./TagsInput";
 import type { ProductFormInput } from "./schema";
 
@@ -15,9 +16,16 @@ export function DetailsTab() {
   const { register, watch, setValue, formState } = useFormContext<ProductFormInput>();
   const category = watch("category");
 
+  // Categories are records now, so the dropdown is data rather than two
+  // hardcoded <option>s. A retired category is still offered when the product
+  // being edited already sits in it, so its form stays usable.
+  const { data: categories = [] } = useCategories();
+  const selectable = categories.filter((c) => c.isActive || c.slug === category);
+
   const { data: subcategories = [] } = useQuery({
     queryKey: ["subcategories", category],
     queryFn: () => api.get<Subcategory[]>(`/subcategories?categoryType=${category}`),
+    enabled: Boolean(category),
   });
 
   return (
@@ -54,12 +62,30 @@ export function DetailsTab() {
           </label>
           <select
             id="product-category"
-            {...register("category", { onChange: () => setValue("subCategory", "", { shouldDirty: true }) })}
+            {...register("category", {
+              onChange: () => {
+                // Changing category invalidates the sub-category, the
+                // attribute values and the variant axes, all of which are
+                // category-specific. Leaving them would save nonsense.
+                setValue("subCategory", "", { shouldDirty: true });
+                setValue("attributes", {}, { shouldDirty: true });
+                setValue("options", [], { shouldDirty: true });
+                setValue("variants", [], { shouldDirty: true });
+              },
+            })}
             className="mt-1 w-full rounded border border-obsidian/15 px-3 py-2 text-sm"
           >
-            <option value="eyewear">Eyewear</option>
-            <option value="apparel">Apparel</option>
+            <option value="">Select…</option>
+            {selectable.map((option) => (
+              <option key={option._id} value={option.slug}>
+                {option.name}
+                {option.isActive ? "" : " (retired)"}
+              </option>
+            ))}
           </select>
+          {formState.errors.category && (
+            <p className="mt-1 text-xs text-red-600">{formState.errors.category.message}</p>
+          )}
         </div>
 
         <div>

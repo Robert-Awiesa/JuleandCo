@@ -1,24 +1,5 @@
 import { z } from "zod";
 
-export const variantSchema = z.object({
-  id: z.string(),
-  colorId: z.string(),
-  colorLabel: z.string(),
-  colorHex: z.string().optional(),
-  colorImage: z.string().optional(),
-  sizeId: z.string().optional(),
-  sizeLabel: z.string().optional(),
-  stock: z.coerce.number().min(0),
-  sku: z.string().optional(),
-});
-
-export const colorSchema = z.object({
-  colorId: z.string().min(1),
-  colorLabel: z.string().min(1, "Color name is required"),
-  colorHex: z.string().optional(),
-  colorImage: z.string().optional(),
-});
-
 // An emptied number input hands back "", which z.coerce.number() turns into 0 —
 // and 0 fails .positive(), so a blank optional price would block the whole save
 // with no visible field error. Normalize blank/NaN to undefined first.
@@ -27,41 +8,57 @@ const optionalPositiveNumber = z.preprocess(
   z.coerce.number().positive().optional()
 );
 
+export const optionValueSchema = z.object({
+  value: z.string().min(1),
+  label: z.string().min(1, "Every option value needs a name"),
+  hex: z.string().optional(),
+  image: z.string().optional(),
+});
+
+/** A variant axis: "Frame Colour", "Metal", "Length". */
+export const productOptionSchema = z.object({
+  name: z.string().min(1, "Give this option a name"),
+  groupKey: z.string().optional(),
+  values: z.array(optionValueSchema),
+});
+
+export const variantSchema = z.object({
+  id: z.string(),
+  optionValues: z.array(z.object({ name: z.string(), value: z.string() })),
+  stock: z.coerce.number().min(0),
+  sku: z.string().optional(),
+});
+
 export const productFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
   slug: z.string().min(1, "Slug is required"),
-  category: z.enum(["eyewear", "apparel"]),
+
+  // A category slug, validated against the Category collection by the API.
+  // Not a z.enum: categories are data now, so a union here would reintroduce
+  // the very hardcoding this refactor removed.
+  category: z.string().min(1, "Category is required"),
   subCategory: z.string().min(1, "Sub-category is required"),
+
   description: z.string().min(1, "Description is required"),
   price: z.coerce.number().positive("Price must be greater than 0"),
   compareAtPrice: optionalPositiveNumber,
   images: z.array(z.string()).min(1, "At least one image is required"),
-  // --- Eyewear ---
-  frameShape: z.string().optional(),
-  frameMaterial: z.string().optional(),
-  lensColor: z.string().optional(),
-  lensOptions: z.array(z.string()).optional(),
-  measurements: z
-    .object({
-      lensWidthMm: optionalPositiveNumber,
-      bridgeWidthMm: optionalPositiveNumber,
-      templeLengthMm: optionalPositiveNumber,
-    })
-    .optional(),
 
-  // --- Apparel ---
-  fabric: z.string().optional(),
-  clothingSize: z.array(z.string()).optional(),
-  composition: z.string().optional(),
-  fit: z.string().optional(),
+  /**
+   * Category-specific values keyed by AttributeGroup.key. Untyped on purpose —
+   * which keys are valid depends on the category's groups, which are data. The
+   * form renders only the groups bound to the chosen category, and the API is
+   * the authority on what a group accepts.
+   */
+  attributes: z.record(z.string(), z.any()).default({}),
 
-  // --- Shared ---
-  gender: z.string().optional(),
-  careInstructions: z.string().optional(),
+  options: z.array(productOptionSchema).default([]),
+  variants: z.array(variantSchema).default([]),
 
   isNewArrival: z.boolean().optional(),
   isBestSeller: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
+  pairsWith: z.array(z.string()).optional(),
 
   // Draft keeps a product off the storefront entirely.
   publishStatus: z.enum(["draft", "published"]).default("draft"),
@@ -74,9 +71,6 @@ export const productFormSchema = z.object({
       description: z.string().optional(),
     })
     .optional(),
-  colors: z.array(colorSchema).min(1, "Add at least one color"),
-  variants: z.array(variantSchema),
-  pairsWith: z.array(z.string()).optional(),
 });
 
 // z.coerce/z.preprocess make the schema's input and output types differ: a number

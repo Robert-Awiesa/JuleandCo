@@ -4,7 +4,7 @@ import { useCallback, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { SlidersHorizontal, X } from "lucide-react";
-import type { FacetResponse, Product } from "@/lib/types";
+import type { FacetResponse, Product, StoreCategory } from "@/lib/types";
 import { FilterSidebar } from "./FilterSidebar";
 import { ProductGrid } from "./ProductGrid";
 
@@ -13,6 +13,7 @@ type SortOption = "featured" | "new" | "bestseller" | "price-asc" | "price-desc"
 interface ShopViewProps {
   products: Product[];
   facets: FacetResponse;
+  categories: StoreCategory[];
 }
 
 /**
@@ -22,7 +23,7 @@ interface ShopViewProps {
  * queries Mongo, so every filter change is a navigation: the URL is the single
  * source of truth, which also makes filtered views shareable and bookmarkable.
  */
-export function ShopView({ products, facets }: ShopViewProps) {
+export function ShopView({ products, facets, categories }: ShopViewProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -82,7 +83,7 @@ export function ShopView({ products, facets }: ShopViewProps) {
 
       <div className="grid grid-cols-1 gap-10 py-10 lg:grid-cols-[240px_1fr]">
         <aside className="hidden lg:block">
-          <FilterSidebar facets={facets} onChange={setParams} onReset={handleReset} />
+          <FilterSidebar facets={facets} categories={categories} onChange={setParams} onReset={handleReset} />
         </aside>
 
         <div className={isPending ? "opacity-60 transition-opacity" : "transition-opacity"}>
@@ -122,7 +123,7 @@ export function ShopView({ products, facets }: ShopViewProps) {
                   <X size={18} />
                 </button>
               </div>
-              <FilterSidebar facets={facets} onChange={setParams} onReset={handleReset} />
+              <FilterSidebar facets={facets} categories={categories} onChange={setParams} onReset={handleReset} />
             </motion.div>
           </>
         )}
