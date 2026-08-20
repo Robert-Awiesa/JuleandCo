@@ -18,7 +18,43 @@ const attributeGroupRoutes = require("./routes/attributeGroupRoutes");
 
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:3000", credentials: true }));
+/**
+ * CORS.
+ *
+ * CLIENT_URL accepts a comma-separated list, and outside production any
+ * localhost port is allowed. Previously this was a single hardcoded origin, so
+ * when Next fell back to port 3001 (because 3000 was busy) every admin request
+ * failed with an opaque preflight error that looks nothing like the real cause.
+ *
+ * Credentials are on, so the matched origin must be echoed back — a wildcard is
+ * not permitted by the browser here.
+ */
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:3000")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const isDevLocalhost = (origin) =>
+  process.env.NODE_ENV !== "production" && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Same-origin, curl and server-side requests send no Origin header.
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin) || isDevLocalhost(origin)) return callback(null, true);
+
+      console.warn(
+        `[cors] blocked origin ${origin} — add it to CLIENT_URL in backend/.env (currently: ${allowedOrigins.join(", ")})`
+      );
+      // Reject by withholding the header rather than throwing: the browser
+      // blocks the request either way, and throwing turns every stray bot
+      // request into a logged 500.
+      return callback(null, false);
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 if (process.env.NODE_ENV !== "test") {
