@@ -84,7 +84,7 @@ export function Footer() {
             <ul className="space-y-3">
               {col.links.map((link) => (
                 <li key={link.label}>
-                  <Link href={link.href} className="text-sm text-ink-muted hover:text-gold">
+                  <Link href={link.href} className="inline-block py-1.5 text-sm text-ink-muted transition-colors hover:text-gold">
                     {link.label}
                   </Link>
                 </li>
@@ -96,7 +96,7 @@ export function Footer() {
 
       <div className="container-elevated flex flex-col items-center justify-between gap-4 border-t border-line py-6 sm:flex-row">
         <div className="text-center sm:text-left">
-          <p className="font-sans text-[11px] uppercase tracking-widest2 text-gold">
+          <p className="font-sans text-xs uppercase tracking-widest2 text-gold">
             Created with purpose &middot; Worn with confidence &middot; Inspired by legacy
           </p>
           <p className="mt-2 text-xs text-ink-subtle">

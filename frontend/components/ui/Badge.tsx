@@ -17,7 +17,7 @@ export function Badge({ tone = "obsidian", children, className }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 border px-2.5 py-1 text-[10px] uppercase tracking-widest2 font-medium",
+        "inline-flex items-center gap-1 border px-2.5 py-1 text-[11px] font-medium uppercase tracking-widest2",
         toneClass[tone],
         className
       )}

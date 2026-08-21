@@ -62,7 +62,7 @@ export function ShopView({ products, facets, categories }: ShopViewProps) {
       <div className="flex items-center justify-between border-y border-line py-4">
         <button
           onClick={() => setMobileFiltersOpen(true)}
-          className="flex items-center gap-2 text-sm lg:hidden"
+          className="-ml-2 flex items-center gap-2 px-2 py-2.5 text-sm lg:hidden"
         >
           <SlidersHorizontal size={15} /> Filters
         </button>
@@ -72,7 +72,7 @@ export function ShopView({ products, facets, categories }: ShopViewProps) {
         <select
           value={sort}
           onChange={(e) => setParams({ sort: e.target.value === "featured" ? null : e.target.value })}
-          className="border-none bg-transparent text-sm focus:outline-none"
+          className="-mr-1 border-none bg-transparent py-2.5 pr-1 text-sm focus:outline-none"
         >
           <option value="featured">Sort: Featured</option>
           <option value="new">Newest</option>

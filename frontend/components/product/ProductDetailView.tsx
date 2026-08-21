@@ -44,7 +44,7 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
 
         <div className="lg:max-w-lg">
           <nav className="mb-6 text-xs text-ink-subtle">
-            <Link href="/shop" className="hover:text-ink">
+            <Link href="/shop" className="inline-block py-1.5 transition-colors hover:text-gold">
               Shop
             </Link>{" "}
             / {product.subCategory}

@@ -21,7 +21,7 @@ export function CuratedCollections() {
           <p className="eyebrow mb-3">Curated Edits</p>
           <h2 className="font-serif text-4xl font-bold leading-[1.18]">Shop the Season</h2>
         </div>
-        <Link href="/shop" className="hidden text-sm underline-offset-4 hover:underline sm:block">
+        <Link href="/shop" className="hidden py-2 text-sm text-ink-muted underline-offset-4 transition-colors hover:text-gold hover:underline sm:inline-block">
           View all collections
         </Link>
       </div>

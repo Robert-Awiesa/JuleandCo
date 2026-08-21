@@ -169,7 +169,7 @@
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 font-sans text-sm font-medium uppercase tracking-wide text-ink-muted underline-offset-4 transition-colors hover:text-gold hover:underline;
+    @apply inline-flex items-center justify-center gap-2 py-2 font-sans text-sm font-medium uppercase tracking-wide text-ink-muted underline-offset-4 transition-colors hover:text-gold hover:underline;
   }
 
   .glass-panel {

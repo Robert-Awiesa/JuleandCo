@@ -69,42 +69,52 @@ export function Header() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-5">
+          {/*
+            Each control is a 44px hit box with the icon centred inside it.
+            They previously had no padding at all, so the tappable area was the
+            19px icon itself — well under the 44px minimum and genuinely hard to
+            hit on a phone. The icons are unchanged; only the target grew.
+          */}
+          <div className="flex items-center gap-0.5 sm:gap-1">
             <button
               onClick={() => setSearchOpen(true)}
               aria-label="Search"
-              className="text-ink hover:text-ink"
+              className="flex h-11 w-11 items-center justify-center text-ink transition-colors hover:text-gold"
             >
               <Search size={19} />
             </button>
             <Link
               href="/account/wishlist"
               aria-label="Wishlist"
-              className="relative hidden text-ink hover:text-ink sm:block"
+              className="hidden h-11 w-11 items-center justify-center text-ink transition-colors hover:text-gold sm:flex"
             >
-              <Heart size={19} />
-              {wishlistCount > 0 && (
-                <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center bg-gold text-[10px] text-ink">
-                  {wishlistCount}
-                </span>
-              )}
+              <span className="relative">
+                <Heart size={19} />
+                {wishlistCount > 0 && (
+                  <span className="numeric absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center bg-gold text-[10px] text-surface">
+                    {wishlistCount}
+                  </span>
+                )}
+              </span>
             </Link>
             <button
               onClick={cartOpen}
               aria-label="Open cart"
-              className="relative text-ink hover:text-ink"
+              className="flex h-11 w-11 items-center justify-center text-ink transition-colors hover:text-gold"
             >
-              <ShoppingBag size={19} />
-              {itemCount > 0 && (
-                <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center bg-gold text-[10px] text-ink">
-                  {itemCount}
-                </span>
-              )}
+              <span className="relative">
+                <ShoppingBag size={19} />
+                {itemCount > 0 && (
+                  <span className="numeric absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center bg-gold text-[10px] text-surface">
+                    {itemCount}
+                  </span>
+                )}
+              </span>
             </button>
             <button
               onClick={() => setMobileOpen(true)}
               aria-label="Open menu"
-              className="text-ink hover:text-ink lg:hidden"
+              className="flex h-11 w-11 items-center justify-center text-ink transition-colors hover:text-gold lg:hidden"
             >
               <Menu size={20} />
             </button>
