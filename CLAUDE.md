@@ -160,3 +160,27 @@ Final state: backend **112/112**, `tsc --noEmit` clean, Playwright **7/7**, 13 p
 #### Gotchas worth keeping
 - A raw NUL byte got written into `publicProduct.js` as a sentinel character. It worked and passed tests, but made git treat the source as binary. Rewritten without a sentinel; check `git diff --stat` for `Bin` markers.
 - `.claude/settings.local.json` picked up an auto-added `Bash(node -e ' *)` permission. Deliberately left uncommitted — it is a policy loosening, not part of this work.
+
+### 2026-08-20 — Warm-dark re-theme + Playfair/Roboto typography
+
+Two related passes on `category-model-pivot`.
+
+#### Typography (commit `dd3ca27`)
+Plus Jakarta Sans → **Roboto**; Playfair Display was already the serif. Roles: Playfair for hero lines, section headings and product names (bold for headings, medium for product names); Roboto for body, navigation, buttons and every figure. Headings get progressively looser leading as they scale (1.14 at h1 → 1.3 at h3/h4) — Playfair's serifs collide at display sizes when leading sits at a UI-typical 1.1. New `.numeric` utility pins figures to Roboto with **tabular** lining figures, and `PriceTag` uses it: a price inside a serif block otherwise inherits Playfair, whose figures are decorative and slow to read. Tabular also aligns price columns and the inventory grid.
+
+#### Colour
+The logo is **gold ink with no dark ink in any asset**, but the site rendered it on `alabaster #F9F8F6`. Gold on that measured **2.04:1** — a real WCAG failure, not just an aesthetic mismatch. On the new surface it is **8.69:1**. The storefront is now warm espresso-black (`#14110F`, warm rather than a cold `#000`, which reads as tech rather than aged material), warm ivory text, gold accent — **no third colour**; `sage` survives only in `Badge`.
+
+- **Semantic tokens over literal ones.** `obsidian`/`alabaster` mean "that near-black"/"that near-white", so redefining their *values* would make every name lie. Added `surface{,-raised,-overlay,-tile}`, `ink{,-muted,-subtle}` and `line{,-strong}` as CSS variables in `globals.css`, mapped in `tailwind.config.ts`. `:root` is the storefront (dark); **`.theme-admin` on the admin `<body>` re-declares the same names as light values**, so the admin keeps its appearance and its 16 files of `bg-white` panels, `text-red-600` validation and status badges were **not touched at all**. Only `app/admin/layout.tsx` changed, for the one class.
+- **Named text levels replace arbitrary opacity.** ~163 `text-obsidian/40../70` collapsed onto three levels. Light-on-dark needs *less* opacity reduction than dark-on-light to read as equally muted, so a mechanical swap would have produced muddy text.
+- **Gold marks the customer's choices only** — selected swatch, chosen option, active filter, wishlisted item. Not decoration. Buttons fill ivory and reward with gold on hover, so the accent never becomes every button's default state.
+- **Sections that used `bg-obsidian` to stand out from a light page** (Hero, BrandStory, Footer) now *lift* instead of sink, via `surface-raised` and hairlines. Hero's local button overrides existed only to invert against a light page and are gone.
+- **Product images sit on a light `surface-tile` well.** Real photography will have white backgrounds; bleeding a white cutout onto a dark page punches a glaring rectangle. Floating card controls became `bg-surface/80` + backdrop blur so they read against the light tile.
+- Elevation is theme-dependent: `shadow-soft`/`shadow-card` are now variables, because a dark surface cannot be lifted by a darker drop shadow — it needs a light top edge plus depth.
+- Fixed en route: pre-rebrand gold `#D4AF37` in the wishlist heart (`ProductCard`, `ProductDetailView`) — the brand gold is `#CDAD54`, so those were off-brand already; and the `border` token baked its alpha (`hsl(var(--border) / 0.1)`) so it could never be opaque.
+
+**Plan assumption that proved wrong:** `apple-icon.png` has no alpha channel, and the plan assumed it would therefore show a *light* baked background. Decoded it — the bake is `#121212`, already dark and correct for the new theme. No regeneration, no image dependency added.
+
+Verified: contrast audit passes on every ink/surface pairing (ink 16.7:1, muted 10.7, subtle 6.1, gold 8.7 on `surface`); `tsc` clean; Playwright **7/7**, the admin specs confirming the admin theme did not move.
+
+**Note:** `tsc --noEmit` now needs `node --max-old-space-size=4096` on this machine — it OOMs at the default heap.

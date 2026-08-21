@@ -3,8 +3,57 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * The palette, as channel triplets so Tailwind's alpha modifiers still work.
+   *
+   * :root is the storefront: warm espresso-black, warm ivory, gold. The logo is
+   * gold ink with no dark ink in any asset, so a near-white page fought it —
+   * and gold on #F9F8F6 measured ~2.4:1, below the 4.5:1 minimum. On this
+   * surface it clears ~7.5:1, so going dark fixes an existing contrast failure
+   * rather than introducing one.
+   *
+   * Warm rather than cold on purpose: a pure #000 reads as tech or streetwear,
+   * where a warm espresso-black reads as aged material, leather and gold.
+   */
+  :root {
+    --surface: 20 17 15; /* #14110F */
+    --surface-raised: 28 25 23; /* #1C1917 */
+    --surface-overlay: 36 32 29; /* #24201D */
+    --surface-tile: 239 234 226; /* #EFEAE2 — light well for product photos */
+
+    --ink: 244 241 234; /* #F4F1EA — warm ivory, never pure white */
+    --ink-muted: 201 195 184; /* #C9C3B8 */
+    --ink-subtle: 154 146 135; /* #9A9287 */
+
+    --line: 244 241 234;
+
+    --shadow-soft: 0 1px 0 0 rgb(244 241 234 / 0.05), 0 12px 40px rgb(0 0 0 / 0.5);
+    --shadow-card: 0 1px 0 0 rgb(244 241 234 / 0.06), 0 4px 24px rgb(0 0 0 / 0.45);
+  }
+
+  /*
+   * The admin runs light from the same token names. Inventory grids and long
+   * forms are read for extended periods, where a dark surface is tiring — so
+   * the brand identity is the customer's, and legibility is the operator's.
+   */
+  .theme-admin {
+    --surface: 249 248 246; /* alabaster */
+    --surface-raised: 255 255 255;
+    --surface-overlay: 255 255 255;
+    --surface-tile: 245 243 239;
+
+    --ink: 18 18 18; /* obsidian */
+    --ink-muted: 82 82 78;
+    --ink-subtle: 122 122 116;
+
+    --line: 18 18 18;
+
+    --shadow-soft: 0 8px 30px rgb(18 18 18 / 0.06);
+    --shadow-card: 0 2px 20px rgb(18 18 18 / 0.08);
+  }
+
   * {
-    @apply border-obsidian/10;
+    @apply border-line;
   }
 
   html {
@@ -12,7 +61,7 @@
   }
 
   body {
-    @apply bg-alabaster text-obsidian antialiased font-sans;
+    @apply bg-surface text-ink antialiased font-sans;
     /* Roboto at 15-16px is the readable band for long product copy. */
     font-size: 15.5px;
     line-height: 1.65;
@@ -66,7 +115,7 @@
   }
 
   ::selection {
-    @apply bg-gold/30 text-obsidian;
+    @apply bg-gold/30 text-ink;
   }
 
   ::-webkit-scrollbar {
@@ -74,15 +123,15 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-alabaster;
+    @apply bg-surface;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-obsidian/20 rounded-full;
+    @apply rounded-full bg-ink/20;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-obsidian/40;
+    @apply bg-ink/40;
   }
 }
 
@@ -92,7 +141,7 @@
   }
 
   .eyebrow {
-    @apply font-sans text-xs uppercase tracking-widest2 text-obsidian/60 font-medium;
+    @apply font-sans text-xs font-medium uppercase tracking-widest2 text-ink-subtle;
   }
 
   /*
@@ -105,20 +154,26 @@
     letter-spacing: 0.01em;
   }
 
+  /*
+   * A solid ivory fill is the strongest, most confident mark on a dark page,
+   * and it inverts correctly for the light admin without a second rule. Gold is
+   * held back for the hover so the accent stays a reward rather than becoming
+   * the default state of every button on the site.
+   */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 bg-obsidian text-alabaster px-7 py-3.5 font-sans text-sm font-medium uppercase tracking-wide transition-colors duration-300 hover:bg-gold hover:text-obsidian;
+    @apply inline-flex items-center justify-center gap-2 bg-ink px-7 py-3.5 font-sans text-sm font-medium uppercase tracking-wide text-surface transition-colors duration-300 hover:bg-gold hover:text-surface;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 border border-obsidian/30 text-obsidian px-7 py-3.5 font-sans text-sm font-medium uppercase tracking-wide transition-colors duration-300 hover:border-obsidian hover:bg-obsidian hover:text-alabaster;
+    @apply inline-flex items-center justify-center gap-2 border border-line-strong px-7 py-3.5 font-sans text-sm font-medium uppercase tracking-wide text-ink transition-colors duration-300 hover:border-gold hover:text-gold;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 font-sans text-sm font-medium uppercase tracking-wide text-obsidian/80 underline-offset-4 hover:underline transition-colors;
+    @apply inline-flex items-center justify-center gap-2 font-sans text-sm font-medium uppercase tracking-wide text-ink-muted underline-offset-4 transition-colors hover:text-gold hover:underline;
   }
 
   .glass-panel {
-    @apply bg-alabaster/70 backdrop-blur-md border border-obsidian/10;
+    @apply border border-line bg-surface-overlay/80 backdrop-blur-md;
   }
 }
 

@@ -14,8 +14,8 @@ interface FilterSidebarProps {
 
 function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="border-b border-obsidian/10 py-5">
-      <p className="mb-3 text-xs uppercase tracking-widest2 text-obsidian/50">{title}</p>
+    <div className="border-b border-line py-5">
+      <p className="mb-3 text-xs uppercase tracking-widest2 text-ink-subtle">{title}</p>
       {children}
     </div>
   );
@@ -58,7 +58,7 @@ export function FilterSidebar({ facets, categories, onChange, onReset }: FilterS
             onClick={() => toggle(key, option.value)}
             className={cn(
               "flex items-center gap-1.5 border px-3 py-1.5 text-sm transition-colors",
-              active ? "border-obsidian bg-obsidian text-alabaster" : "border-obsidian/20 hover:border-obsidian"
+              active ? "border-gold bg-gold text-surface" : "border-line-strong hover:border-ink"
             )}
           >
             {option.hex && (
@@ -95,7 +95,7 @@ export function FilterSidebar({ facets, categories, onChange, onReset }: FilterS
       <div className="flex items-center justify-between pb-2">
         <p className="text-sm font-medium">Filter</p>
         {activeCount > 0 && (
-          <button onClick={onReset} className="text-xs text-obsidian/50 underline underline-offset-4">
+          <button onClick={onReset} className="text-xs text-ink-subtle underline underline-offset-4">
             Clear ({activeCount})
           </button>
         )}
@@ -153,7 +153,7 @@ export function FilterSidebar({ facets, categories, onChange, onReset }: FilterS
         })}
 
       <FilterSection title="Price">
-        <p className="text-sm text-obsidian/60">
+        <p className="text-sm text-ink-muted">
           GH₵{facets.priceBounds[0].toLocaleString()} – GH₵{facets.priceBounds[1].toLocaleString()}
         </p>
         <div className="mt-3 flex items-center gap-2">
@@ -162,15 +162,15 @@ export function FilterSidebar({ facets, categories, onChange, onReset }: FilterS
             placeholder="Min"
             defaultValue={searchParams.get("minPrice") ?? ""}
             onBlur={(e) => onChange({ minPrice: e.target.value || null })}
-            className="w-full border border-obsidian/20 px-2 py-1.5 text-sm focus:border-obsidian focus:outline-none"
+            className="w-full border border-line-strong px-2 py-1.5 text-sm focus:border-gold focus:outline-none"
           />
-          <span className="text-obsidian/40">–</span>
+          <span className="text-ink-subtle">–</span>
           <input
             type="number"
             placeholder="Max"
             defaultValue={searchParams.get("maxPrice") ?? ""}
             onBlur={(e) => onChange({ maxPrice: e.target.value || null })}
-            className="w-full border border-obsidian/20 px-2 py-1.5 text-sm focus:border-obsidian focus:outline-none"
+            className="w-full border border-line-strong px-2 py-1.5 text-sm focus:border-gold focus:outline-none"
           />
         </div>
       </FilterSection>

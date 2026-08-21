@@ -53,7 +53,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
       {isOpen && (
         <>
           <motion.div
-            className="fixed inset-0 z-[75] bg-obsidian/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[75] bg-black/75 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -67,13 +67,13 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
               exit={{ opacity: 0, scale: 0.97 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
             >
-              <div className="grid h-[min(85vh,640px)] grid-rows-[14rem_1fr] overflow-hidden bg-alabaster shadow-soft sm:grid-cols-2 sm:grid-rows-1">
+              <div className="grid h-[min(85vh,640px)] grid-rows-[14rem_1fr] overflow-hidden bg-surface-raised shadow-soft sm:grid-cols-2 sm:grid-rows-1">
                 <div className="relative h-full w-full">
                   <Image src={product.images[0]} alt={product.name} fill sizes="400px" className="object-cover" />
                   <button
                     onClick={onClose}
                     aria-label="Close"
-                    className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center bg-alabaster/90 sm:hidden"
+                    className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center bg-surface-overlay/90 text-ink sm:hidden"
                   >
                     <X size={16} />
                   </button>
@@ -83,13 +83,13 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                   <button
                     onClick={onClose}
                     aria-label="Close"
-                    className="absolute right-6 top-6 hidden text-obsidian/50 hover:text-obsidian sm:block"
+                    className="absolute right-6 top-6 hidden text-ink-subtle hover:text-ink sm:block"
                   >
                     <X size={18} />
                   </button>
 
                   <div className="flex-1 p-7 pb-0">
-                    <p className="text-xs uppercase tracking-widest2 text-obsidian/45">
+                    <p className="text-xs uppercase tracking-widest2 text-ink-subtle">
                       {product.subCategory}
                     </p>
                     <h3 className="mt-1 font-serif text-2xl">{product.name}</h3>
@@ -99,11 +99,11 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                       size="lg"
                       className="mt-2"
                     />
-                    <p className="mt-3 line-clamp-2 text-sm text-obsidian/65">{product.description}</p>
+                    <p className="mt-3 line-clamp-2 text-sm text-ink-muted">{product.description}</p>
                     <p
                       className={cn(
                         "mt-2 text-xs uppercase tracking-wide",
-                        stock.tone === "out" && "text-obsidian/40",
+                        stock.tone === "out" && "text-ink-subtle",
                         stock.tone === "low" && "text-gold-dark",
                         stock.tone === "in" && "text-sage-dark"
                       )}
@@ -135,7 +135,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                     )}
                   </div>
 
-                  <div className="sticky bottom-0 flex flex-col gap-3 border-t border-obsidian/10 bg-alabaster p-7 pt-4">
+                  <div className="sticky bottom-0 flex flex-col gap-3 border-t border-line bg-surface-raised p-7 pt-4">
                     <Button onClick={handleAdd} disabled={!isAvailable}>
                       {isAvailable ? "Add to Bag" : "Sold Out"}
                     </Button>

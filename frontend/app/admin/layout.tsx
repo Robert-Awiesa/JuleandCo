@@ -31,7 +31,16 @@ export const metadata: Metadata = {
 export default function AdminRootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${sans.variable} ${serif.variable}`}>
-      <body className="font-sans bg-alabaster text-obsidian antialiased" suppressHydrationWarning>
+      {/*
+        theme-admin re-declares the colour variables as light values, so the
+        admin keeps its current appearance while the storefront runs warm-dark
+        from the same token names. The literal bg-alabaster/text-obsidian stay
+        because every admin panel already uses them directly.
+      */}
+      <body
+        className="theme-admin bg-alabaster font-sans text-obsidian antialiased"
+        suppressHydrationWarning
+      >
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>

@@ -21,7 +21,7 @@ export function PriceTag({ price, compareAtPrice, className, size = "md" }: Pric
     <span className={cn("numeric inline-flex items-baseline gap-2", sizeClass[size], className)}>
       <span className="font-medium">{formatCurrency(price)}</span>
       {compareAtPrice && compareAtPrice > price && (
-        <span className="text-obsidian/40 line-through text-[0.85em]">
+        <span className="text-ink-subtle line-through text-[0.85em]">
           {formatCurrency(compareAtPrice)}
         </span>
       )}

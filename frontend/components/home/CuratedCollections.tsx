@@ -48,9 +48,9 @@ export function CuratedCollections() {
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-obsidian/80 via-obsidian/10 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-6 text-alabaster">
+              <div className="absolute inset-x-0 bottom-0 p-6 text-ink">
                 <p className="font-serif text-2xl font-medium leading-snug">{collection.title}</p>
-                <p className="mt-1 text-sm text-alabaster/75">{collection.subtitle}</p>
+                <p className="mt-1 text-sm text-ink/75">{collection.subtitle}</p>
                 <span className="mt-4 inline-flex items-center gap-1 text-xs uppercase tracking-widest2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                   Shop the edit <ArrowUpRight size={13} />
                 </span>

@@ -30,7 +30,7 @@ export function ImageGallery({ images, name }: ImageGalleryProps) {
             onClick={() => setActive(i)}
             className={cn(
               "relative h-20 w-16 shrink-0 overflow-hidden border transition-colors",
-              active === i ? "border-obsidian" : "border-obsidian/15 hover:border-obsidian/40"
+              active === i ? "border-line-strong" : "border-line hover:border-ink/40"
             )}
           >
             <Image src={img} alt={`${name} thumbnail ${i + 1}`} fill sizes="64px" className="object-cover" />
@@ -39,7 +39,7 @@ export function ImageGallery({ images, name }: ImageGalleryProps) {
       </div>
 
       <div
-        className="relative aspect-[3/4] flex-1 cursor-zoom-in overflow-hidden bg-obsidian/5"
+        className="relative aspect-[3/4] flex-1 cursor-zoom-in overflow-hidden bg-surface-tile"
         onMouseEnter={() => setZooming(true)}
         onMouseLeave={() => setZooming(false)}
         onMouseMove={handleMouseMove}

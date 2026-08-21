@@ -59,14 +59,14 @@ export function ShopView({ products, facets, categories }: ShopViewProps) {
         <h1 className="font-serif text-4xl font-bold leading-[1.15] md:text-5xl">Shop the Collection</h1>
       </div>
 
-      <div className="flex items-center justify-between border-y border-obsidian/10 py-4">
+      <div className="flex items-center justify-between border-y border-line py-4">
         <button
           onClick={() => setMobileFiltersOpen(true)}
           className="flex items-center gap-2 text-sm lg:hidden"
         >
           <SlidersHorizontal size={15} /> Filters
         </button>
-        <p className="hidden text-sm text-obsidian/50 lg:block">
+        <p className="hidden text-sm text-ink-subtle lg:block">
           {isPending ? "Updating…" : `${products.length} ${products.length === 1 ? "piece" : "pieces"}`}
         </p>
         <select
@@ -90,7 +90,7 @@ export function ShopView({ products, facets, categories }: ShopViewProps) {
         <div className={isPending ? "opacity-60 transition-opacity" : "transition-opacity"}>
           {products.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-24 text-center">
-              <p className="text-obsidian/50">Nothing matches these filters.</p>
+              <p className="text-ink-subtle">Nothing matches these filters.</p>
               <button onClick={handleReset} className="text-sm underline underline-offset-4">
                 Clear all filters
               </button>
@@ -105,14 +105,14 @@ export function ShopView({ products, facets, categories }: ShopViewProps) {
         {mobileFiltersOpen && (
           <>
             <motion.div
-              className="fixed inset-0 z-[85] bg-obsidian/50 lg:hidden"
+              className="fixed inset-0 z-[85] bg-black/70 lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileFiltersOpen(false)}
             />
             <motion.div
-              className="fixed left-0 top-0 z-[86] h-full w-[85%] max-w-xs overflow-y-auto bg-alabaster p-6 lg:hidden"
+              className="fixed left-0 top-0 z-[86] h-full w-[85%] max-w-xs overflow-y-auto bg-surface-raised p-6 lg:hidden"
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}

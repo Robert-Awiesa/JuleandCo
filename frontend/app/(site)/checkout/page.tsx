@@ -47,7 +47,7 @@ export default function CheckoutPage() {
     return (
       <div className="container-elevated flex flex-col items-center justify-center gap-4 py-32 text-center">
         <p className="font-serif text-2xl">Your bag is empty</p>
-        <p className="text-sm text-obsidian/50">Add something you love before checking out.</p>
+        <p className="text-sm text-ink-subtle">Add something you love before checking out.</p>
         <Link href="/shop" className="btn-primary mt-2">
           Continue Shopping
         </Link>
@@ -62,8 +62,8 @@ export default function CheckoutPage() {
           <Check size={26} />
         </div>
         <p className="font-serif text-3xl">Order Confirmed</p>
-        <p className="max-w-sm text-sm text-obsidian/60">
-          Thank you — your order <span className="font-medium text-obsidian">{orderNumber}</span> has
+        <p className="max-w-sm text-sm text-ink-muted">
+          Thank you — your order <span className="font-medium text-ink">{orderNumber}</span> has
           been placed. A confirmation and tracking notifications will be sent to your phone.
         </p>
         <Link href="/shop" className="btn-primary mt-2">
@@ -85,17 +85,17 @@ export default function CheckoutPage() {
                 className={cn(
                   "flex h-7 w-7 items-center justify-center rounded-full border text-xs",
                   i <= stepIndex
-                    ? "border-obsidian bg-obsidian text-alabaster"
-                    : "border-obsidian/25 text-obsidian/40"
+                    ? "border-ink bg-ink text-surface"
+                    : "border-line-strong text-ink-subtle"
                 )}
               >
                 {i + 1}
               </span>
-              <span className={cn("text-sm", i <= stepIndex ? "text-obsidian" : "text-obsidian/40")}>
+              <span className={cn("text-sm", i <= stepIndex ? "text-ink" : "text-ink-subtle")}>
                 {s.label}
               </span>
             </div>
-            {i < steps.length - 1 && <span className="h-px w-8 bg-obsidian/15" />}
+            {i < steps.length - 1 && <span className="h-px w-8 bg-line-strong" />}
           </div>
         ))}
       </div>
@@ -117,7 +117,7 @@ export default function CheckoutPage() {
                   placeholder="Full Name"
                   value={shipping.fullName}
                   onChange={(e) => setShipping({ ...shipping, fullName: e.target.value })}
-                  className="border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                  className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                 />
                 <input
                   required
@@ -125,7 +125,7 @@ export default function CheckoutPage() {
                   placeholder="Phone Number"
                   value={shipping.phone}
                   onChange={(e) => setShipping({ ...shipping, phone: e.target.value })}
-                  className="border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                  className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                 />
               </div>
               <input
@@ -133,7 +133,7 @@ export default function CheckoutPage() {
                 placeholder="Street Address"
                 value={shipping.address}
                 onChange={(e) => setShipping({ ...shipping, address: e.target.value })}
-                className="w-full border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                className="w-full border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
               />
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <input
@@ -141,14 +141,14 @@ export default function CheckoutPage() {
                   placeholder="City"
                   value={shipping.city}
                   onChange={(e) => setShipping({ ...shipping, city: e.target.value })}
-                  className="border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                  className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                 />
                 <input
                   required
                   placeholder="Region"
                   value={shipping.region}
                   onChange={(e) => setShipping({ ...shipping, region: e.target.value })}
-                  className="border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                  className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                 />
               </div>
               <Button type="submit" className="mt-2">
@@ -165,26 +165,26 @@ export default function CheckoutPage() {
                   onClick={() => setPaymentMethod("mobile_money")}
                   className={cn(
                     "flex items-center gap-3 border p-4 text-left transition-colors",
-                    paymentMethod === "mobile_money" ? "border-obsidian" : "border-obsidian/20"
+                    paymentMethod === "mobile_money" ? "border-line-strong" : "border-line-strong"
                   )}
                 >
                   <Smartphone size={20} />
                   <div>
                     <p className="text-sm font-medium">Mobile Money</p>
-                    <p className="text-xs text-obsidian/50">MTN, Vodafone, AirtelTigo</p>
+                    <p className="text-xs text-ink-subtle">MTN, Vodafone, AirtelTigo</p>
                   </div>
                 </button>
                 <button
                   onClick={() => setPaymentMethod("card")}
                   className={cn(
                     "flex items-center gap-3 border p-4 text-left transition-colors",
-                    paymentMethod === "card" ? "border-obsidian" : "border-obsidian/20"
+                    paymentMethod === "card" ? "border-line-strong" : "border-line-strong"
                   )}
                 >
                   <CreditCard size={20} />
                   <div>
                     <p className="text-sm font-medium">Card</p>
-                    <p className="text-xs text-obsidian/50">Visa, Mastercard</p>
+                    <p className="text-xs text-ink-subtle">Visa, Mastercard</p>
                   </div>
                 </button>
               </div>
@@ -192,22 +192,22 @@ export default function CheckoutPage() {
               {paymentMethod === "mobile_money" ? (
                 <input
                   placeholder="Mobile Money Number"
-                  className="w-full border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                  className="w-full border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                 />
               ) : (
                 <div className="space-y-4">
                   <input
                     placeholder="Card Number"
-                    className="w-full border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                    className="w-full border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                   />
                   <div className="grid grid-cols-2 gap-4">
                     <input
                       placeholder="MM / YY"
-                      className="border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                      className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                     />
                     <input
                       placeholder="CVC"
-                      className="border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                      className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                     />
                   </div>
                 </div>
@@ -226,17 +226,17 @@ export default function CheckoutPage() {
             <div className="space-y-6">
               <h2 className="font-serif text-2xl">Review &amp; Place Order</h2>
 
-              <div className="border border-obsidian/10 p-5 text-sm">
-                <p className="mb-1 text-xs uppercase tracking-widest2 text-obsidian/45">Ship To</p>
+              <div className="border border-line p-5 text-sm">
+                <p className="mb-1 text-xs uppercase tracking-widest2 text-ink-subtle">Ship To</p>
                 <p>{shipping.fullName}</p>
-                <p className="text-obsidian/60">
+                <p className="text-ink-muted">
                   {shipping.address}, {shipping.city}, {shipping.region}
                 </p>
-                <p className="text-obsidian/60">{shipping.phone}</p>
+                <p className="text-ink-muted">{shipping.phone}</p>
               </div>
 
-              <div className="border border-obsidian/10 p-5 text-sm">
-                <p className="mb-1 text-xs uppercase tracking-widest2 text-obsidian/45">Payment</p>
+              <div className="border border-line p-5 text-sm">
+                <p className="mb-1 text-xs uppercase tracking-widest2 text-ink-subtle">Payment</p>
                 <p className="capitalize">{paymentMethod.replace("_", " ")}</p>
               </div>
 
@@ -250,17 +250,17 @@ export default function CheckoutPage() {
           )}
         </div>
 
-        <div className="h-fit border border-obsidian/10 p-6">
+        <div className="h-fit border border-line p-6">
           <p className="mb-5 font-serif text-xl">Order Summary</p>
           <ul className="space-y-4">
             {lines.map((line) => (
               <li key={cartLineKey(line)} className="flex gap-3">
-                <div className="relative h-16 w-14 shrink-0 overflow-hidden bg-obsidian/5">
+                <div className="relative h-16 w-14 shrink-0 overflow-hidden bg-surface-tile">
                   <Image src={line.image} alt={line.name} fill sizes="56px" className="object-cover" />
                 </div>
                 <div className="flex-1 text-sm">
                   <p className="font-medium">{line.name}</p>
-                  <p className="text-xs text-obsidian/50">
+                  <p className="text-xs text-ink-subtle">
                     {describeCartLine(line)} &times; {line.quantity}
                   </p>
                 </div>
@@ -269,16 +269,16 @@ export default function CheckoutPage() {
             ))}
           </ul>
 
-          <div className="mt-6 space-y-2 border-t border-obsidian/10 pt-4 text-sm">
-            <div className="flex justify-between text-obsidian/60">
+          <div className="mt-6 space-y-2 border-t border-line pt-4 text-sm">
+            <div className="flex justify-between text-ink-muted">
               <span>Subtotal</span>
               <span>{formatCurrency(subtotal())}</span>
             </div>
-            <div className="flex justify-between text-obsidian/60">
+            <div className="flex justify-between text-ink-muted">
               <span>Shipping</span>
               <span>{shippingCost === 0 ? "Complimentary" : formatCurrency(shippingCost)}</span>
             </div>
-            <div className="flex justify-between border-t border-obsidian/10 pt-2 text-base font-medium">
+            <div className="flex justify-between border-t border-line pt-2 text-base font-medium">
               <span>Total</span>
               <span>{formatCurrency(total)}</span>
             </div>

@@ -41,7 +41,7 @@ export function Footer() {
   const [submitted, setSubmitted] = useState(false);
 
   return (
-    <footer className="border-t border-obsidian/10 bg-obsidian text-alabaster">
+    <footer className="border-t border-line bg-surface-raised text-ink">
       <div className="container-elevated grid grid-cols-1 gap-12 py-16 md:grid-cols-[1.3fr_1fr_1fr_1fr]">
         <div>
           <Image
@@ -51,7 +51,7 @@ export function Footer() {
             height={280}
             className="h-14 w-auto"
           />
-          <p className="mt-4 max-w-xs text-sm text-alabaster/60">
+          <p className="mt-4 max-w-xs text-sm text-ink-muted">
             Curated eyewear, jewellery and bags for those who wear the difference. Designed
             in-house, crafted to last.
           </p>
@@ -68,11 +68,11 @@ export function Footer() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Your email"
-              className="w-full bg-transparent px-4 py-3 text-sm placeholder:text-alabaster/40 focus:outline-none"
+              className="w-full bg-transparent px-4 py-3 text-sm placeholder:text-ink-subtle focus:outline-none"
             />
             <button
               type="submit"
-              className="shrink-0 bg-gold px-4 text-xs uppercase tracking-wide text-obsidian transition-colors hover:bg-gold-light"
+              className="shrink-0 bg-gold px-4 text-xs uppercase tracking-wide text-ink transition-colors hover:bg-gold-light"
             >
               {submitted ? "Thanks!" : "Join"}
             </button>
@@ -81,11 +81,11 @@ export function Footer() {
 
         {columns.map((col) => (
           <div key={col.title}>
-            <p className="eyebrow mb-4 text-alabaster/50">{col.title}</p>
+            <p className="eyebrow mb-4 text-ink/50">{col.title}</p>
             <ul className="space-y-3">
               {col.links.map((link) => (
                 <li key={link.label}>
-                  <Link href={link.href} className="text-sm text-alabaster/80 hover:text-gold">
+                  <Link href={link.href} className="text-sm text-ink-muted hover:text-gold">
                     {link.label}
                   </Link>
                 </li>
@@ -96,13 +96,13 @@ export function Footer() {
       </div>
 
       <div className="container-elevated flex flex-col items-center justify-between gap-4 border-t border-alabaster/10 py-6 sm:flex-row">
-        <p className="text-xs text-alabaster/50">
+        <p className="text-xs text-ink/50">
           &copy; {new Date().getFullYear()} JULES &amp; CO. All rights reserved.
         </p>
         <div className="flex items-center gap-5">
-          <Instagram size={16} className="text-alabaster/60 hover:text-gold" />
-          <Facebook size={16} className="text-alabaster/60 hover:text-gold" />
-          <Twitter size={16} className="text-alabaster/60 hover:text-gold" />
+          <Instagram size={16} className="text-ink-muted hover:text-gold" />
+          <Facebook size={16} className="text-ink-muted hover:text-gold" />
+          <Twitter size={16} className="text-ink-muted hover:text-gold" />
         </div>
       </div>
     </footer>

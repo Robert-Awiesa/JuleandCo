@@ -43,8 +43,8 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
         <ImageGallery images={product.images} name={product.name} />
 
         <div className="lg:max-w-lg">
-          <nav className="mb-6 text-xs text-obsidian/45">
-            <Link href="/shop" className="hover:text-obsidian">
+          <nav className="mb-6 text-xs text-ink-subtle">
+            <Link href="/shop" className="hover:text-ink">
               Shop
             </Link>{" "}
             / {product.subCategory}
@@ -58,13 +58,13 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
           <h1 className="font-serif text-4xl font-medium leading-[1.2]">{product.name}</h1>
           <PriceTag price={product.price} compareAtPrice={product.compareAtPrice} size="lg" className="mt-3" />
 
-          <p className="mt-6 text-sm leading-relaxed text-obsidian/65">{product.description}</p>
+          <p className="mt-6 text-sm leading-relaxed text-ink-muted">{product.description}</p>
 
           {product.specs.length > 0 && (
             <dl className="mt-6 grid grid-cols-2 gap-y-2 text-sm">
               {product.specs.map((spec) => (
                 <Fragment key={spec.key}>
-                  <dt className="text-obsidian/45">{spec.label}</dt>
+                  <dt className="text-ink-subtle">{spec.label}</dt>
                   <dd>{spec.value}</dd>
                 </Fragment>
               ))}
@@ -74,7 +74,7 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
           <p
             className={cn(
               "mt-5 text-xs uppercase tracking-wide",
-              stock.tone === "out" && "text-obsidian/40",
+              stock.tone === "out" && "text-ink-subtle",
               stock.tone === "low" && "text-gold-dark",
               stock.tone === "in" && "text-sage-dark"
             )}
@@ -92,7 +92,7 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
             </div>
           )}
 
-          <div className="mt-6 border-t border-obsidian/10 pt-6">
+          <div className="mt-6 border-t border-line pt-6">
             <VariantSelector
               product={product}
               options={options}
@@ -124,13 +124,13 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
             <button
               onClick={() => toggleWishlist(product.id)}
               aria-label="Toggle wishlist"
-              className="flex h-[52px] w-[52px] shrink-0 items-center justify-center border border-obsidian/20 hover:border-obsidian"
+              className="flex h-[52px] w-[52px] shrink-0 items-center justify-center border border-line-strong hover:border-ink"
             >
-              <Heart size={18} fill={wishlisted ? "#D4AF37" : "none"} />
+              <Heart size={18} fill={wishlisted ? "#CDAD54" : "none"} />
             </button>
           </div>
 
-          <div className="mt-8 space-y-3 border-t border-obsidian/10 pt-6 text-sm text-obsidian/60">
+          <div className="mt-8 space-y-3 border-t border-line pt-6 text-sm text-ink-muted">
             <p className="flex items-center gap-2">
               <Truck size={15} /> Complimentary shipping within Ghana on orders over GH₵1,000
             </p>

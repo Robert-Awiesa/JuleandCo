@@ -10,6 +10,42 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        /*
+         * Semantic tokens — what a colour is FOR, not what it looks like.
+         *
+         * The literal tokens below (obsidian/alabaster) say "that near-black"
+         * and "that near-white", so inverting the storefront by redefining them
+         * would make every name a lie. These resolve through CSS variables
+         * instead, which lets the storefront run warm-dark while the admin runs
+         * light from the same class names — see :root and .theme-admin in
+         * globals.css.
+         */
+        surface: {
+          DEFAULT: "rgb(var(--surface) / <alpha-value>)",
+          raised: "rgb(var(--surface-raised) / <alpha-value>)",
+          overlay: "rgb(var(--surface-overlay) / <alpha-value>)",
+          // A deliberately light well for product photography. Real product
+          // shots have white backgrounds; bleeding them onto a dark page punches
+          // harsh rectangles, so images sit framed on this instead.
+          tile: "rgb(var(--surface-tile) / <alpha-value>)",
+        },
+        ink: {
+          DEFAULT: "rgb(var(--ink) / <alpha-value>)",
+          muted: "rgb(var(--ink-muted) / <alpha-value>)",
+          subtle: "rgb(var(--ink-subtle) / <alpha-value>)",
+        },
+        /*
+         * Hairlines carry their alpha in the token rather than at the call site.
+         * Scattered `border-obsidian/10` worked on a light page but goes muddy
+         * on a dark one, and light-on-dark needs different alpha than
+         * dark-on-light to read the same.
+         */
+        line: {
+          DEFAULT: "rgb(var(--line) / 0.12)",
+          strong: "rgb(var(--line) / 0.24)",
+        },
+
+        // --- Literal tokens. Still used by the admin, which stays light. ---
         obsidian: "#121212",
         alabaster: "#F9F8F6",
         gold: {
@@ -30,7 +66,8 @@ const config: Config = {
         muted: { DEFAULT: "hsl(var(--muted))", foreground: "hsl(var(--muted-foreground))" },
         accent: { DEFAULT: "hsl(var(--accent))", foreground: "hsl(var(--accent-foreground))" },
         destructive: { DEFAULT: "hsl(var(--destructive))", foreground: "hsl(var(--destructive-foreground))" },
-        border: "hsl(var(--border) / 0.1)",
+        // Alpha used to be baked in here, so this token could never be opaque.
+        border: "hsl(var(--border))",
         ring: "hsl(var(--ring))",
       },
       borderRadius: {
@@ -67,9 +104,14 @@ const config: Config = {
         marquee: "marquee 32s linear infinite",
         "fade-up": "fade-up 0.6s ease-out forwards",
       },
+      /*
+       * Elevation is theme-dependent. A dark surface cannot be lifted by a
+       * darker drop shadow — it needs a light top edge plus depth beneath —
+       * whereas the light admin still wants a soft obsidian-tinted shadow.
+       */
       boxShadow: {
-        soft: "0 8px 30px rgba(18, 18, 18, 0.06)",
-        card: "0 2px 20px rgba(18, 18, 18, 0.08)",
+        soft: "var(--shadow-soft)",
+        card: "var(--shadow-card)",
       },
     },
   },

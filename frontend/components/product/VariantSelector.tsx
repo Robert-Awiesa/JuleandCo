@@ -39,7 +39,7 @@ export function VariantSelector({
 
         return (
           <div key={option.name}>
-            <p className="mb-3 text-xs uppercase tracking-widest2 text-obsidian/50">
+            <p className="mb-3 text-xs uppercase tracking-widest2 text-ink-subtle">
               {option.name}
               {chosen ? ` — ${chosen.label}` : ""}
             </p>
@@ -58,13 +58,15 @@ export function VariantSelector({
                       aria-label={value.label}
                       className={cn(
                         "relative h-8 w-8 rounded-full border transition-transform",
-                        active ? "border-obsidian ring-1 ring-obsidian ring-offset-2" : "border-obsidian/20",
+                        active
+                          ? "border-gold ring-2 ring-gold ring-offset-2 ring-offset-surface"
+                          : "border-line-strong",
                         !value.inStock && "cursor-not-allowed opacity-40"
                       )}
                       style={{ backgroundColor: value.hex || "#9CA3AF" }}
                     >
                       {!value.inStock && (
-                        <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white/90">
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white/80">
                           ×
                         </span>
                       )}
@@ -80,9 +82,9 @@ export function VariantSelector({
                     className={cn(
                       "border px-3.5 py-2 text-sm transition-colors",
                       active
-                        ? "border-obsidian bg-obsidian text-alabaster"
-                        : "border-obsidian/20 hover:border-obsidian",
-                      !value.inStock && "cursor-not-allowed text-obsidian/30 line-through hover:border-obsidian/20"
+                        ? "border-gold bg-gold text-surface"
+                        : "border-line-strong hover:border-ink",
+                      !value.inStock && "cursor-not-allowed text-ink-subtle line-through hover:border-ink/20"
                     )}
                   >
                     {value.label}
@@ -96,7 +98,7 @@ export function VariantSelector({
 
       {product.selections.map((selection) => (
         <div key={selection.key}>
-          <p className="mb-3 text-xs uppercase tracking-widest2 text-obsidian/50">
+          <p className="mb-3 text-xs uppercase tracking-widest2 text-ink-subtle">
             {selection.label}
             {selections[selection.key]
               ? ` — ${selection.values.find((v) => v.value === selections[selection.key])?.label}`
@@ -110,8 +112,8 @@ export function VariantSelector({
                 className={cn(
                   "border px-3.5 py-2 text-sm transition-colors",
                   selections[selection.key] === value.value
-                    ? "border-obsidian bg-obsidian text-alabaster"
-                    : "border-obsidian/20 hover:border-obsidian"
+                    ? "border-gold bg-gold text-surface"
+                    : "border-line-strong hover:border-ink"
                 )}
               >
                 {value.label}
@@ -119,7 +121,7 @@ export function VariantSelector({
             ))}
           </div>
           {!compact && (
-            <p className="mt-2 text-xs text-obsidian/45">
+            <p className="mt-2 text-xs text-ink-subtle">
               Available on every option above — stock is held per {product.options[0]?.name.toLowerCase() ?? "item"}.
             </p>
           )}

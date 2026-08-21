@@ -20,7 +20,7 @@ const pillars = [
 
 export function BrandStory() {
   return (
-    <section id="brand-story" className="bg-obsidian py-24 text-alabaster">
+    <section id="brand-story" className="border-y border-line bg-surface-raised py-24 text-ink">
       <div className="container-elevated grid grid-cols-1 items-center gap-14 md:grid-cols-2">
         <motion.div
           initial={{ opacity: 0, x: -24 }}
@@ -43,7 +43,7 @@ export function BrandStory() {
           <h2 className="font-serif text-4xl font-bold leading-[1.18] md:text-5xl">
             Craftsmanship, edited for a modern wardrobe.
           </h2>
-          <p className="mt-6 max-w-lg text-alabaster/70">
+          <p className="mt-6 max-w-lg text-ink-muted">
             JULES &amp; CO started with a simple belief: what you wear should set you apart,
             not blend in. Too much of what&apos;s sold as &ldquo;premium&rdquo; is neither
             considered nor built to last. We work directly with a small circle of ateliers to
@@ -61,7 +61,7 @@ export function BrandStory() {
                 transition={{ duration: 0.5, delay: i * 0.1 }}
               >
                 <p className="mb-2 font-serif text-lg text-gold">{pillar.title}</p>
-                <p className="text-sm text-alabaster/60">{pillar.body}</p>
+                <p className="text-sm text-ink-muted">{pillar.body}</p>
               </motion.div>
             ))}
           </div>

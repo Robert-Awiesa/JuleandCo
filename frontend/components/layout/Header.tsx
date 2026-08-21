@@ -36,7 +36,7 @@ export function Header() {
         className={cn(
           "fixed inset-x-0 top-0 z-50 transition-all duration-500",
           scrolled || activeMega
-            ? "bg-alabaster/80 backdrop-blur-md shadow-soft border-b border-obsidian/5"
+            ? "bg-surface/85 backdrop-blur-md shadow-soft border-b border-line"
             : "bg-transparent"
         )}
       >
@@ -61,7 +61,7 @@ export function Header() {
               >
                 <Link
                   href={item.href}
-                  className="font-sans text-sm font-medium uppercase tracking-wide text-obsidian/80 transition-colors hover:text-obsidian"
+                  className="font-sans text-sm font-medium uppercase tracking-wide text-ink transition-colors hover:text-ink"
                 >
                   {item.label}
                 </Link>
@@ -73,18 +73,18 @@ export function Header() {
             <button
               onClick={() => setSearchOpen(true)}
               aria-label="Search"
-              className="text-obsidian/80 hover:text-obsidian"
+              className="text-ink hover:text-ink"
             >
               <Search size={19} />
             </button>
             <Link
               href="/account/wishlist"
               aria-label="Wishlist"
-              className="relative hidden text-obsidian/80 hover:text-obsidian sm:block"
+              className="relative hidden text-ink hover:text-ink sm:block"
             >
               <Heart size={19} />
               {wishlistCount > 0 && (
-                <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center bg-gold text-[10px] text-obsidian">
+                <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center bg-gold text-[10px] text-ink">
                   {wishlistCount}
                 </span>
               )}
@@ -92,11 +92,11 @@ export function Header() {
             <button
               onClick={cartOpen}
               aria-label="Open cart"
-              className="relative text-obsidian/80 hover:text-obsidian"
+              className="relative text-ink hover:text-ink"
             >
               <ShoppingBag size={19} />
               {itemCount > 0 && (
-                <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center bg-gold text-[10px] text-obsidian">
+                <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center bg-gold text-[10px] text-ink">
                   {itemCount}
                 </span>
               )}
@@ -104,7 +104,7 @@ export function Header() {
             <button
               onClick={() => setMobileOpen(true)}
               aria-label="Open menu"
-              className="text-obsidian/80 hover:text-obsidian lg:hidden"
+              className="text-ink hover:text-ink lg:hidden"
             >
               <Menu size={20} />
             </button>
@@ -120,14 +120,14 @@ export function Header() {
         {mobileOpen && (
           <>
             <motion.div
-              className="fixed inset-0 z-[90] bg-obsidian/50"
+              className="fixed inset-0 z-[90] bg-black/70"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileOpen(false)}
             />
             <motion.div
-              className="fixed right-0 top-0 z-[91] h-full w-[85%] max-w-sm bg-alabaster p-6"
+              className="fixed right-0 top-0 z-[91] h-full w-[85%] max-w-sm bg-surface-raised p-6"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}

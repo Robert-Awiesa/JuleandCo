@@ -30,7 +30,7 @@ export function MegaMenu({ section, onNavigate }: MegaMenuProps) {
                   <Link
                     href={link.href}
                     onClick={onNavigate}
-                    className="text-[15px] text-obsidian/80 transition-colors hover:text-gold-dark"
+                    className="text-[15px] text-ink transition-colors hover:text-gold-dark"
                   >
                     {link.label}
                   </Link>
@@ -53,9 +53,9 @@ export function MegaMenu({ section, onNavigate }: MegaMenuProps) {
             className="object-cover transition-transform duration-700 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-obsidian/70 via-obsidian/10 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 p-5 text-alabaster">
+          <div className="absolute inset-x-0 bottom-0 p-5 text-ink">
             <p className="font-serif text-lg">{section.featured.title}</p>
-            <p className="mt-1 text-xs text-alabaster/80">{section.featured.subtitle}</p>
+            <p className="mt-1 text-xs text-ink-muted">{section.featured.subtitle}</p>
             <span className="mt-3 inline-flex items-center gap-1 text-xs uppercase tracking-widest2">
               Discover <ArrowUpRight size={13} />
             </span>
