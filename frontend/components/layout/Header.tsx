@@ -12,7 +12,7 @@ import { useCartStore } from "@/store/useCartStore";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { cn } from "@/lib/utils";
 
-export function Header() {
+export function Header({ counts = {} }: { counts?: Record<string, Record<string, number>> }) {
   const [scrolled, setScrolled] = useState(false);
   const [activeMega, setActiveMega] = useState<keyof typeof megaMenu | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -122,7 +122,13 @@ export function Header() {
         </div>
 
         <AnimatePresence>
-          {activeMega && <MegaMenu section={megaMenu[activeMega]} onNavigate={() => setActiveMega(null)} />}
+          {activeMega && (
+            <MegaMenu
+              section={megaMenu[activeMega]}
+              counts={counts}
+              onNavigate={() => setActiveMega(null)}
+            />
+          )}
         </AnimatePresence>
       </header>
 

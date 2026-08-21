@@ -65,6 +65,8 @@ export interface FacetOption {
   value: string;
   label: string;
   hex?: string;
+  /** How many published products carry this value. */
+  count?: number;
 }
 
 /** Title and control style for a facet, so the UI can render one it has never heard of. */
@@ -78,6 +80,11 @@ export interface FacetMeta {
 export interface FacetResponse {
   /** Keyed by AttributeGroup.key — an open record, not a fixed set of groups. */
   groups: Record<string, FacetOption[]>;
+  /**
+   * group key -> option value -> product count, plus a `subCategory` entry.
+   * Lets the navigation put a number beside a link without re-deriving it.
+   */
+  counts: Record<string, Record<string, number>>;
   groupMeta: FacetMeta[];
   subCategories: string[];
   priceBounds: [number, number];

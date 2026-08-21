@@ -262,3 +262,53 @@ describe("facets", () => {
     expect(keys).not.toContain("frameShape");
   });
 });
+
+describe("facet counts", () => {
+  test("report a product count per option value", async () => {
+    await Product.create([
+      productFixture({ slug: "a", attributes: { frameShape: "aviator" } }),
+      productFixture({ slug: "b", attributes: { frameShape: "aviator" } }),
+      productFixture({ slug: "c", attributes: { frameShape: "round" } }),
+    ]);
+
+    const res = await request(app).get("/api/products/facets");
+    expect(res.status).toBe(200);
+    expect(res.body.counts.frameShape).toEqual({ aviator: 2, round: 1 });
+    expect(res.body.groups.frameShape.find((o) => o.value === "aviator").count).toBe(2);
+  });
+
+  test("count a multiselect attribute once per product carrying the value", async () => {
+    await Product.create([
+      productFixture({ slug: "a", attributes: { lensType: ["polarised", "clear"] } }),
+      productFixture({ slug: "b", attributes: { lensType: ["clear"] } }),
+    ]);
+
+    const res = await request(app).get("/api/products/facets");
+    expect(res.body.counts.lensType).toEqual({ polarised: 1, clear: 2 });
+  });
+
+  test("exclude draft products", async () => {
+    await Product.create([
+      productFixture({ slug: "live", attributes: { frameShape: "aviator" } }),
+      productFixture({
+        slug: "hidden",
+        publishStatus: "draft",
+        attributes: { frameShape: "aviator" },
+      }),
+    ]);
+
+    const res = await request(app).get("/api/products/facets");
+    expect(res.body.counts.frameShape.aviator).toBe(1);
+  });
+
+  test("report a product count per sub-category", async () => {
+    await Product.create([
+      productFixture({ slug: "a", subCategory: "sunglasses" }),
+      productFixture({ slug: "b", subCategory: "sunglasses" }),
+      productFixture({ slug: "c", subCategory: "optical" }),
+    ]);
+
+    const res = await request(app).get("/api/products/facets");
+    expect(res.body.counts.subCategory).toEqual({ sunglasses: 2, optical: 1 });
+  });
+});

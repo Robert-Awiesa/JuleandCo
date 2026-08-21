@@ -4,14 +4,16 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { MegaMenuSection } from "@/lib/navigation";
+import { MegaMenuSection, countForHref } from "@/lib/navigation";
 
 interface MegaMenuProps {
   section: MegaMenuSection;
+  /** group key -> value -> product count, from /api/products/facets. */
+  counts: Record<string, Record<string, number>>;
   onNavigate: () => void;
 }
 
-export function MegaMenu({ section, onNavigate }: MegaMenuProps) {
+export function MegaMenu({ section, counts, onNavigate }: MegaMenuProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -8 }}
@@ -25,17 +27,31 @@ export function MegaMenu({ section, onNavigate }: MegaMenuProps) {
           <div key={column.title}>
             <p className="eyebrow mb-4">{column.title}</p>
             <ul className="space-y-3">
-              {column.links.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    onClick={onNavigate}
-                    className="text-[15px] text-ink transition-colors hover:text-gold-dark"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
+              {column.links.map((link) => {
+                const count = countForHref(link.href, counts);
+                return (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      onClick={onNavigate}
+                      className="group/link inline-flex items-baseline gap-1.5 py-0.5 text-[15px] text-ink transition-colors hover:text-gold"
+                    >
+                      {link.label}
+                      {count !== null && (
+                        <span
+                          className={
+                            count === 0
+                              ? "numeric text-xs text-ink-subtle/60"
+                              : "numeric text-xs text-ink-subtle"
+                          }
+                        >
+                          ({count})
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}

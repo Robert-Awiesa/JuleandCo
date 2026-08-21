@@ -270,59 +270,64 @@ const getProductFacets = asyncHandler(async (req, res) => {
     (g) => !category || category === "all" || !g.categories?.length || g.categories.includes(category)
   );
 
-  const groupStage = {
-    _id: null,
-    subCategory: { $addToSet: "$subCategory" },
-    minPrice: { $min: "$price" },
-    maxPrice: { $max: "$price" },
+  /**
+   * One sub-pipeline per group, so every option comes back with how many
+   * products carry it. $addToSet alone gave distinct values but no counts,
+   * which is what the navigation needs to show "Aviator (3)".
+   *
+   * $unwind handles both shapes a value can take: multiselect groups store an
+   * array, single-select groups store a scalar, and Mongo treats a non-array
+   * as a one-element array here. Documents missing the field drop out, which
+   * is what we want.
+   */
+  const facetStage = {
+    subCategory: [{ $group: { _id: "$subCategory", n: { $sum: 1 } } }],
+    priceBounds: [{ $group: { _id: null, min: { $min: "$price" }, max: { $max: "$price" } } }],
   };
   applicable.forEach((group) => {
-    groupStage[group.key] = { $addToSet: `$attributes.${group.key}` };
+    facetStage[group.key] = [
+      { $unwind: `$attributes.${group.key}` },
+      { $group: { _id: `$attributes.${group.key}`, n: { $sum: 1 } } },
+    ];
   });
 
-  const [raw] = await Product.aggregate([{ $match: match }, { $group: groupStage }]);
+  const [raw = {}] = await Product.aggregate([{ $match: match }, { $facet: facetStage }]);
+
+  // Drops the nulls left by products that never set the attribute.
+  const buckets = (key) =>
+    (raw[key] || []).filter((b) => b._id !== null && b._id !== undefined && b._id !== "");
+
+  const usedValues = applicable.flatMap((g) => buckets(g.key).map((b) => b._id));
+  const attributes = usedValues.length
+    ? await Attribute.find({ value: { $in: usedValues } }).lean()
+    : [];
 
   // Callers read groups.<key>, so an empty catalogue must still return every key.
-  const emptyGroups = Object.fromEntries(applicable.map((g) => [g.key, []]));
+  const groups = Object.fromEntries(applicable.map((g) => [g.key, []]));
+  const counts = {};
 
-  if (!raw) {
-    return res.json({
-      groups: emptyGroups,
-      groupMeta: applicable.map(({ key, label, filterStyle, sortOrder }) => ({
-        key,
-        label,
-        filterStyle,
-        sortOrder,
-      })),
-      subCategories: [],
-      priceBounds: [0, 0],
-    });
-  }
-
-  // $addToSet over multiselect fields yields arrays of arrays; flatten and drop
-  // the nulls left by products that do not set the attribute at all.
-  const clean = (values) =>
-    Array.from(
-      new Set((values || []).flat().filter((v) => v !== null && v !== undefined && v !== ""))
-    );
-
-  const usedValues = applicable.flatMap((g) => clean(raw[g.key]));
-  const attributes = await Attribute.find({ value: { $in: usedValues } }).lean();
-
-  const groups = { ...emptyGroups };
   applicable.forEach((group) => {
-    groups[group.key] = clean(raw[group.key])
-      .map((value) => {
-        const attr = attributes.find((a) => a.group === group.key && a.value === value);
+    const rows = buckets(group.key);
+    counts[group.key] = Object.fromEntries(rows.map((b) => [b._id, b.n]));
+
+    groups[group.key] = rows
+      .map((b) => {
+        const attr = attributes.find((a) => a.group === group.key && a.value === b._id);
         return {
-          value,
-          label: attr ? attr.label : String(value),
+          value: b._id,
+          label: attr ? attr.label : String(b._id),
           hex: attr ? attr.hex : undefined,
+          count: b.n,
           sortOrder: attr ? attr.sortOrder : 0,
         };
       })
       .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label));
   });
+
+  const subCategoryRows = buckets("subCategory");
+  counts.subCategory = Object.fromEntries(subCategoryRows.map((b) => [b._id, b.n]));
+
+  const price = (raw.priceBounds || [])[0] || {};
 
   res.json({
     groups,
@@ -331,8 +336,11 @@ const getProductFacets = asyncHandler(async (req, res) => {
     groupMeta: applicable
       .map(({ key, label, filterStyle, sortOrder }) => ({ key, label, filterStyle, sortOrder }))
       .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)),
-    subCategories: clean(raw.subCategory).sort(),
-    priceBounds: [raw.minPrice ?? 0, raw.maxPrice ?? 0],
+    subCategories: subCategoryRows.map((b) => b._id).sort(),
+    // value -> product count, keyed by group. Consumed by the navigation, which
+    // needs a number per link without re-deriving it from `groups`.
+    counts,
+    priceBounds: [price.min ?? 0, price.max ?? 0],
   });
 });
 

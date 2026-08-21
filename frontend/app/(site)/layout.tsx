@@ -4,6 +4,7 @@ import "../globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CartDrawer } from "@/components/layout/CartDrawer";
+import { fetchFacets } from "@/lib/api";
 
 // Roboto carries everything functional: body copy, navigation, buttons,
 // prices and any other number. It is engineered for screen legibility, which
@@ -44,11 +45,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Fetched here rather than in the Header so the counts are server-rendered:
+  // no request from the browser, and no flash of numberless links.
+  const facets = await fetchFacets();
+
   return (
     <html lang="en" className={`${sans.variable} ${serif.variable}`}>
       <body className="font-sans">
-        <Header />
+        <Header counts={facets.counts} />
         <main className="pt-20">{children}</main>
         <Footer />
         <CartDrawer />

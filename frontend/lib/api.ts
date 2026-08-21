@@ -90,6 +90,7 @@ export function fetchFacets(category?: string): Promise<FacetResponse> {
   return getJson<FacetResponse>(`/products/facets${qs}`, {
     groups: {},
     groupMeta: [],
+    counts: {},
     subCategories: [],
     priceBounds: [0, 0],
   });

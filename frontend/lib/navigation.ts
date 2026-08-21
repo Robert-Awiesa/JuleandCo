@@ -137,3 +137,30 @@ export const primaryNav = [
   { label: "Bags", href: "/shop?category=bags", mega: "bags" as const },
   { label: "Our Ethos", href: "/ethos" },
 ];
+
+/**
+ * Product count for a navigation link, read straight off its own href.
+ *
+ * Deriving it from the URL rather than duplicating the group/value on every
+ * link means the menu config stays a plain list, and a link cannot drift out of
+ * sync with the filter it actually applies.
+ *
+ * Returns null when the link applies no counted facet — "New Arrivals" sorts
+ * rather than filters, so a number there would be meaningless.
+ */
+export function countForHref(
+  href: string,
+  counts: Record<string, Record<string, number>>
+): number | null {
+  const query = href.split("?")[1];
+  if (!query) return null;
+
+  for (const [key, value] of new URLSearchParams(query)) {
+    if (key === "category") continue;
+    const group = counts[key];
+    if (!group) continue;
+    // A known facet with nothing behind it is a real zero, not a missing count.
+    return group[value] ?? 0;
+  }
+  return null;
+}
