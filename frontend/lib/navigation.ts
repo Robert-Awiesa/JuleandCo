@@ -135,5 +135,5 @@ export const primaryNav = [
   { label: "Eyewear", href: "/shop?category=eyewear", mega: "eyewear" as const },
   { label: "Jewellery", href: "/shop?category=jewellery", mega: "jewellery" as const },
   { label: "Bags", href: "/shop?category=bags", mega: "bags" as const },
-  { label: "Journal", href: "/#brand-story" },
+  { label: "Our Ethos", href: "/ethos" },
 ];

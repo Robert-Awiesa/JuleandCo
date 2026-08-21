@@ -28,9 +28,8 @@ const columns = [
   {
     title: "The House",
     links: [
-      { label: "Our Story", href: "/#brand-story" },
-      { label: "Craftsmanship", href: "/#brand-story" },
-      { label: "Sustainability", href: "/#brand-story" },
+      { label: "Our Ethos", href: "/ethos" },
+      { label: "What We Stand For", href: "/ethos" },
       { label: "Careers", href: "/careers" },
     ],
   },
@@ -52,15 +51,15 @@ export function Footer() {
             className="h-14 w-auto"
           />
           <p className="mt-4 max-w-xs text-sm text-ink-muted">
-            Curated eyewear, jewellery and bags for those who wear the difference. Designed
-            in-house, crafted to last.
+            Curated eyewear, jewellery and bags for the woman who wants to express herself
+            with confidence, sophistication and individuality.
           </p>
           <form
             onSubmit={(e) => {
               e.preventDefault();
               setSubmitted(true);
             }}
-            className="mt-6 flex max-w-xs border border-alabaster/25"
+            className="mt-6 flex max-w-xs border border-line-strong"
           >
             <input
               required
@@ -72,7 +71,7 @@ export function Footer() {
             />
             <button
               type="submit"
-              className="shrink-0 bg-gold px-4 text-xs uppercase tracking-wide text-ink transition-colors hover:bg-gold-light"
+              className="shrink-0 bg-gold px-4 text-xs font-medium uppercase tracking-wide text-surface transition-colors hover:bg-gold-light"
             >
               {submitted ? "Thanks!" : "Join"}
             </button>
@@ -95,10 +94,15 @@ export function Footer() {
         ))}
       </div>
 
-      <div className="container-elevated flex flex-col items-center justify-between gap-4 border-t border-alabaster/10 py-6 sm:flex-row">
-        <p className="text-xs text-ink/50">
-          &copy; {new Date().getFullYear()} JULES &amp; CO. All rights reserved.
-        </p>
+      <div className="container-elevated flex flex-col items-center justify-between gap-4 border-t border-line py-6 sm:flex-row">
+        <div className="text-center sm:text-left">
+          <p className="font-sans text-[11px] uppercase tracking-widest2 text-gold">
+            Created with purpose &middot; Worn with confidence &middot; Inspired by legacy
+          </p>
+          <p className="mt-2 text-xs text-ink-subtle">
+            &copy; {new Date().getFullYear()} JULES &amp; CO. All rights reserved.
+          </p>
+        </div>
         <div className="flex items-center gap-5">
           <Instagram size={16} className="text-ink-muted hover:text-gold" />
           <Facebook size={16} className="text-ink-muted hover:text-gold" />
