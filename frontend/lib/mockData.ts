@@ -70,17 +70,19 @@ export const collections: Collection[] = [
 ];
 
 /**
- * PLACEHOLDER TESTIMONIALS. These quotes are invented and must be replaced with
- * real, permitted client feedback before launch.
+ * PLACEHOLDER TESTIMONIALS. Quotes and portraits alike are stand-ins, to be
+ * replaced with real, permitted client feedback and photographs before launch.
  *
- * `image` is deliberately left unset on all of them. The card supports a client
- * photograph and will render one the moment it is provided, but attaching a
- * real, identifiable face to an invented quote presents a specific person as
- * endorsing the brand, which is a different thing from placeholder copy. Until
- * the quotes are real, the cards show a monogram instead.
+ * Portraits are cropped with Unsplash's `facearea` so the face stays centred
+ * inside the circular frame no matter the source composition. Each was checked
+ * by eye and matched to the name it carries: three Ghanaian clients and one in
+ * London, rather than arbitrary stock faces against Ghanaian names.
  *
  * Destined to become admin-managed records alongside the collection tiles.
  */
+const portrait = (id: string) =>
+  `https://images.unsplash.com/${id}?auto=format&fit=facearea&facepad=2.8&w=320&h=320&q=80`;
+
 export const testimonials: Testimonial[] = [
   {
     id: "t1",
@@ -88,6 +90,7 @@ export const testimonials: Testimonial[] = [
       "The craftsmanship is on another level — my Aviators still look brand new two years in.",
     author: "Adjoa M.",
     role: "Accra",
+    image: portrait("photo-1531123897727-8f129e1688ce"),
   },
   {
     id: "t2",
@@ -95,6 +98,7 @@ export const testimonials: Testimonial[] = [
       "The anklet has not left my ankle since it arrived — still bright, still perfect.",
     author: "Kwame B.",
     role: "Kumasi",
+    image: portrait("photo-1562715517-ce49b9617d26"),
   },
   {
     id: "t3",
@@ -102,6 +106,7 @@ export const testimonials: Testimonial[] = [
       "JULES & CO feels like shopping an editorial spread, not a catalog. The pairing suggestions are spot on.",
     author: "Naana O.",
     role: "London",
+    image: portrait("photo-1624667773099-1b80ae774080"),
   },
   {
     id: "t4",
@@ -109,5 +114,6 @@ export const testimonials: Testimonial[] = [
       "Checkout with Mobile Money took under a minute. Tracking notifications kept me updated the whole way.",
     author: "Yaw D.",
     role: "Takoradi",
+    image: portrait("photo-1562173650-f61426fbe683"),
   },
 ];

@@ -19,12 +19,12 @@ function ClientAvatar({ testimonial }: { testimonial: Testimonial }) {
 
   if (testimonial.image) {
     return (
-      <div className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-full ${ring}`}>
+      <div className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-full sm:h-20 sm:w-20 ${ring}`}>
         <Image
           src={testimonial.image}
           alt={testimonial.author}
           fill
-          sizes="48px"
+          sizes="80px"
           className="object-cover"
         />
       </div>
@@ -34,7 +34,7 @@ function ClientAvatar({ testimonial }: { testimonial: Testimonial }) {
   return (
     <div
       aria-hidden="true"
-      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gold/10 font-serif text-sm tracking-wide text-gold ${ring}`}
+      className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gold/10 font-serif text-lg tracking-wide text-gold sm:h-20 sm:w-20 ${ring}`}
     >
       {initials(testimonial.author)}
     </div>
@@ -55,7 +55,7 @@ export function Testimonials() {
             // justify-between with a floor height keeps every attribution row on
             // the same baseline, so the avatars line up across cards of
             // differing quote lengths.
-            className="flex min-h-[16rem] w-[300px] shrink-0 flex-col justify-between border border-line bg-surface-overlay p-7 sm:w-[380px] sm:p-8"
+            className="flex min-h-[17.5rem] w-[300px] shrink-0 flex-col justify-between border border-line bg-surface-overlay p-7 sm:w-[380px] sm:p-8"
           >
             <p className="font-serif text-lg leading-relaxed text-ink">
               &ldquo;{t.quote}&rdquo;
