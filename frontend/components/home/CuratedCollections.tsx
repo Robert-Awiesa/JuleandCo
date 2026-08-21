@@ -47,7 +47,7 @@ export function CuratedCollections() {
                 sizes="(min-width: 768px) 33vw, 100vw"
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-obsidian/80 via-obsidian/10 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-surface/90 via-surface/25 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-6 text-ink">
                 <p className="font-serif text-2xl font-medium leading-snug">{collection.title}</p>
                 <p className="mt-1 text-sm text-ink/75">{collection.subtitle}</p>

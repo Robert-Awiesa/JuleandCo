@@ -52,7 +52,7 @@ export function MegaMenu({ section, onNavigate }: MegaMenuProps) {
             sizes="400px"
             className="object-cover transition-transform duration-700 group-hover:scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-obsidian/70 via-obsidian/10 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-surface/90 via-surface/25 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 p-5 text-ink">
             <p className="font-serif text-lg">{section.featured.title}</p>
             <p className="mt-1 text-xs text-ink-muted">{section.featured.subtitle}</p>

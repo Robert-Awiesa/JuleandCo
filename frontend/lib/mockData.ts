@@ -13,21 +13,41 @@ import { Collection, Testimonial } from "./types";
 const img = (seed: string, w = 900, h = 1125) =>
   `https://picsum.photos/seed/${seed}/${w}/${h}`;
 
+/**
+ * Homepage collection tiles.
+ *
+ * TEMPORARY IMAGERY. These are hotlinked Unsplash photographs standing in until
+ * the brand's own photography is shot — every one is to be replaced before
+ * launch. `images.unsplash.com` is already whitelisted in next.config.js.
+ *
+ * Each was checked by eye rather than by filename: candidates showing
+ * third-party branding (a Ray-Ban temple, a Ferragamo clasp, an RVCA cap) were
+ * rejected, since putting another label's product on this storefront is wrong
+ * even as a placeholder. Titles and filter links match what each photo actually
+ * depicts, so the tile does not promise something the results contradict.
+ *
+ * These tiles are the last hand-authored catalogue content on the site and are
+ * destined to become admin-managed records, at which point this array goes.
+ */
+const unsplash = (id: string, w = 1200) =>
+  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
+
 export const collections: Collection[] = [
   {
     id: "c1",
-    title: "The Aviator Edit",
-    subtitle: "Polarised gold-mirror silhouettes for high summer",
-    image: img("collection-aviator", 1200, 1500),
-    href: "/shop?category=eyewear&frameShape=aviator",
+    title: "The Gold Frame Edit",
+    subtitle: "Round gold-rimmed frames, cut for a softer line",
+    // Gold-rimmed round frames on marble — matches the `round` filter below.
+    image: unsplash("photo-1511499767150-a48a237f0083", 1000),
+    href: "/shop?category=eyewear&frameShape=round",
     span: "tall",
   },
   {
-    // TODO(copy): placeholder wording and imagery — refine before launch.
     id: "c2",
     title: "Everyday Gold",
     subtitle: "Vermeil and solid gold layers, made to never come off",
-    image: img("collection-gold-jewellery", 1400, 1000),
+    // Layered necklaces and stacked rings, worn.
+    image: unsplash("photo-1611652022419-a9419f74343d", 1400),
     href: "/shop?category=jewellery&metal=yellow-gold",
     span: "wide",
   },
@@ -35,16 +55,17 @@ export const collections: Collection[] = [
     id: "c3",
     title: "The Optical Archive",
     subtitle: "Clear-lens frames for the studio and the boardroom",
-    image: img("collection-optical", 1000, 1250),
+    // Tortoiseshell browline optical frames.
+    image: unsplash("photo-1574258495973-f010dfbb5371", 1000),
     href: "/shop?category=eyewear&subCategory=optical",
   },
   {
-    // TODO(copy): placeholder wording and imagery — refine before launch.
     id: "c4",
     title: "Carry Everything",
-    subtitle: "Structured leather totes for the working week",
-    image: img("collection-totes", 1000, 1250),
-    href: "/shop?category=bags&subCategory=totes",
+    subtitle: "Structured leather with gold hardware",
+    // Teal leather bag with gold hardware, unbranded.
+    image: unsplash("photo-1594223274512-ad4803739b7c", 1000),
+    href: "/shop?category=bags",
   },
 ];
 
