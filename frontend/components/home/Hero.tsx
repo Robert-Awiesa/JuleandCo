@@ -30,7 +30,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.1 }}
-          className="max-w-2xl font-serif text-5xl leading-[1.05] sm:text-6xl md:text-7xl"
+          className="max-w-2xl font-serif text-5xl font-bold leading-[1.12] tracking-tightest sm:text-6xl md:text-7xl"
         >
           Vision, tailored to how you live.
         </motion.h1>

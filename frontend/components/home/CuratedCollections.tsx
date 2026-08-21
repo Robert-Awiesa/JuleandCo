@@ -19,7 +19,7 @@ export function CuratedCollections() {
       <div className="mb-12 flex items-end justify-between">
         <div>
           <p className="eyebrow mb-3">Curated Edits</p>
-          <h2 className="font-serif text-4xl">Shop the Season</h2>
+          <h2 className="font-serif text-4xl font-bold leading-[1.18]">Shop the Season</h2>
         </div>
         <Link href="/shop" className="hidden text-sm underline-offset-4 hover:underline sm:block">
           View all collections
@@ -49,7 +49,7 @@ export function CuratedCollections() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-obsidian/80 via-obsidian/10 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-6 text-alabaster">
-                <p className="font-serif text-2xl">{collection.title}</p>
+                <p className="font-serif text-2xl font-medium leading-snug">{collection.title}</p>
                 <p className="mt-1 text-sm text-alabaster/75">{collection.subtitle}</p>
                 <span className="mt-4 inline-flex items-center gap-1 text-xs uppercase tracking-widest2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                   Shop the edit <ArrowUpRight size={13} />

@@ -39,8 +39,9 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "Inter", "sans-serif"],
-        serif: ["var(--font-serif)", "Georgia", "serif"],
+        // Roboto for everything functional, Playfair for everything expressive.
+        sans: ["var(--font-sans)", "Roboto", "system-ui", "-apple-system", "sans-serif"],
+        serif: ["var(--font-serif)", "Playfair Display", "Georgia", "serif"],
       },
       letterSpacing: {
         tightest: "-0.04em",

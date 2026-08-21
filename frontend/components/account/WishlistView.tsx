@@ -19,7 +19,7 @@ export function WishlistView({ products }: { products: Product[] }) {
   return (
     <div className="container-elevated py-12">
       <p className="eyebrow mb-2">Saved Pieces</p>
-      <h1 className="mb-10 font-serif text-4xl">Your Wishlist</h1>
+      <h1 className="mb-10 font-serif text-4xl font-bold leading-[1.15]">Your Wishlist</h1>
 
       {!hydrated ? (
         <div className="py-20 text-center text-sm text-obsidian/40">Loading…</div>

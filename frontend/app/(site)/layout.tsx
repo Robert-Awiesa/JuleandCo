@@ -1,18 +1,26 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
+import { Roboto, Playfair_Display } from "next/font/google";
 import "../globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CartDrawer } from "@/components/layout/CartDrawer";
 
-const sans = Plus_Jakarta_Sans({
+// Roboto carries everything functional: body copy, navigation, buttons,
+// prices and any other number. It is engineered for screen legibility, which
+// is what checkout and specs need. Weights are explicit because Roboto is not
+// served as a variable font by next/font.
+const sans = Roboto({
   subsets: ["latin"],
+  weight: ["300", "400", "500", "700"],
   variable: "--font-sans",
   display: "swap",
 });
 
+// Playfair carries personality: hero lines, section headings, product names.
+// The heavier weights are loaded so headings can go bold against light Roboto.
 const serif = Playfair_Display({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
   variable: "--font-serif",
   display: "swap",
 });

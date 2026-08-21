@@ -40,7 +40,7 @@ export function BrandStory() {
 
         <div>
           <p className="eyebrow mb-4 text-gold">Our Ethos</p>
-          <h2 className="font-serif text-4xl leading-tight md:text-5xl">
+          <h2 className="font-serif text-4xl font-bold leading-[1.18] md:text-5xl">
             Craftsmanship, edited for a modern wardrobe.
           </h2>
           <p className="mt-6 max-w-lg text-alabaster/70">

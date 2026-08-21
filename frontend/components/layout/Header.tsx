@@ -61,7 +61,7 @@ export function Header() {
               >
                 <Link
                   href={item.href}
-                  className="text-sm uppercase tracking-wide text-obsidian/80 transition-colors hover:text-obsidian"
+                  className="font-sans text-sm font-medium uppercase tracking-wide text-obsidian/80 transition-colors hover:text-obsidian"
                 >
                   {item.label}
                 </Link>

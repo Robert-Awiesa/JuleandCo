@@ -55,7 +55,7 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
             {product.isBestSeller && <Badge tone="gold">Best Seller</Badge>}
           </div>
 
-          <h1 className="font-serif text-4xl">{product.name}</h1>
+          <h1 className="font-serif text-4xl font-medium leading-[1.2]">{product.name}</h1>
           <PriceTag price={product.price} compareAtPrice={product.compareAtPrice} size="lg" className="mt-3" />
 
           <p className="mt-6 text-sm leading-relaxed text-obsidian/65">{product.description}</p>
