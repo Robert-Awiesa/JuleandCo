@@ -125,6 +125,13 @@ export interface Testimonial {
   quote: string;
   author: string;
   role: string;
+  /**
+   * Client photograph. Optional on purpose: most testimonials arrive without
+   * one, and a card that only works with a picture would break on the majority.
+   * When absent the card falls back to a monogram, which is a deliberate state
+   * rather than a hole in the layout.
+   */
+  image?: string;
 }
 
 export interface CartLine {

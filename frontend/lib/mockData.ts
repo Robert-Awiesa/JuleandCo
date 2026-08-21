@@ -69,6 +69,18 @@ export const collections: Collection[] = [
   },
 ];
 
+/**
+ * PLACEHOLDER TESTIMONIALS. These quotes are invented and must be replaced with
+ * real, permitted client feedback before launch.
+ *
+ * `image` is deliberately left unset on all of them. The card supports a client
+ * photograph and will render one the moment it is provided, but attaching a
+ * real, identifiable face to an invented quote presents a specific person as
+ * endorsing the brand, which is a different thing from placeholder copy. Until
+ * the quotes are real, the cards show a monogram instead.
+ *
+ * Destined to become admin-managed records alongside the collection tiles.
+ */
 export const testimonials: Testimonial[] = [
   {
     id: "t1",
