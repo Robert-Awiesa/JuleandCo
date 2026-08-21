@@ -11,7 +11,23 @@ import type { FacetResponse, Product, StoreCategory } from "./types";
  * The API only ever returns products with publishStatus "published", so drafts
  * are filtered out before they reach this layer.
  */
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+/**
+ * Server-side calls go straight to the API. NEXT_PUBLIC_API_URL is "/api" in
+ * production so the browser stays same-origin, but a relative URL is
+ * meaningless inside a server component — hence API_ORIGIN.
+ */
+function normaliseOrigin(value?: string) {
+  if (!value) return "";
+  const trimmed = value.trim().replace(/\/+$/, "");
+  if (!trimmed) return "";
+  // Render hands over a bare hostname; accept it with or without a scheme.
+  return /^https?:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+const API_ORIGIN = normaliseOrigin(process.env.API_ORIGIN);
+const API_URL = API_ORIGIN
+  ? `${API_ORIGIN}/api`
+  : process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 async function getJson<T>(path: string, fallback: T): Promise<T> {
   try {

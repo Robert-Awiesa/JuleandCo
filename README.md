@@ -108,6 +108,12 @@ Create it with:
 
 The frontend ships with a local mock data layer (`frontend/lib/mockData.ts`) so the UI is fully browsable **before** the backend/database is wired up — see Phase 2 vs. Phase 3 in the roadmap below.
 
+## Deployment
+
+Render blueprint: [`render.yaml`](render.yaml). Every environment variable, the
+first-deploy steps, and why the API is proxied through the frontend are in
+[docs/deployment-render.md](docs/deployment-render.md).
+
 ## 6. Key User Flows & Page Modules
 
 **A. Landing page** (`app/page.tsx`) — full-screen editorial hero with dual CTAs ("Shop Eyewear" / "Explore Apparel"), asymmetrical curated-collections grid, brand ethos block, testimonials ticker.

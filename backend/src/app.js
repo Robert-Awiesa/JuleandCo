@@ -18,6 +18,11 @@ const attributeGroupRoutes = require("./routes/attributeGroupRoutes");
 
 const app = express();
 
+// Render terminates TLS at its edge and forwards over HTTP. Without this Express
+// sees an insecure request and refuses to set `secure` cookies, so login would
+// silently never persist in production.
+app.set("trust proxy", 1);
+
 /**
  * CORS.
  *
@@ -31,8 +36,11 @@ const app = express();
  */
 const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:3000")
   .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+  .map((entry) => entry.trim().replace(/\/+$/, ""))
+  .filter(Boolean)
+  // Render's `fromService … property: host` yields a bare hostname, but an
+  // Origin header always carries a scheme, so a bare value would never match.
+  .map((entry) => (/^https?:\/\//.test(entry) ? entry : `https://${entry}`));
 
 const isDevLocalhost = (origin) =>
   process.env.NODE_ENV !== "production" && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
