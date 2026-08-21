@@ -55,6 +55,11 @@ export const megaMenu: Record<"eyewear" | "jewellery" | "bags", MegaMenuSection>
         links: [
           { label: "Sunglasses", href: "/shop?category=eyewear&subCategory=sunglasses" },
           { label: "Optical", href: "/shop?category=eyewear&subCategory=optical" },
+          // The house reads women-first, so men's frames are the cut worth
+          // surfacing as a shortcut. Uses the existing `gender` vocabulary
+          // rather than a new one, so it is the same value the admin sets on a
+          // product and the same chip the shop sidebar already renders.
+          { label: "Men", href: "/shop?category=eyewear&gender=mens" },
           { label: "New Arrivals", href: "/shop?category=eyewear&sort=new" },
           { label: "Best Sellers", href: "/shop?category=eyewear&sort=bestseller" },
         ],
