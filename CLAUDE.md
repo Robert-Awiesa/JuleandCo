@@ -184,3 +184,75 @@ The logo is **gold ink with no dark ink in any asset**, but the site rendered it
 Verified: contrast audit passes on every ink/surface pairing (ink 16.7:1, muted 10.7, subtle 6.1, gold 8.7 on `surface`); `tsc` clean; Playwright **7/7**, the admin specs confirming the admin theme did not move.
 
 **Note:** `tsc --noEmit` now needs `node --max-old-space-size=4096` on this machine — it OOMs at the default heap.
+
+### 2026-08-22 — Admin dashboard Phase 2: publish readiness, duplicate, bulk actions
+
+Plan: `docs/superpowers/plans/2026-08-22-admin-dashboard-completion.md`. Phase 1
+(the order loop) is commit `2cf4a92`.
+
+**The framing problem:** the product form was complete but *silent*. It never
+said what was missing, and the Visibility select would happily publish a product
+with no images — which renders an empty card on the shop. Every other item in
+this phase is a job that was slower than it needed to be.
+
+- **One definition of "ready to publish".** `backend/src/utils/productReadiness.js`
+  holds four rules: an image, a sub-category, a price above zero, and a variant
+  for every option. `assertPublishable` gates create *and* update, judging the
+  **merged** product rather than the request body — otherwise a two-field patch
+  that only flips `publishStatus` would sail past. Saving a draft is never
+  gated; the point is to catch the problem at publish time, not to block work in
+  progress.
+- The admin mirrors those four rules in
+  `frontend/app/admin/_components/products/readiness.ts`, plus four advisory
+  warnings (stock, spec coverage, a second image, SEO) that need the category's
+  attribute groups. **The ids match deliberately** — the backend copy is the
+  gate, the frontend copy is the explanation. Keep them in step.
+- `ReadinessPanel` sits **outside** the tab set, because what is missing is
+  almost always on a tab you are not looking at. The Published option is
+  `disabled` until the checklist clears, so the failure is visible before the
+  save rather than as a 400 afterwards.
+- **A blank form reads 1/4, not 0/4.** "A variant for every option" is satisfied
+  while there are no options — that is how a single-item product publishes. The
+  first draft of the e2e asserted 0/4 and was wrong, not the code.
+- **Duplicate** (`POST /products/:id/duplicate`) copies everything, appends
+  `-copy` to the slug (then `-copy-2`, `-copy-3`), and forces the copy to
+  **draft with zero stock and no SKUs** — stock and barcodes belong to the
+  original piece, and an unedited copy going live would double-list.
+- **Bulk actions** (`PATCH /products/bulk`): publish, unpublish, mark out of
+  stock, over a select-all with pagination (25/page). Bulk publish runs the same
+  blockers per product and **reports what it skipped and why** — otherwise
+  select-all becomes a way to put broken cards on the storefront. `outOfStock`
+  uses the all-positional `variants.$[].stock` so it works whatever axes a
+  product has.
+- **Admin search was `$text`**, which only matches whole words — typing "avia"
+  found nothing, so the box was useless as you type. Now a case-insensitive
+  regex across name, slug, tags, barcode and variant SKU, with metacharacters
+  escaped (unescaped, `.*` matches everything and looks like it works).
+- New **publishStatus filter** on the admin list: finding your drafts is the
+  main reason to open it.
+- **Sub-categories can be created inline** from the product form and are
+  selected on creation. Previously you left for Categories and came back, losing
+  everything typed.
+- **Gallery drag-to-reorder** in `ImageUploader` (HTML5 DnD, no new dependency);
+  the first image is the shop thumbnail and reordering meant delete-and-reupload.
+  Added **"Reuse a shot"**, backed by a new `GET /uploads/recent` over the
+  Cloudinary Admin API — the same photograph is often wanted on several
+  colourways, and re-uploading made a duplicate asset for nothing.
+
+**The gate immediately caught a real ordering bug in the existing e2e:**
+`admin-product.spec.ts` set Published *before* uploading the image. It passed
+only because publishing was unchecked. Moved to after the image, colour and
+stock — which is the order a person actually works in, and now doubles as proof
+the gate opens once a product is complete.
+
+Verified: backend **135 → 158**, `tsc --noEmit` clean, Playwright **15/15**
+(7 new). Live against the running stack: `?search=avia` returns The Aviator;
+publishing an image-less product returns 400 and leaves it untouched;
+a duplicate came back as a zero-stock draft; bulk publish took the ready one and
+skipped the image-less one by name. Verification copy deleted afterwards —
+catalogue back to 24 with no residue.
+
+**Still outstanding from Phase 1:** the plan's buy-a-product Playwright journey
+(add to cart → checkout → order in `/admin/orders` → status advances) was never
+written. The order pipeline is covered by 19 backend tests and was verified live,
+but not from the browser.

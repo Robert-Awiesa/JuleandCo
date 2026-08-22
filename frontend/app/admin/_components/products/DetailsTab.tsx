@@ -1,11 +1,14 @@
 "use client";
 
-import { useFormContext } from "react-hook-form";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api } from "../../_lib/api";
 import type { Subcategory } from "../../_lib/types";
-import { useCategories } from "../../_lib/useCatalogConfig";
+import { useAttributeGroups, useCategories } from "../../_lib/useCatalogConfig";
 import { TagsInput } from "./TagsInput";
+import { evaluateReadiness } from "./readiness";
 import type { ProductFormInput } from "./schema";
 
 function slugify(value: string) {
@@ -13,8 +16,19 @@ function slugify(value: string) {
 }
 
 export function DetailsTab() {
-  const { register, watch, setValue, formState } = useFormContext<ProductFormInput>();
+  const { control, register, watch, setValue, formState } = useFormContext<ProductFormInput>();
   const category = watch("category");
+  const queryClient = useQueryClient();
+
+  const [addingSub, setAddingSub] = useState(false);
+  const [newSubName, setNewSubName] = useState("");
+
+  // Publishing is gated on the same rules the API enforces, so the option is
+  // unselectable rather than failing on save with a message from the server.
+  const values = useWatch({ control }) as ProductFormInput;
+  const { data: groups = [] } = useAttributeGroups(category || undefined);
+  const { blockers, canPublish } = evaluateReadiness(values, groups);
+  const missing = blockers.filter((b) => !b.done);
 
   // Categories are records now, so the dropdown is data rather than two
   // hardcoded <option>s. A retired category is still offered when the product
@@ -26,6 +40,24 @@ export function DetailsTab() {
     queryKey: ["subcategories", category],
     queryFn: () => api.get<Subcategory[]>(`/subcategories?categoryType=${category}`),
     enabled: Boolean(category),
+  });
+
+  const createSub = useMutation({
+    mutationFn: (name: string) =>
+      api.post<Subcategory>("/subcategories", {
+        name: name.trim(),
+        slug: slugify(name),
+        categoryType: category,
+      }),
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ["subcategories", category] });
+      // Select it straight away — creating one is always in order to use it.
+      setValue("subCategory", created.slug, { shouldDirty: true, shouldValidate: true });
+      setAddingSub(false);
+      setNewSubName("");
+      toast.success(`Added "${created.name}"`);
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   return (
@@ -89,21 +121,69 @@ export function DetailsTab() {
         </div>
 
         <div>
-          <label htmlFor="product-subcategory" className="text-xs uppercase tracking-widest2 text-obsidian/60">
-            Sub-category
-          </label>
-          <select
-            id="product-subcategory"
-            {...register("subCategory")}
-            className="mt-1 w-full rounded border border-obsidian/15 px-3 py-2 text-sm"
-          >
-            <option value="">Select…</option>
-            {subcategories.map((sub) => (
-              <option key={sub._id} value={sub.slug}>
-                {sub.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-baseline justify-between">
+            <label htmlFor="product-subcategory" className="text-xs uppercase tracking-widest2 text-obsidian/60">
+              Sub-category
+            </label>
+            {category && (
+              <button
+                type="button"
+                onClick={() => setAddingSub(true)}
+                className="text-xs text-gold-dark hover:underline"
+              >
+                + New
+              </button>
+            )}
+          </div>
+
+          {/* Creating one used to mean leaving the form for Categories and
+              coming back, losing everything typed so far. */}
+          {addingSub ? (
+            <div className="mt-1 flex gap-2">
+              <input
+                autoFocus
+                value={newSubName}
+                onChange={(e) => setNewSubName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    createSub.mutate(newSubName);
+                  }
+                  if (e.key === "Escape") setAddingSub(false);
+                }}
+                placeholder="e.g. Anklets"
+                className="w-full rounded border border-obsidian/15 px-3 py-2 text-sm outline-none focus:border-obsidian/40"
+              />
+              <button
+                type="button"
+                onClick={() => createSub.mutate(newSubName)}
+                disabled={!newSubName.trim() || createSub.isPending}
+                className="shrink-0 rounded bg-obsidian px-3 text-xs uppercase tracking-wide text-alabaster disabled:opacity-40"
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                onClick={() => setAddingSub(false)}
+                className="shrink-0 text-xs uppercase tracking-wide text-obsidian/50 hover:text-obsidian"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <select
+              id="product-subcategory"
+              {...register("subCategory")}
+              className="mt-1 w-full rounded border border-obsidian/15 px-3 py-2 text-sm"
+            >
+              <option value="">Select…</option>
+              {subcategories.map((sub) => (
+                <option key={sub._id} value={sub.slug}>
+                  {sub.name}
+                </option>
+              ))}
+            </select>
+          )}
           {formState.errors.subCategory && (
             <p className="mt-1 text-xs text-red-600">{formState.errors.subCategory.message}</p>
           )}
@@ -174,12 +254,23 @@ export function DetailsTab() {
           className="mt-1 w-full max-w-xs rounded border border-obsidian/15 px-3 py-2 text-sm"
         >
           <option value="draft">Draft — hidden from the storefront</option>
-          <option value="published">Published — live for customers</option>
+          <option value="published" disabled={!canPublish}>
+            Published — live for customers
+            {canPublish ? "" : " (not ready yet)"}
+          </option>
         </select>
-        <p className="mt-1 text-xs text-obsidian/45">
-          New products start as drafts. Nothing appears in the shop, search, or collections until this
-          is set to Published.
-        </p>
+        {canPublish ? (
+          <p className="mt-1 text-xs text-obsidian/45">
+            New products start as drafts. Nothing appears in the shop, search, or collections until
+            this is set to Published.
+          </p>
+        ) : (
+          <p className="mt-1 text-xs text-amber-700">
+            Cannot be published yet — still needs{" "}
+            {missing.map((b) => b.label.toLowerCase()).join(", ")}. The checklist beside the form
+            tracks this.
+          </p>
+        )}
       </div>
 
       <details className="rounded border border-obsidian/10 p-4">

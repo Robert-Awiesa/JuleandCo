@@ -54,8 +54,6 @@ test.describe("admin product management", () => {
     await page.locator("#product-subcategory").selectOption({ index: 1 });
     await page.locator("#product-description").fill("Created by the Playwright smoke test.");
     await page.locator("#product-price").fill("199");
-    // Publish it, otherwise it stays a draft and never reaches the storefront.
-    await page.locator("#publish-status").selectOption("published");
 
     await page.getByRole("tab", { name: "Options & Images" }).click();
     await page.setInputFiles('input[type="file"]', "e2e/fixtures/test-product.jpg");
@@ -68,6 +66,12 @@ test.describe("admin product management", () => {
 
     await page.getByRole("tab", { name: "Inventory" }).click();
     await page.locator('input[name="variants.0.stock"]').fill("5");
+
+    // Published last, and only now: the option is disabled until the product
+    // has everything the storefront needs, so this doubles as proof the gate
+    // opens once it does.
+    await page.getByRole("tab", { name: "Details" }).click();
+    await page.locator("#publish-status").selectOption("published");
 
     await page.getByRole("button", { name: "Save product" }).click();
     await page.waitForURL("**/admin/products");

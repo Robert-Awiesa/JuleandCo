@@ -15,6 +15,7 @@ import { AttributesTab } from "./AttributesTab";
 import { OptionsImagesTab } from "./OptionsImagesTab";
 import { InventoryTab } from "./InventoryTab";
 import { CrossSellTab } from "./CrossSellTab";
+import { ReadinessPanel } from "./ReadinessPanel";
 
 function toFormValues(product?: AdminProduct): ProductFormInput {
   if (!product) {
@@ -127,30 +128,36 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
           </button>
         </div>
 
-        <Tabs defaultValue="details">
-          <TabsList>
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="attributes">Attributes</TabsTrigger>
-            <TabsTrigger value="options">Options &amp; Images</TabsTrigger>
-            <TabsTrigger value="inventory">Inventory</TabsTrigger>
-            <TabsTrigger value="cross-sell">Cross-sell</TabsTrigger>
-          </TabsList>
-          <TabsContent value="details">
-            <DetailsTab />
-          </TabsContent>
-          <TabsContent value="attributes">
-            <AttributesTab />
-          </TabsContent>
-          <TabsContent value="options">
-            <OptionsImagesTab />
-          </TabsContent>
-          <TabsContent value="inventory">
-            <InventoryTab />
-          </TabsContent>
-          <TabsContent value="cross-sell">
-            <CrossSellTab currentProductId={product?._id} />
-          </TabsContent>
-        </Tabs>
+        <div className="flex flex-col gap-6 lg:flex-row">
+          <Tabs defaultValue="details" className="min-w-0 flex-1">
+            <TabsList>
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="attributes">Attributes</TabsTrigger>
+              <TabsTrigger value="options">Options &amp; Images</TabsTrigger>
+              <TabsTrigger value="inventory">Inventory</TabsTrigger>
+              <TabsTrigger value="cross-sell">Cross-sell</TabsTrigger>
+            </TabsList>
+            <TabsContent value="details">
+              <DetailsTab />
+            </TabsContent>
+            <TabsContent value="attributes">
+              <AttributesTab />
+            </TabsContent>
+            <TabsContent value="options">
+              <OptionsImagesTab />
+            </TabsContent>
+            <TabsContent value="inventory">
+              <InventoryTab />
+            </TabsContent>
+            <TabsContent value="cross-sell">
+              <CrossSellTab currentProductId={product?._id} />
+            </TabsContent>
+          </Tabs>
+
+          {/* Outside the tabs on purpose: what is missing is usually on a tab
+              you are not looking at. */}
+          <ReadinessPanel />
+        </div>
       </form>
     </FormProvider>
   );

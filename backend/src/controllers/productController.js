@@ -6,6 +6,7 @@ const Attribute = require("../models/Attribute");
 const AttributeGroup = require("../models/AttributeGroup");
 const { toPublicProduct } = require("../utils/publicProduct");
 const { buildCatalogContext } = require("../utils/catalogContext");
+const { publishBlockers, describeBlockers } = require("../utils/productReadiness");
 
 /** Reserved query params that are not attribute filters. */
 const NON_ATTRIBUTE_PARAMS = new Set([
@@ -39,6 +40,23 @@ async function buildAttributeFilters(query) {
   });
 
   return filters;
+}
+
+/**
+ * Refuses a write that would put an incomplete product on the storefront.
+ * Saving as a draft is always allowed — the point is to catch the problem at
+ * the moment of publishing, not to stop work in progress being saved.
+ */
+function assertPublishable(res, product) {
+  if (product.publishStatus !== "published") return;
+
+  const blockers = publishBlockers(product);
+  if (blockers.length === 0) return;
+
+  res.status(400);
+  const error = new Error(describeBlockers(blockers));
+  error.blockers = blockers;
+  throw error;
 }
 
 /**
@@ -139,6 +157,8 @@ const createProduct = asyncHandler(async (req, res) => {
     throw err;
   }
 
+  assertPublishable(res, req.body);
+
   const product = await Product.create(req.body);
   res.status(201).json(product);
 });
@@ -165,8 +185,107 @@ const updateProduct = asyncHandler(async (req, res) => {
   }
 
   Object.assign(product, req.body, { category: nextCategory, subCategory: nextSubCategory });
+
+  // Checked after the merge, not against the request body: a patch that only
+  // flips publishStatus has to be judged on the product it produces.
+  assertPublishable(res, product);
+
   const updated = await product.save();
   res.json(updated);
+});
+
+// @desc    Copy a product as a new draft
+// @route   POST /api/products/:id/duplicate
+// @access  Private/Admin
+const duplicateProduct = asyncHandler(async (req, res) => {
+  const source = await Product.findById(req.params.id).lean();
+  if (!source) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  const { _id, createdAt, updatedAt, __v, ...rest } = source;
+
+  const copy = await Product.create({
+    ...rest,
+    name: `${source.name} (copy)`,
+    slug: await uniqueSlug(source.slug),
+    // Always a draft: a copy is a starting point, and publishing it unedited
+    // would put a duplicate listing on the storefront.
+    publishStatus: "draft",
+    // Stock and barcodes belong to the original piece, not to its copy.
+    variants: (source.variants || []).map(({ _id, ...v }) => ({ ...v, stock: 0, sku: undefined })),
+    options: (source.options || []).map(({ _id, ...o }) => o),
+    stock: 0,
+    barcode: undefined,
+  });
+
+  res.status(201).json(copy);
+});
+
+/** Appends -copy, then -copy-2, -copy-3… until the slug is free. */
+async function uniqueSlug(base) {
+  const candidate = `${base}-copy`;
+  if (!(await Product.exists({ slug: candidate }))) return candidate;
+
+  for (let n = 2; n < 100; n += 1) {
+    const next = `${candidate}-${n}`;
+    if (!(await Product.exists({ slug: next }))) return next;
+  }
+  return `${candidate}-${Date.now()}`;
+}
+
+// @desc    Apply one action to several products at once
+// @route   PATCH /api/products/bulk
+// @access  Private/Admin
+const bulkUpdateProducts = asyncHandler(async (req, res) => {
+  const { ids, action } = req.body;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    res.status(400);
+    throw new Error("Select at least one product");
+  }
+
+  if (action === "unpublish") {
+    const { modifiedCount } = await Product.updateMany(
+      { _id: { $in: ids } },
+      { $set: { publishStatus: "draft" } }
+    );
+    return res.json({ updated: modifiedCount, skipped: [] });
+  }
+
+  if (action === "outOfStock") {
+    // Zeroes every variant and the rollup in one pass. $[] is the all-positional
+    // operator, so this works whatever axes a product has.
+    const { modifiedCount } = await Product.updateMany(
+      { _id: { $in: ids } },
+      { $set: { "variants.$[].stock": 0, stock: 0 } }
+    );
+    return res.json({ updated: modifiedCount, skipped: [] });
+  }
+
+  if (action === "publish") {
+    const products = await Product.find({ _id: { $in: ids } });
+
+    // Publishing in bulk must apply the same rules as publishing one at a time,
+    // otherwise select-all becomes a way to put broken cards on the storefront.
+    const ready = [];
+    const skipped = [];
+    for (const product of products) {
+      const blockers = publishBlockers(product);
+      if (blockers.length === 0) ready.push(product._id);
+      else skipped.push({ id: String(product._id), name: product.name, blockers });
+    }
+
+    const { modifiedCount } = ready.length
+      ? await Product.updateMany({ _id: { $in: ready } }, { $set: { publishStatus: "published" } })
+      : { modifiedCount: 0 };
+
+    return res.json({ updated: modifiedCount, skipped });
+  }
+
+  res.status(400);
+  throw new Error(`Unknown bulk action "${action}"`);
 });
 
 // @desc    Delete a product
@@ -187,12 +306,27 @@ const deleteProduct = asyncHandler(async (req, res) => {
 // @route   GET /api/products/admin
 // @access  Private/Admin
 const getAdminProducts = asyncHandler(async (req, res) => {
-  const { category, subCategory, stockStatus, search, page = 1, limit = 20 } = req.query;
+  const {
+    category,
+    subCategory,
+    stockStatus,
+    publishStatus,
+    search,
+    page = 1,
+    limit = 20,
+  } = req.query;
   const query = {};
 
   if (category && category !== "all") query.category = category;
   if (subCategory) query.subCategory = subCategory;
-  if (search) query.$text = { $search: search };
+  if (publishStatus && publishStatus !== "all") query.publishStatus = publishStatus;
+  if (search) {
+    // Was $text, which only matches whole words — typing "avia" found nothing,
+    // so the box was unusable as you type. A prefix-anchored regex matches how
+    // people actually search a list they can already see.
+    const rx = new RegExp(String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    query.$or = [{ name: rx }, { slug: rx }, { tags: rx }, { barcode: rx }, { "variants.sku": rx }];
+  }
   if (stockStatus === "out") query.stock = 0;
   if (stockStatus === "low") query.stock = { $gt: 0, $lte: 5 };
   if (stockStatus === "in") query.stock = { $gt: 5 };
@@ -351,6 +485,8 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
+  duplicateProduct,
+  bulkUpdateProducts,
   getAdminProducts,
   getAdminProductById,
   updateProductStock,
