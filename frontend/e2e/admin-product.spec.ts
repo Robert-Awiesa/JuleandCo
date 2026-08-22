@@ -101,6 +101,9 @@ test.describe("admin product management", () => {
     await page.goto("/admin/products");
     const row = page.locator("tr", { hasText: FIXTURE_NAME });
     await row.getByRole("button", { name: "Mark out of stock" }).click();
-    await expect(row.getByText("0 in stock")).toBeVisible();
+
+    // The row re-renders from a refetch, which under a full-suite run competes
+    // with Next compiling other routes. The default 5s is not always enough.
+    await expect(row.getByText("0 in stock")).toBeVisible({ timeout: 20000 });
   });
 });

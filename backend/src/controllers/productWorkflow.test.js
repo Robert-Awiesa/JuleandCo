@@ -313,3 +313,34 @@ describe("admin search", () => {
     expect(res.body.items).toHaveLength(0);
   });
 });
+
+describe("storefront search", () => {
+  test("a shopper typing a partial word sees the product", async () => {
+    await Product.create(productFixture({ name: "The Aviator", publishStatus: "published" }));
+
+    // $text matched whole words only, so this returned an empty shop.
+    const res = await request(app).get("/api/products?search=avia");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].name).toBe("The Aviator");
+  });
+
+  test("drafts stay hidden from search", async () => {
+    await Product.create(productFixture({ name: "The Aviator", publishStatus: "draft" }));
+    const res = await request(app).get("/api/products?search=avia");
+    expect(res.body).toHaveLength(0);
+  });
+
+  test("search still combines with a filter", async () => {
+    await Product.create(
+      productFixture({ name: "The Aviator", publishStatus: "published", price: 890 })
+    );
+
+    const match = await request(app).get("/api/products?search=avia&maxPrice=1000");
+    const pricedOut = await request(app).get("/api/products?search=avia&maxPrice=100");
+
+    expect(match.body).toHaveLength(1);
+    expect(pricedOut.body).toHaveLength(0);
+  });
+});

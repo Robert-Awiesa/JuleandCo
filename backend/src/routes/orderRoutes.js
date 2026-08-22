@@ -1,6 +1,7 @@
 const express = require("express");
 const {
   createOrder,
+  deleteOrder,
   getOrders,
   getOrderStats,
   getMyOrders,
@@ -24,5 +25,6 @@ router.get("/mine", protect, getMyOrders);
 
 router.get("/:id", protect, getOrderById);
 router.put("/:id/status", protect, admin, updateOrderStatus);
+router.delete("/:id", protect, admin, deleteOrder);
 
 module.exports = router;

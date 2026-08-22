@@ -111,8 +111,10 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Attribute values live in a Map and cannot be text-indexed, so search covers
-// the category-agnostic fields. Weighted so a name match beats a description one.
+// No longer queried: both search boxes moved to utils/searchRegex.js, because
+// $text matches whole words only and "avia" found nothing. Kept so the index is
+// still there if a large catalogue ever makes relevance ranking worth it —
+// drop it from Atlas if that never happens.
 productSchema.index(
   { name: "text", tags: "text", subCategory: "text", description: "text" },
   { weights: { name: 10, tags: 4, subCategory: 2, description: 1 }, name: "product_search" }

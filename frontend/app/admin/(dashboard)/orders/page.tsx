@@ -49,6 +49,16 @@ function OrderRow({ order }: { order: AdminOrder }) {
   const [open, setOpen] = useState(false);
   const [tracking, setTracking] = useState(order.trackingNumber ?? "");
 
+  const remove = useMutation({
+    mutationFn: () => api.del(`/orders/${order._id}`),
+    onSuccess: () => {
+      toast.success(`${order.orderNumber} deleted`);
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["order-stats"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const update = useMutation({
     mutationFn: (patch: { status?: OrderStatus; trackingNumber?: string }) =>
       api.put<AdminOrder>(`/orders/${order._id}/status`, patch),
@@ -192,6 +202,25 @@ function OrderRow({ order }: { order: AdminOrder }) {
                     </button>
                   </div>
                 </div>
+
+                {/* Only offered once cancelled: cancelling is what returns the
+                    stock, so deleting straight from live would strand it. */}
+                {order.status === "cancelled" && (
+                  <div className="border-t border-obsidian/10 pt-4">
+                    <button
+                      onClick={() => {
+                        if (confirm(`Permanently delete ${order.orderNumber}?`)) remove.mutate();
+                      }}
+                      disabled={remove.isPending}
+                      className="text-xs uppercase tracking-wide text-obsidian/50 hover:text-red-600 disabled:opacity-40"
+                    >
+                      Delete this order
+                    </button>
+                    <p className="mt-1 text-xs text-obsidian/45">
+                      Its stock has already been returned to the catalogue.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </td>

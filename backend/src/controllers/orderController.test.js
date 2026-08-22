@@ -290,3 +290,47 @@ describe("the admin order list", () => {
     expect(res.body).toEqual({ orders: 0, revenue: 0, averageOrderValue: 0, unfulfilled: 0 });
   });
 });
+
+describe("deleting an order", () => {
+  test("a cancelled order can be removed", async () => {
+    const token = await adminToken();
+    const product = await Product.create(productFixture());
+    const created = await request(app).post("/api/orders").send(orderBody(product._id));
+
+    await request(app)
+      .put(`/api/orders/${created.body._id}/status`)
+      .set("Cookie", [`token=${token}`])
+      .send({ status: "cancelled" });
+
+    const res = await request(app)
+      .delete(`/api/orders/${created.body._id}`)
+      .set("Cookie", [`token=${token}`]);
+
+    expect(res.status).toBe(200);
+    expect(await Order.countDocuments()).toBe(0);
+  });
+
+  test("a live order cannot be deleted without cancelling it first", async () => {
+    const token = await adminToken();
+    const product = await Product.create(productFixture());
+    const created = await request(app).post("/api/orders").send(orderBody(product._id));
+
+    const res = await request(app)
+      .delete(`/api/orders/${created.body._id}`)
+      .set("Cookie", [`token=${token}`]);
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/cancel/i);
+    // Still there, and its stock is still held.
+    expect(await Order.countDocuments()).toBe(1);
+    const after = await Product.findById(product._id).lean();
+    expect(after.variants.find((v) => v.id === "tortoise").stock).toBe(2);
+  });
+
+  test("requires an admin", async () => {
+    const product = await Product.create(productFixture());
+    const created = await request(app).post("/api/orders").send(orderBody(product._id));
+    const res = await request(app).delete(`/api/orders/${created.body._id}`);
+    expect(res.status).toBe(401);
+  });
+});

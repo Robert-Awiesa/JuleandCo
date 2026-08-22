@@ -7,6 +7,7 @@ const AttributeGroup = require("../models/AttributeGroup");
 const { toPublicProduct } = require("../utils/publicProduct");
 const { buildCatalogContext } = require("../utils/catalogContext");
 const { publishBlockers, describeBlockers } = require("../utils/productReadiness");
+const { searchRegex } = require("../utils/searchRegex");
 
 /** Reserved query params that are not attribute filters. */
 const NON_ATTRIBUTE_PARAMS = new Set([
@@ -95,7 +96,18 @@ const getProducts = asyncHandler(async (req, res) => {
 
   if (category && category !== "all") query.category = category;
   if (subCategory) query.subCategory = { $in: csv(subCategory) };
-  if (search) query.$text = { $search: search };
+
+  // Partial matches, so a shopper typing "avia" sees The Aviator rather than
+  // an empty shop. $text could only match whole words.
+  const searchRx = searchRegex(search);
+  if (searchRx) {
+    query.$or = [
+      { name: searchRx },
+      { tags: searchRx },
+      { subCategory: searchRx },
+      { description: searchRx },
+    ];
+  }
 
   Object.assign(query, await buildAttributeFilters(req.query));
 
@@ -320,11 +332,8 @@ const getAdminProducts = asyncHandler(async (req, res) => {
   if (category && category !== "all") query.category = category;
   if (subCategory) query.subCategory = subCategory;
   if (publishStatus && publishStatus !== "all") query.publishStatus = publishStatus;
-  if (search) {
-    // Was $text, which only matches whole words — typing "avia" found nothing,
-    // so the box was unusable as you type. A prefix-anchored regex matches how
-    // people actually search a list they can already see.
-    const rx = new RegExp(String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+  const rx = searchRegex(search);
+  if (rx) {
     query.$or = [{ name: rx }, { slug: rx }, { tags: rx }, { barcode: rx }, { "variants.sku": rx }];
   }
   if (stockStatus === "out") query.stock = 0;

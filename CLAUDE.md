@@ -256,3 +256,75 @@ catalogue back to 24 with no residue.
 (add to cart → checkout → order in `/admin/orders` → status advances) was never
 written. The order pipeline is covered by 19 backend tests and was verified live,
 but not from the browser.
+
+### 2026-08-22 — Clearing the known defects before Phase 3
+
+Three things carried forward from earlier passes, plus what they turned up.
+
+#### `npm run seed -w backend` was destructive *and* wrong
+The documented seed command opened with `deleteMany({})` on products,
+categories and sub-categories — against whatever `MONGO_URI` points at, which is
+the live Atlas database. It then rebuilt neither: the products it wrote used the
+pre-pivot `colors`/`sizes` shape, so they had no `options`/`variants`, no
+`attributes` and no `publishStatus`, and their sub-category **labels** no longer
+matched the **slugs** the API validates. It also seeded a retired Apparel
+category while leaving `AttributeGroup`/`Attribute` untouched, so the
+vocabularies would have survived with nothing pointing at them. Running it once
+would have destroyed the catalogue and the pivot's configuration.
+
+`seedData.js` is now a **bootstrap, not a wipe**: every write is `$setOnInsert`,
+nothing is ever deleted, and it is safe to run against a populated database.
+It defines the Eyewear category (nothing else does — it predates the category
+model) and then *runs* `seedAttributes.js` and `pivotToJewelleryAndBags.js`
+rather than copying their contents, so each vocabulary keeps one definition.
+Products are no longer seeded at all: they are real content and belong in the
+admin. `--with-examples` adds the four jewellery drafts.
+
+Deleted `seed/toVariants.js` and its 4 tests — it built the pre-pivot variant
+shape and the broken seed was its only consumer (`seedJewelleryExamples.js` has
+its own, correct, `buildVariants`).
+
+**Verified against a scratch database** (`jules-and-co-seedtest`, dropped
+afterwards), never against the live one: a fresh database bootstraps to 3 active
+categories, 11 sub-categories, 14 attribute groups and 55 vocabulary options;
+a second run reports "No changes"; and a jewellery product created against that
+config saves, rolls up stock, passes the publish gate and renders its specs.
+
+#### The storefront search had the same `$text` bug as the admin
+Fixed in the admin during Phase 2 and left in place for customers: a shopper
+typing "avia" got an empty shop, while "aviator" returned The Aviator. Confirmed
+live before changing it. All three search sites — storefront, admin products,
+admin orders — now share `backend/src/utils/searchRegex.js`, which escapes
+metacharacters (unescaped, `.*` matches everything and looks like it works) and
+returns null for a blank term rather than an empty regex that matches all.
+
+The `product_search` text index is now unqueried. Left in place with a comment
+saying so, rather than dropping it from Atlas for no gain.
+
+#### The Phase 1 buy-a-product journey, which was never written
+`e2e/buy-a-product.spec.ts`: shop → Add to Bag → checkout → order in
+`/admin/orders` → status advances → cancel returns the stock. It picks a real
+published in-stock product rather than assuming a fixture.
+
+It places a **real order**, so it needed a way to tidy up. Added
+`DELETE /api/orders/:id`, which **refuses unless the order is already
+cancelled** — cancelling is what returns the stock, so the guard keeps the two
+steps in the right order and puts something deliberate between tidying a test
+order and losing a real one. Exposed in the admin only on cancelled orders.
+
+**Two test-design faults this exposed, both mine:**
+- Cleanup was written as the last *test*. In serial mode a failure skips
+  everything after it, so the first failed run **stranded a live order with its
+  stock still held**. Cleanup is now `beforeAll`/`afterAll`, scoped to the test
+  buyer's email so it can never touch a real order.
+- The order-status control is a Radix select, not a native one; `selectOption`
+  cannot drive it, and clicking straight through to the option is flaky under
+  load. It now waits for the menu.
+
+Also raised the assertion timeout in `admin-product.spec.ts`'s
+mark-out-of-stock test: it passed alone and failed in the full suite, where the
+refetch competes with Next compiling other routes.
+
+Verified: backend **158 → 160** (+3 delete-guard, +3 storefront search, −4
+deleted `toVariants`), `tsc` clean, Playwright **15 → 20**, green twice
+consecutively. Catalogue left at 24 products, 0 orders, no residue.

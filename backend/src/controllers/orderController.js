@@ -1,6 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const Order = require("../models/Order");
 const { buildOrderLines, reserveStock, releaseStock } = require("../utils/orderPricing");
+const { searchRegex } = require("../utils/searchRegex");
 
 /** JC for JULES & CO. Was AO-, left over from the Aura & Optic name. */
 function generateOrderNumber() {
@@ -69,9 +70,8 @@ const getOrders = asyncHandler(async (req, res) => {
 
   const query = {};
   if (status && status !== "all") query.status = status;
-  if (search) {
-    const term = String(search).trim();
-    const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+  const rx = searchRegex(search);
+  if (rx) {
     query.$or = [{ orderNumber: rx }, { "customer.name": rx }, { "customer.email": rx }];
   }
 
@@ -181,8 +181,33 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   res.json(updated);
 });
 
+// @desc    Delete an order
+// @route   DELETE /api/orders/:id
+// @access  Private/Admin
+const deleteOrder = asyncHandler(async (req, res) => {
+  const order = await Order.findById(req.params.id);
+
+  if (!order) {
+    res.status(404);
+    throw new Error("Order not found");
+  }
+
+  // Only a cancelled order can be removed. An order is a financial record and
+  // a fulfilment promise; cancelling first is what returns the stock and leaves
+  // a deliberate step between "I meant to tidy a test order" and losing a real
+  // one. Test orders and mistakes go: cancel, then delete.
+  if (order.status !== "cancelled") {
+    res.status(400);
+    throw new Error("Cancel this order before deleting it, so its stock is returned");
+  }
+
+  await order.deleteOne();
+  res.json({ message: "Order removed" });
+});
+
 module.exports = {
   createOrder,
+  deleteOrder,
   getOrders,
   getOrderStats,
   getMyOrders,
