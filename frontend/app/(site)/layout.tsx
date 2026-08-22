@@ -52,7 +52,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className={`${sans.variable} ${serif.variable}`}>
-      <body className="font-sans">
+      {/*
+        Browser extensions (Grammarly and similar) add attributes to <body>
+        before React hydrates, which React reports as a server/client mismatch.
+        It is not our markup. Suppression is one level deep, so genuine
+        hydration bugs inside the tree still surface.
+      */}
+      <body className="font-sans" suppressHydrationWarning>
         <Header counts={facets.counts} />
         <main className="pt-20">{children}</main>
         <Footer />

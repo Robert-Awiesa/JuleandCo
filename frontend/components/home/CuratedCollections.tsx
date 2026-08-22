@@ -39,7 +39,7 @@ export function CuratedCollections() {
               spanClass[collection.span ?? "default"]
             )}
           >
-            <Link href={collection.href}>
+            <Link href={collection.href} className="absolute inset-0 block">
               <Image
                 src={collection.image}
                 alt={collection.title}

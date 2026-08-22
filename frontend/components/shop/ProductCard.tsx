@@ -25,7 +25,7 @@ export function ProductCard({ product }: ProductCardProps) {
     <>
       <div className="group relative">
         <div className="relative aspect-[3/4] overflow-hidden bg-surface-tile">
-          <Link href={`/product/${product.slug}`}>
+          <Link href={`/product/${product.slug}`} className="absolute inset-0 block">
             <Image
               src={product.images[0]}
               alt={product.name}
