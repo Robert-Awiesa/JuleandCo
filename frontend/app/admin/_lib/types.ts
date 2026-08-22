@@ -140,3 +140,48 @@ export interface PaginatedResult<T> {
   page: number;
   pages: number;
 }
+
+export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+
+export interface OrderItem {
+  product: string;
+  name: string;
+  image?: string;
+  price: number;
+  quantity: number;
+  variantId?: string;
+  /** Chosen option values, e.g. { Metal: "Rose Gold" }. */
+  options?: Record<string, string>;
+  /** Non-stocked choices, e.g. { Lens: "Polarised" }. */
+  selections?: Record<string, string>;
+}
+
+export interface AdminOrder {
+  _id: string;
+  orderNumber: string;
+  customer: { name: string; email: string; phone: string };
+  items: OrderItem[];
+  shippingAddress: {
+    fullName: string;
+    phone: string;
+    address: string;
+    city: string;
+    region: string;
+  };
+  paymentMethod: "mobile_money" | "card";
+  paymentStatus: "pending" | "paid" | "failed";
+  itemsPrice: number;
+  shippingPrice: number;
+  totalPrice: number;
+  status: OrderStatus;
+  trackingNumber?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderStats {
+  orders: number;
+  revenue: number;
+  averageOrderValue: number;
+  unfulfilled: number;
+}

@@ -30,17 +30,66 @@ export default function CheckoutPage() {
     city: "",
     region: "",
   });
+  // Checkout is guest-only, so an email is the only way to send a receipt or
+  // reach the buyer about the order.
+  const [email, setEmail] = useState("");
+  const [placing, setPlacing] = useState(false);
+  const [orderError, setOrderError] = useState("");
 
   const shippingCost = subtotal() > 1000 || subtotal() === 0 ? 0 : 45;
   const total = useMemo(() => subtotal() + shippingCost, [subtotal, shippingCost]);
 
   const stepIndex = steps.findIndex((s) => s.id === step);
 
-  const handlePlaceOrder = () => {
-    const generated = `AO-${Math.floor(100000 + Math.random() * 900000)}`;
-    setOrderNumber(generated);
-    clear();
-    setStep("confirmation");
+  /**
+   * Creates the order for real. This used to invent an order number, empty the
+   * cart and show a confirmation without contacting the server at all, so a
+   * customer could "buy" something and nothing was recorded anywhere.
+   *
+   * Only the cart contents are sent. Prices, shipping and stock are resolved
+   * server-side, so the totals shown above are a preview and the order carries
+   * whatever the catalogue actually says.
+   */
+  const handlePlaceOrder = async () => {
+    setPlacing(true);
+    setOrderError("");
+
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      const res = await fetch(`${base}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer: { name: shipping.fullName, email, phone: shipping.phone },
+          shippingAddress: shipping,
+          paymentMethod,
+          items: lines.map((line) => ({
+            productId: line.productId,
+            variantId: line.variantId,
+            quantity: line.quantity,
+            options: line.options,
+            selections: line.selections,
+          })),
+        }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        // A sold-out line is the common case here, and the customer needs to
+        // know rather than see a success screen for an order that never existed.
+        setOrderError(body.message || "We could not place your order. Please try again.");
+        return;
+      }
+
+      setOrderNumber(body.orderNumber);
+      clear();
+      setStep("confirmation");
+    } catch {
+      setOrderError("We could not reach the store. Check your connection and try again.");
+    } finally {
+      setPlacing(false);
+    }
   };
 
   if (lines.length === 0 && step !== "confirmation") {
@@ -128,6 +177,14 @@ export default function CheckoutPage() {
                   className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                 />
               </div>
+              <input
+                required
+                type="email"
+                placeholder="Email Address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
+              />
               <input
                 required
                 placeholder="Street Address"
@@ -240,11 +297,22 @@ export default function CheckoutPage() {
                 <p className="capitalize">{paymentMethod.replace("_", " ")}</p>
               </div>
 
+              {orderError && (
+                <p
+                  role="alert"
+                  className="border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+                >
+                  {orderError}
+                </p>
+              )}
+
               <div className="flex gap-3 pt-2">
                 <Button variant="secondary" onClick={() => setStep("payment")}>
                   Back
                 </Button>
-                <Button onClick={handlePlaceOrder}>Place Order</Button>
+                <Button onClick={handlePlaceOrder} disabled={placing}>
+                  {placing ? "Placing order…" : "Place Order"}
+                </Button>
               </div>
             </div>
           )}
