@@ -1,3 +1,4 @@
+import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
 import { defineConfig } from "@playwright/test";
@@ -6,6 +7,17 @@ import { defineConfig } from "@playwright/test";
 // here keeps the specs working after a password change without duplicating the
 // secret into a second file or a CI variable.
 dotenv.config({ path: path.resolve(__dirname, "../backend/.env") });
+
+/** Port written by scripts/dev.js; falls back to Next's own default. */
+function devServerPort(): string {
+  try {
+    const recorded = fs.readFileSync(path.resolve(__dirname, ".next-dev-port"), "utf8").trim();
+    if (recorded) return recorded;
+  } catch {
+    // No dev server running, or started some other way.
+  }
+  return "3000";
+}
 
 export default defineConfig({
   testDir: "./e2e",
@@ -18,9 +30,10 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   use: {
-    // Next falls back to 3001 (and up) whenever 3000 is occupied, which made
-    // the whole suite fail at the login step with an opaque timeout.
-    baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",
+    // The dev server takes whatever port is free and records it, so the suite
+    // follows it instead of assuming 3000 and failing at the login step with an
+    // opaque timeout. An explicit E2E_BASE_URL still wins.
+    baseURL: process.env.E2E_BASE_URL || `http://localhost:${devServerPort()}`,
     headless: true,
   },
 });
