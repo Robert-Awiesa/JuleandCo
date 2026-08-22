@@ -35,7 +35,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.1 }}
-          className="max-w-[18ch] font-serif text-[2.5rem] font-bold leading-[1.08] tracking-tightest [text-shadow:0_2px_24px_rgb(0_0_0/0.55)] sm:text-5xl lg:text-6xl xl:text-[4.25rem]"
+          className="max-w-[22ch] font-serif text-[1.85rem] font-bold leading-[1.12] tracking-tightest [text-shadow:0_2px_24px_rgb(0_0_0/0.55)] sm:text-[2.25rem] lg:text-[2.75rem] xl:text-[3.25rem]"
         >
           Thank you for visiting Jules and Co! Pick a Pair{" "}
           <span className="inline-block align-middle text-[0.55em] leading-none">😎</span>
