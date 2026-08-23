@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { buildVariantMatrix } from "./variantMatrix";
+import { fillMissingSkus } from "./sku";
 import type { ProductOption } from "../../_lib/types";
 import type { ProductFormInput } from "./schema";
 
@@ -28,9 +29,24 @@ export function InventoryTab() {
 
   const axes = options.filter((option) => (option.values || []).length > 0);
   const total = variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+  const missingSkus = variants.filter((v) => !v.sku?.trim()).length;
 
   function setAll(value: number) {
     variants.forEach((_, i) => setValue(`variants.${i}.stock`, value, { shouldDirty: true }));
+  }
+
+  /** Fills the blanks only — a code typed by hand is never overwritten. */
+  function generateSkus() {
+    const { variants: next } = fillMissingSkus(variants, {
+      productSlug: watch("slug") || "",
+      subCategory: watch("subCategory") || "",
+      options,
+    });
+    next.forEach((variant, i) => {
+      if (variant.sku !== variants[i]?.sku) {
+        setValue(`variants.${i}.sku`, variant.sku, { shouldDirty: true });
+      }
+    });
   }
 
   function valueLabel(optionName: string, value: string) {
@@ -55,7 +71,16 @@ export function InventoryTab() {
             ({variants.length} {variants.length === 1 ? "combination" : "combinations"})
           </span>
         </p>
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-3 text-xs">
+          {missingSkus > 0 && (
+            <button
+              type="button"
+              onClick={generateSkus}
+              className="rounded border border-obsidian/25 px-3 py-1.5 uppercase tracking-wide text-obsidian/70 hover:border-obsidian/50 hover:text-obsidian"
+            >
+              Generate {missingSkus} SKU{missingSkus === 1 ? "" : "s"}
+            </button>
+          )}
           <span className="text-obsidian/50">Set all to</span>
           <input
             type="number"

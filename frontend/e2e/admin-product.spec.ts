@@ -67,6 +67,12 @@ test.describe("admin product management", () => {
     await page.getByRole("tab", { name: "Inventory" }).click();
     await page.locator('input[name="variants.0.stock"]').fill("5");
 
+    // SKUs were a blank field on every row, so a real catalogue had none.
+    // Generated codes read as what they refer to: JC, the sub-category, the
+    // piece, then the colourway.
+    await page.getByRole("button", { name: /Generate 1 SKU/i }).click();
+    await expect(page.locator('input[name="variants.0.sku"]')).toHaveValue(/^JC-SUNG-E2ETES/);
+
     // Published last, and only now: the option is disabled until the product
     // has everything the storefront needs, so this doubles as proof the gate
     // opens once it does.

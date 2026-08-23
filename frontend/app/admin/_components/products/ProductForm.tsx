@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useForm, FormProvider, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -86,17 +86,43 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
     return () => window.removeEventListener("beforeunload", warnOnUnload);
   }, [form.formState.isDirty]);
 
+  /**
+   * Whether to leave for the list after saving, or stay and start the next one.
+   * Held in a ref rather than state: it is read inside the mutation callback,
+   * and a state update would not have landed by then.
+   */
+  const addAnother = useRef(false);
+
   const saveMutation = useMutation({
     mutationFn: (values: ProductFormValues) =>
       isEditing
         ? api.put<AdminProduct>(`/products/${product!._id}`, values)
         : api.post<AdminProduct>("/products", values),
-    onSuccess: () => {
-      toast.success(isEditing ? "Product updated" : "Product created");
+    onSuccess: (saved) => {
       invalidate.catalogue();
+
+      if (!isEditing && addAnother.current) {
+        // Entering a line of pieces means the same category, sub-category and
+        // tags over and over. Carrying them into the next blank form is the
+        // difference between adding ten necklaces and adding one.
+        toast.success(`${saved.name} created — starting the next one`);
+        form.reset({
+          ...toFormValues(),
+          category: saved.category,
+          subCategory: saved.subCategory,
+          tags: saved.tags ?? [],
+        });
+        addAnother.current = false;
+        return;
+      }
+
+      toast.success(isEditing ? "Product updated" : "Product created");
       router.push("/admin/products");
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => {
+      addAnother.current = false;
+      toast.error(err.message);
+    },
   });
 
   // Zod errors on a tab the user isn't looking at are invisible otherwise —
@@ -120,13 +146,38 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
           <h1 className="font-serif text-2xl text-obsidian">
             {isEditing ? `Edit ${product!.name}` : "New Product"}
           </h1>
-          <button
-            type="submit"
-            disabled={saveMutation.isPending}
-            className="rounded bg-obsidian px-6 py-2.5 text-xs uppercase tracking-wide text-alabaster hover:bg-gold hover:text-obsidian disabled:opacity-50"
-          >
-            {saveMutation.isPending ? "Saving…" : "Save product"}
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Whether there is anything to lose, stated rather than implied by
+                a browser dialog that only appears once it is too late. */}
+            <span className="text-xs uppercase tracking-wide text-obsidian/45">
+              {saveMutation.isPending
+                ? "Saving…"
+                : form.formState.isDirty
+                  ? "Unsaved changes"
+                  : "All changes saved"}
+            </span>
+
+            {!isEditing && (
+              <button
+                type="submit"
+                onClick={() => {
+                  addAnother.current = true;
+                }}
+                disabled={saveMutation.isPending}
+                className="rounded border border-obsidian/25 px-4 py-2.5 text-xs uppercase tracking-wide text-obsidian/70 hover:border-obsidian/50 hover:text-obsidian disabled:opacity-50"
+              >
+                Save &amp; add another
+              </button>
+            )}
+
+            <button
+              type="submit"
+              disabled={saveMutation.isPending}
+              className="rounded bg-obsidian px-6 py-2.5 text-xs uppercase tracking-wide text-alabaster hover:bg-gold hover:text-obsidian disabled:opacity-50"
+            >
+              {saveMutation.isPending ? "Saving…" : "Save product"}
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-6 lg:flex-row">

@@ -9,11 +9,59 @@ import type { Subcategory } from "../../_lib/types";
 import { useAttributeGroups, useCategories } from "../../_lib/useCatalogConfig";
 import { TagsInput } from "./TagsInput";
 import { evaluateReadiness } from "./readiness";
+import { formatCurrency } from "../../_lib/format";
 import { useInvalidate } from "../../_lib/invalidate";
 import type { ProductFormInput } from "./schema";
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+/**
+ * What the piece actually earns, next to the two numbers it comes from.
+ *
+ * Cost price was already captured but never used, so working out whether a
+ * price was worth setting meant doing the sum on paper. Shown only once both
+ * numbers exist — a margin against a missing cost is not a zero, it is unknown.
+ */
+function MarginSummary() {
+  const { control } = useFormContext<ProductFormInput>();
+  const price = Number(useWatch({ control, name: "price" })) || 0;
+  const cost = Number(useWatch({ control, name: "costPrice" })) || 0;
+
+  if (price <= 0 || cost <= 0) {
+    return (
+      <p className="mt-4 text-xs text-obsidian/45">
+        Enter a cost price to see the margin on this piece.
+      </p>
+    );
+  }
+
+  const profit = price - cost;
+  const margin = (profit / price) * 100;
+  const losing = profit <= 0;
+
+  return (
+    <div className="mt-4 flex flex-wrap items-baseline gap-x-6 gap-y-1 rounded bg-obsidian/[0.03] px-3 py-2 text-sm">
+      <span className="text-obsidian/60">
+        Margin{" "}
+        <span className={losing ? "numeric font-medium text-red-600" : "numeric font-medium text-obsidian"}>
+          {margin.toFixed(1)}%
+        </span>
+      </span>
+      <span className="text-obsidian/60">
+        Profit per piece{" "}
+        <span className={losing ? "numeric font-medium text-red-600" : "numeric font-medium text-obsidian"}>
+          {formatCurrency(profit)}
+        </span>
+      </span>
+      {losing && (
+        <span className="text-xs text-red-600">
+          This piece sells for less than it costs.
+        </span>
+      )}
+    </div>
+  );
 }
 
 export function DetailsTab() {
@@ -313,6 +361,7 @@ export function DetailsTab() {
             />
           </div>
         </div>
+        <MarginSummary />
         <p className="mt-2 text-xs text-obsidian/45">Internal only — never sent to the storefront.</p>
       </details>
 

@@ -65,9 +65,23 @@ function assertPublishable(res, product) {
  * The enum was a hard write gate that made adding a category a code change.
  */
 async function assertValidCategorisation(categorySlug, subCategorySlug) {
+  // Absent is a different problem from wrong, and said "undefined is not a
+  // known category" before — which reads as a bug rather than a missing field.
+  if (!categorySlug) {
+    const error = new Error("Choose a category on the Details tab");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const category = await Category.findOne({ slug: categorySlug });
   if (!category) {
     const error = new Error(`"${categorySlug}" is not a known category`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!subCategorySlug) {
+    const error = new Error(`Choose a sub-category for ${category.name}`);
     error.statusCode = 400;
     throw error;
   }
@@ -78,7 +92,7 @@ async function assertValidCategorisation(categorySlug, subCategorySlug) {
   });
   if (!subcategory) {
     const error = new Error(
-      `"${subCategorySlug}" is not a valid sub-category for "${categorySlug}"`
+      `"${subCategorySlug}" is not a valid sub-category for "${category.name}"`
     );
     error.statusCode = 400;
     throw error;

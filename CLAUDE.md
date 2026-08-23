@@ -507,3 +507,61 @@ edit source while either is running.**
 Verified: backend **174 → 178**, `tsc` clean, Playwright **25 → 27**. Catalogue
 left at 24 products, 0 orders, sub-categories unchanged, every content slot
 still original.
+
+### 2026-08-23 — Professionalising single-product entry
+
+Owner's call between bulk import and polishing one-at-a-time entry: **polish the
+form**. Bulk CSV import/export was offered and deliberately not built — revisit
+it if a batch of pieces ever needs adding at once.
+
+#### Two refusals that told you nothing
+Found by walking the create path against the live API rather than reading it.
+
+- A clashing slug returned **"Duplicate field value entered"** — naming neither
+  the field nor the value, so adding a second piece with a similar name was a
+  dead end. Mongo puts the collision in `err.keyValue`; the handler now passes
+  it on and, for `slug` specifically, says where to change it.
+- A missing category returned **`"undefined" is not a known category`**, which
+  reads as a bug rather than a missing field. Absent and wrong are now different
+  messages, and a missing sub-category names its category by label, not slug.
+- Mongoose `ValidationError` reported only the first invalid path. It now lists
+  all of them — otherwise you fix one and are refused for the next.
+
+#### SKUs
+Every variant row had a blank SKU field, so a real catalogue would have had
+none: nothing to search by code, nothing to print on a picking list, nothing to
+reconcile physical stock against. Typing them across a twelve-row grid is
+exactly the work nobody does.
+
+`_components/products/sku.ts` generates readable codes —
+`JC-ANKL-ZURIAN-SS-18IN` is an anklet, Zuri, sterling silver, 18 in — and the
+Inventory tab offers **"Generate N SKUs"**, which fills only the blanks. A code
+typed by hand is never overwritten; a shop with its own numbering keeps it.
+
+**Caught while testing the scheme:** the product segment was initials, so
+"The Aviator" and "The Anklet" both produced `TA`. Two pieces sharing a code
+defeats the purpose. It now drops articles and keeps the distinctive words, so
+`ZURIST` and `ZURIHO` stay apart. Measurements keep their digits, otherwise
+every length in a range collapses to one code.
+
+**Not enforced:** SKUs are not uniquely indexed — they live inside the variants
+array. Generated codes are distinctive rather than guaranteed unique, and the
+field is editable and visible before saving. Worth an index if the catalogue
+grows enough for collisions to be plausible.
+
+#### The rest
+- **Margin.** `costPrice` was captured and never used, so judging a price meant
+  doing the sum on paper. Margin and per-piece profit now sit beside the two
+  numbers, red when a piece sells for less than it costs. Hidden until both
+  exist — a margin against a missing cost is unknown, not zero.
+- **Save & add another** keeps you on the form and carries category,
+  sub-category and tags into the next blank one. `addAnother` is a ref, not
+  state: it is read inside the mutation callback, where a state update would not
+  have landed.
+- **"Unsaved changes" / "All changes saved"** beside the Save button. The
+  `beforeunload` dialog only appears once you are already leaving; this says so
+  while there is still something to do about it.
+
+Verified: backend **178 → 182**, `tsc` clean, Playwright **27/27** (the SKU
+generation is asserted inside the existing create journey). Live: the two
+refusals now read as instructions. Catalogue left at 24 products, 0 orders.

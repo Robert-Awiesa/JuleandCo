@@ -13,9 +13,34 @@ function errorHandler(err, req, res, next) {
     message = "Resource not found";
   }
 
+  /**
+   * A unique-index clash. The old message was "Duplicate field value entered",
+   * which named neither the field nor the value — so naming a second product
+   * after an existing one produced a refusal with nothing to act on. Mongo
+   * tells us exactly what collided; pass it on.
+   */
   if (err.code === 11000) {
     statusCode = 400;
-    message = "Duplicate field value entered";
+    const [field, value] = Object.entries(err.keyValue || {})[0] || [];
+
+    if (field === "slug") {
+      message =
+        `The web address "${value}" is already taken by another item. ` +
+        `Edit the Slug field to something unique — two products cannot share one.`;
+    } else if (field) {
+      message = `Another record already uses ${field} "${value}", and it has to be unique.`;
+    } else {
+      message = "That value is already used by another record and has to be unique.";
+    }
+  }
+
+  // Mongoose validation lists every invalid path; reporting only the first
+  // means fixing one and being refused again for the next.
+  if (err.name === "ValidationError" && err.errors) {
+    statusCode = 400;
+    message = Object.values(err.errors)
+      .map((e) => e.message)
+      .join(" ");
   }
 
   res.status(statusCode).json({

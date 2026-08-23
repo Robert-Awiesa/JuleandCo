@@ -344,3 +344,62 @@ describe("storefront search", () => {
     expect(pricedOut.body).toHaveLength(0);
   });
 });
+
+describe("refusals a person can act on", () => {
+  test("a clashing slug names the field and says how to fix it", async () => {
+    const token = await adminToken();
+    await Product.create(productFixture({ slug: "gold-hoops" }));
+
+    const res = await asAdmin(request(app).post("/api/products"), token).send(
+      productFixture({ slug: "gold-hoops", name: "Gold Hoops II" })
+    );
+
+    expect(res.status).toBe(400);
+    // Was "Duplicate field value entered", which named neither.
+    expect(res.body.message).toMatch(/gold-hoops/);
+    expect(res.body.message).toMatch(/slug/i);
+  });
+
+  test("a missing category asks for one instead of reporting undefined", async () => {
+    const token = await adminToken();
+
+    const res = await asAdmin(request(app).post("/api/products"), token).send({
+      name: "No Category",
+      slug: "no-category",
+      price: 10,
+      description: "x",
+      images: ["https://example.com/a.jpg"],
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/choose a category/i);
+    expect(res.body.message).not.toMatch(/undefined/);
+  });
+
+  test("a missing sub-category names the category it belongs to", async () => {
+    const token = await adminToken();
+
+    const res = await asAdmin(request(app).post("/api/products"), token).send({
+      name: "No Sub",
+      slug: "no-sub",
+      category: "eyewear",
+      price: 10,
+      description: "x",
+      images: ["https://example.com/a.jpg"],
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/sub-category for Eyewear/i);
+  });
+
+  test("an unknown sub-category names the category by its label, not its slug", async () => {
+    const token = await adminToken();
+
+    const res = await asAdmin(request(app).post("/api/products"), token).send(
+      productFixture({ subCategory: "not-a-real-sub" })
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/Eyewear/);
+  });
+});
