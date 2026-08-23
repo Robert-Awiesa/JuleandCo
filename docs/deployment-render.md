@@ -71,31 +71,29 @@ If you later move to a custom domain, `jules.com` + `api.jules.com` with a
 
 2. **Deploy the blueprint** and let both services build.
 
-3. **Seed the catalogue vocabulary** — from a local machine with `MONGO_URI`
-   pointed at production:
+3. **Bootstrap the database** — from a local machine with `MONGO_URI` pointed
+   at production:
 
    ```bash
-   npm run seed:attributes -w backend   # attribute groups + option lists
-   npm run pivot -w backend             # categories, sub-categories, vocabularies
+   npm run seed -w backend
    ```
 
-   Both are idempotent; a second run reports no changes.
+   Categories, sub-categories, the attribute vocabularies and the admin user,
+   in one command. It **never deletes and never overwrites**, so it is safe to
+   run against a database that already has products, and a second run reports
+   no changes. Add `--with-examples` for a few draft jewellery pieces to look at.
 
-4. **Set the admin password.** `ADMIN_EMAIL`/`ADMIN_PASSWORD` are read only when
-   the user is *created*, so editing them later changes nothing:
+   The admin account is created from `ADMIN_EMAIL` / `ADMIN_PASSWORD`. Those are
+   read only when the user is *created*, so editing them later changes nothing —
+   to change a password afterwards, either use **Settings → Administrators** in
+   the dashboard, or run:
 
    ```bash
    npm run set-admin-password -w backend
    ```
 
-   It creates the account if missing, updates it if it exists, verifies the
-   result, and never prints the password.
-
-5. **Log in** at `https://<web-host>/admin/login` and publish a product.
-
-> **Do not run `npm run seed -w backend`.** `seedData.js` still writes the
-> pre-pivot variant shape and would create products with no variants. It needs
-> rewriting before it is safe.
+4. **Log in** at `https://<web-host>/admin/login`, add an administrator or two
+   under Settings, and publish a product.
 
 ---
 

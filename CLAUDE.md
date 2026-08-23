@@ -716,3 +716,59 @@ Verified: backend **187 → 225**, `tsc` clean, Playwright **27 → 32**.
   `next build` has not been run in production mode.
 - SKUs are distinctive but **not uniquely indexed** — they live inside the
   variants array.
+
+### 2026-08-23 — Production build and a deployment dry run
+
+`next build` had never been run in this session, and `render.yaml` had never
+been exercised. Both were unknowns that would have surfaced at the worst moment.
+
+#### The build was passing while hiding something
+It succeeded, but printed **38 lines of `[storefront] … failed: Dynamic server
+usage`**. Those were not failures: Next signals "this route cannot be static" by
+throwing from its patched `fetch` when it sees `cache: "no-store"`, and
+`lib/api.ts`'s catch was swallowing that signal and logging it as an error.
+
+That is control flow, not a fault, and swallowing it is wrong twice over — it
+buried the one place a genuine API outage during a build would have shown, and
+it interferes with a mechanism Next relies on. `getJson` now re-throws anything
+carrying `digest === "DYNAMIC_SERVER_USAGE"`.
+
+Also narrowed `frontend/middleware.ts` to `jose/jwt/verify`. The package root
+pulls in JWE encryption, whose compression uses `CompressionStream` — a Node API
+the Edge runtime lacks — which Next reported as a warning on every build.
+Middleware only ever verifies a signed token.
+
+**Build is now clean: zero warnings, zero errors**, and the storefront routes are
+still correctly marked dynamic.
+
+#### The dry run itself
+Both services started in production mode and the whole architecture was
+exercised, not just the pages:
+
+- API health `200`, Mongo connected, `trust proxy` set, cookie `Secure` only
+  when `NODE_ENV=production`.
+- `next start` served `/`, `/shop`, `/ethos`, `/checkout`, `/admin/login`.
+- **The `/api` rewrite works**, which is the part that makes admin auth possible
+  once the two services sit on different hosts: login through the storefront
+  origin set the cookie (`HttpOnly, Secure, SameSite=Lax`), `/admin/dashboard`
+  stayed signed in, and without the cookie it correctly `307`s to login.
+
+**A false alarm of my own:** I first reported the `/api` rewrite missing from the
+build. My check read `routes-manifest.json` expecting the
+`beforeFiles/afterFiles/fallback` shape; Next stores a plain **array** when no
+phase buckets are used. The rewrite was there all along.
+
+**Worth remembering:** `rewrites()` is evaluated at *build* time, so `API_ORIGIN`
+must be present during the build, not only at runtime. `render.yaml` sets it as
+a service env var, which Render supplies to both.
+
+#### A real defect, in the documentation
+`docs/deployment-render.md` still ended with **"Do not run `npm run seed -w
+backend`"** — stale since the seed was rewritten as a safe idempotent bootstrap.
+Following it, an operator would have avoided the one command that does the whole
+job and run two others instead. The first-deploy steps now say to run the seed,
+and point at Settings → Administrators for password changes rather than only the
+CLI.
+
+Verified: `render.yaml` covers every variable the code reads, `/api/health`
+exists, and both `start` scripts are correct.

@@ -51,6 +51,17 @@ export async function getJson<T>(path: string, fallback: T): Promise<T> {
     }
     return (await res.json()) as T;
   } catch (err) {
+    /**
+     * Next signals "this route cannot be static" by throwing from its patched
+     * fetch when it sees `cache: "no-store"`. That is control flow, not a
+     * failure, and swallowing it here turned every build into 38 lines of
+     * alarming nonsense — which is exactly where a genuine API outage during a
+     * build would have hidden. Let it through.
+     */
+    if (err instanceof Error && (err as { digest?: string }).digest === "DYNAMIC_SERVER_USAGE") {
+      throw err;
+    }
+
     // A storefront that 500s because the API is briefly down is worse than one
     // that renders an empty shelf, so degrade rather than throw.
     console.error(`[storefront] ${path} failed:`, err instanceof Error ? err.message : err);

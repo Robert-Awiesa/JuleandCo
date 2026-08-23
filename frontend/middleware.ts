@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
+// Imported from the subpath rather than the package root: the root pulls in
+// jose's JWE encryption, whose compression uses CompressionStream — a Node API
+// the Edge runtime does not have, which Next reports as a build warning on
+// every build. Middleware only ever verifies a signed token.
+import { jwtVerify } from "jose/jwt/verify";
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
