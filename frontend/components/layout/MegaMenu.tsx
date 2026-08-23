@@ -11,10 +11,11 @@ interface MegaMenuProps {
   section: MegaMenuSection;
   /** group key -> value -> product count, from /api/products/facets. */
   counts: Record<string, Record<string, number>>;
+  countsByCategory?: Record<string, Record<string, Record<string, number>>>;
   onNavigate: () => void;
 }
 
-export function MegaMenu({ section, counts, onNavigate }: MegaMenuProps) {
+export function MegaMenu({ section, counts, countsByCategory, onNavigate }: MegaMenuProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -8 }}
@@ -29,7 +30,7 @@ export function MegaMenu({ section, counts, onNavigate }: MegaMenuProps) {
             <p className="eyebrow mb-4">{column.title}</p>
             <ul className="space-y-3">
               {column.links.map((link) => {
-                const count = countForHref(link.href, counts);
+                const count = countForHref(link.href, counts, countsByCategory);
                 return (
                   <li key={link.id}>
                     <Link

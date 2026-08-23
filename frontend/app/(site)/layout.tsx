@@ -69,7 +69,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         hydration bugs inside the tree still surface.
       */}
       <body className="font-sans" suppressHydrationWarning>
-        <Header counts={facets.counts} menu={content["nav.megaMenu"]} />
+        <Header
+          counts={facets.counts}
+          countsByCategory={facets.countsByCategory}
+          menu={content["nav.megaMenu"]}
+        />
         <main className="pt-20">{children}</main>
         <Footer content={content["layout.footer"]} contact={content["store.contact"]} />
         <CartDrawer />

@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const SiteContent = require("../models/SiteContent");
+const { validateMenuLinks } = require("../utils/navLinks");
 const {
   SLOT_KEYS,
   isSlot,
@@ -82,6 +83,23 @@ const updateContent = asyncHandler(async (req, res) => {
   } catch (err) {
     res.status(err.statusCode || 400);
     throw err;
+  }
+
+  /**
+   * The menu's links are filter URLs, and a slug typed slightly wrong makes an
+   * entry that can never return anything — the customer clicks and gets an
+   * empty shop with nothing to explain it. Refused here rather than discovered
+   * later. A link that is valid but currently empty is fine: the products come
+   * later, and the count beside it already shows a zero.
+   */
+  if (slot === "nav.megaMenu") {
+    const problems = await validateMenuLinks(data);
+    if (problems.length > 0) {
+      res.status(400);
+      throw new Error(
+        `${problems.length} menu ${problems.length === 1 ? "link points" : "links point"} at something that does not exist — ${problems.join("; ")}`
+      );
+    }
   }
 
   const saved = await SiteContent.findOneAndUpdate(

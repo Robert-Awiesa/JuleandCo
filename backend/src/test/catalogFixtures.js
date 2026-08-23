@@ -1,6 +1,7 @@
 const Category = require("../models/Category");
 const Subcategory = require("../models/Subcategory");
 const AttributeGroup = require("../models/AttributeGroup");
+const Attribute = require("../models/Attribute");
 
 /**
  * Seeds the minimum catalogue configuration a product needs to exist.
@@ -33,6 +34,7 @@ async function seedCatalogConfig() {
 
   await Subcategory.create([
     { name: "Sunglasses", slug: "sunglasses", categoryType: "eyewear" },
+    { name: "Optical", slug: "optical", categoryType: "eyewear" },
     { name: "Necklaces", slug: "necklaces", categoryType: "jewellery" },
   ]);
 
@@ -46,6 +48,7 @@ async function seedCatalogConfig() {
     { key: "gemstone", label: "Gemstone", categories: ["jewellery"], role: "spec", filterStyle: "checkbox", sortOrder: 2 },
     { key: "gender", label: "Designed For", categories: [], role: "spec", sortOrder: 20 },
   ]);
+
 }
 
 /** A publishable product on the new options/variants shape. */
@@ -76,4 +79,28 @@ function productFixture(overrides = {}) {
   };
 }
 
-module.exports = { seedCatalogConfig, productFixture };
+/**
+ * The option lists, for tests that need real vocabulary rather than only the
+ * groups that hold it — the mega-menu link validator, for one, checks that a
+ * slug is a genuine option.
+ *
+ * Kept out of `seedCatalogConfig` deliberately: several tests create their own
+ * attributes, and seeding these by default collided with them on the
+ * (group, value) unique index.
+ */
+async function seedVocabulary() {
+  await Attribute.create([
+    { group: "frameShape", value: "aviator", label: "Aviator", sortOrder: 1 },
+    { group: "frameShape", value: "round", label: "Round", sortOrder: 2 },
+    { group: "frameShape", value: "square", label: "Square", sortOrder: 3 },
+    { group: "frameShape", value: "cat-eye", label: "Cat-Eye", sortOrder: 4 },
+    { group: "frameShape", value: "oversized", label: "Oversized", sortOrder: 5 },
+    { group: "frameShape", value: "rectangle", label: "Rectangle", sortOrder: 6 },
+    { group: "gender", value: "womens", label: "Women's", sortOrder: 1 },
+    { group: "gender", value: "mens", label: "Men's", sortOrder: 2 },
+    { group: "gender", value: "unisex", label: "Unisex", sortOrder: 3 },
+    { group: "metal", value: "yellow-gold", label: "Yellow Gold", sortOrder: 1 },
+  ]);
+}
+
+module.exports = { seedCatalogConfig, seedVocabulary, productFixture };

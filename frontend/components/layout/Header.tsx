@@ -14,9 +14,11 @@ import { cn } from "@/lib/utils";
 
 export function Header({
   counts = {},
+  countsByCategory,
   menu = [],
 }: {
   counts?: Record<string, Record<string, number>>;
+  countsByCategory?: Record<string, Record<string, Record<string, number>>>;
   menu?: MegaMenuSection[];
 }) {
   const [scrolled, setScrolled] = useState(false);
@@ -150,6 +152,7 @@ export function Header({
             <MegaMenu
               section={activeSection}
               counts={counts}
+              countsByCategory={countsByCategory}
               onNavigate={() => setActiveMega(null)}
             />
           )}

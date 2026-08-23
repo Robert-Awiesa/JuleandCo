@@ -4,6 +4,7 @@ const app = require("../app");
 const User = require("../models/User");
 const SiteContent = require("../models/SiteContent");
 const { connectTestDB, clearTestDB, closeTestDB } = require("../test/setupTestDb");
+const { seedCatalogConfig, seedVocabulary } = require("../test/catalogFixtures");
 const { SLOT_KEYS, normaliseSlotData, defaultsFor } = require("../utils/contentSlots");
 
 beforeAll(async () => {
@@ -243,5 +244,120 @@ describe("image hosts", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/https/);
+  });
+});
+
+describe("menu links have to point at something", () => {
+  beforeEach(async () => {
+    // The validator checks links against real categories and vocabularies, so
+    // both have to exist — a group with no options is not a smaller catalogue,
+    // it is a different one.
+    await seedCatalogConfig();
+    await seedVocabulary();
+  });
+
+  function menu(links) {
+    return [
+      {
+        key: "eyewear",
+        label: "Eyewear",
+        href: "/shop?category=eyewear",
+        columns: [{ title: "Shop by Type", links }],
+        featured: {
+          title: "T",
+          image: "https://picsum.photos/seed/a/900/1125",
+          href: "/shop",
+        },
+      },
+    ];
+  }
+
+  test("a mis-typed sub-category is refused, naming it", async () => {
+    const token = await adminToken();
+
+    const res = await asAdmin(request(app).put("/api/content/nav.megaMenu"), token).send({
+      data: menu([{ label: "Sunglases", href: "/shop?category=eyewear&subCategory=sunglases" }]),
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/sunglases/);
+  });
+
+  test("an attribute that does not apply to the category is refused", async () => {
+    const token = await adminToken();
+
+    // Frame shape is an eyewear vocabulary; a jewellery link using it could
+    // never return anything.
+    const res = await asAdmin(request(app).put("/api/content/nav.megaMenu"), token).send({
+      data: [
+        {
+          key: "jewellery",
+          label: "Jewellery",
+          href: "/shop?category=jewellery",
+          columns: [
+            {
+              title: "Shop by Shape",
+              links: [
+                { label: "Aviator", href: "/shop?category=jewellery&frameShape=aviator" },
+              ],
+            },
+          ],
+          featured: { title: "T", image: "https://picsum.photos/seed/a/900/1125", href: "/shop" },
+        },
+      ],
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/does not apply to Jewellery/i);
+  });
+
+  test("an unknown attribute value is refused", async () => {
+    const token = await adminToken();
+
+    const res = await asAdmin(request(app).put("/api/content/nav.megaMenu"), token).send({
+      data: menu([{ label: "Hexagonal", href: "/shop?category=eyewear&frameShape=hexagonal" }]),
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/hexagonal/i);
+  });
+
+  test("a valid link with nothing behind it yet is allowed", async () => {
+    const token = await adminToken();
+
+    // The vocabulary exists and applies; there are simply no products carrying
+    // it. Refusing this would stop a shop preparing a line before it launches.
+    const res = await asAdmin(request(app).put("/api/content/nav.megaMenu"), token).send({
+      data: menu([{ label: "Men", href: "/shop?category=eyewear&gender=mens" }]),
+    });
+
+    expect(res.status).toBe(200);
+  });
+
+  test("a sort link carries no filter and is left alone", async () => {
+    const token = await adminToken();
+
+    const res = await asAdmin(request(app).put("/api/content/nav.megaMenu"), token).send({
+      data: menu([{ label: "New Arrivals", href: "/shop?category=eyewear&sort=new" }]),
+    });
+
+    expect(res.status).toBe(200);
+  });
+
+  test("the built-in menu passes its own validator", async () => {
+    const token = await adminToken();
+    const { defaultsFor } = require("../utils/contentSlots");
+
+    // Scoped to the categories this fixture models. The whole menu is checked
+    // against the real vocabulary by the audit in backend/src/scripts — a
+    // fixture covering every category would be a second copy of the seed.
+    const eyewear = defaultsFor("nav.megaMenu").filter((s) => s.key === "eyewear");
+
+    const res = await asAdmin(request(app).put("/api/content/nav.megaMenu"), token).send({
+      data: eyewear,
+    });
+
+    // Guards against shipping a default menu that could not be saved.
+    expect(res.status).toBe(200);
   });
 });

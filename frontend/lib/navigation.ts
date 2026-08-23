@@ -22,17 +22,30 @@
  */
 export function countForHref(
   href: string,
-  counts: Record<string, Record<string, number>>
+  counts: Record<string, Record<string, number>>,
+  countsByCategory?: Record<string, Record<string, Record<string, number>>>
 ): number | null {
   const query = href.split("?")[1];
   if (!query) return null;
 
-  for (const [key, value] of new URLSearchParams(query)) {
+  const params = new URLSearchParams(query);
+  const category = params.get("category");
+
+  /**
+   * A category-scoped link is counted within that category.
+   *
+   * These links filter by both — "Eyewear › Men" means eyewear *and* men's —
+   * but the count used the global figure. A men's jewellery piece therefore
+   * rendered "Men (1)" under Eyewear and gave an empty shop when clicked.
+   */
+  const table = category && countsByCategory ? (countsByCategory[category] ?? {}) : counts;
+
+  for (const [key, value] of params) {
     if (key === "category") continue;
-    const group = counts[key];
-    if (!group) continue;
+    const group = table[key];
     // A known facet with nothing behind it is a real zero, not a missing count.
-    return group[value] ?? 0;
+    if (!counts[key]) continue;
+    return group?.[value] ?? 0;
   }
   return null;
 }

@@ -85,6 +85,11 @@ export interface FacetResponse {
    * Lets the navigation put a number beside a link without re-deriving it.
    */
   counts: Record<string, Record<string, number>>;
+  /**
+   * The same counts narrowed by category, so a category-scoped navigation link
+   * shows the number it will actually deliver rather than the global one.
+   */
+  countsByCategory?: Record<string, Record<string, Record<string, number>>>;
   groupMeta: FacetMeta[];
   subCategories: string[];
   priceBounds: [number, number];
