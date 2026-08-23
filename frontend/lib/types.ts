@@ -118,28 +118,9 @@ export interface Product {
   tags?: string[];
 }
 
-export interface Collection {
-  id: string;
-  title: string;
-  subtitle: string;
-  image: string;
-  href: string;
-  span?: "wide" | "tall" | "default";
-}
-
-export interface Testimonial {
-  id: string;
-  quote: string;
-  author: string;
-  role: string;
-  /**
-   * Client photograph. Optional on purpose: most testimonials arrive without
-   * one, and a card that only works with a picture would break on the majority.
-   * When absent the card falls back to a monogram, which is a deliberate state
-   * rather than a hole in the layout.
-   */
-  image?: string;
-}
+// Collection and Testimonial lived here while the homepage rendered them from
+// a hardcoded file. They are admin-managed content now, and their types travel
+// with the data in lib/content.ts.
 
 export interface CartLine {
   productId: string;

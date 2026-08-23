@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
+import type { HeroSlide } from "@/lib/content";
 
 /**
  * Only the photograph and the headline change between slides. The eyebrow,
@@ -11,48 +12,35 @@ import Link from "next/link";
  * hero reads as one composition that re-dresses itself rather than three
  * separate banners.
  *
- * `objectPosition` is set per slide because the two newer photographs are
- * portrait, and a landscape hero crops them hard: left at the default centre,
- * the frame lands on a torso and cuts the face off. These values keep each
- * subject's face in shot.
+ * Slides arrive from the admin rather than a hardcoded array, so a headline or
+ * a photograph can be changed without a deploy. `objectPosition` is per slide
+ * because a landscape hero crops portrait photographs hard: left at the default
+ * centre, the frame lands on a torso and cuts the face off.
  */
-const SLIDES = [
-  {
-    src: "/images/hero/jules-hero.jpg",
-    alt: "JULES & CO editorial campaign",
-    text: "Thank you for visiting Jules and Co!",
-    objectPosition: "center",
-  },
-  {
-    src: "/images/hero/jules-hero-1.jpeg",
-    alt: "A client wearing JULES & CO optical frames",
-    text: "Complete the look!",
-    objectPosition: "center 22%",
-  },
-  {
-    src: "/images/hero/jules-hero-2.jpeg",
-    alt: "A client wearing JULES & CO sunglasses",
-    text: "Pick a Pair",
-    emoji: "😎",
-    objectPosition: "center 28%",
-  },
-];
-
 const SLIDE_MS = 5000;
 
-export function Hero() {
+export function Hero({ slides }: { slides: HeroSlide[] }) {
   const [index, setIndex] = useState(0);
   const reduceMotion = useReducedMotion();
 
+  // A slide can be switched off in the admin without deleting it.
+  const visible = slides.filter((s) => s.active !== false);
+
   useEffect(() => {
     // An auto-advancing carousel is exactly what "reduce motion" asks us not to
-    // do, so that preference holds the hero on the first slide.
-    if (reduceMotion) return;
-    const timer = setInterval(() => setIndex((i) => (i + 1) % SLIDES.length), SLIDE_MS);
+    // do, so that preference holds the hero on the first slide. One slide has
+    // nothing to rotate to.
+    if (reduceMotion || visible.length < 2) return;
+    const timer = setInterval(() => setIndex((i) => (i + 1) % visible.length), SLIDE_MS);
     return () => clearInterval(timer);
-  }, [reduceMotion]);
+  }, [reduceMotion, visible.length]);
 
-  const slide = SLIDES[index];
+  // Deleting slides in the admin can leave the index past the end.
+  const slide = visible[index % Math.max(1, visible.length)];
+
+  // Without a slide there is no photograph and no headline, so the section
+  // would render as an empty 92vh hole. Better to take it out of the page.
+  if (!slide) return null;
 
   return (
     <section className="relative flex h-[92vh] min-h-[640px] w-full items-end overflow-hidden bg-surface">
@@ -61,10 +49,10 @@ export function Hero() {
         so the browser is never decoding an image mid-transition and the
         crossfade cannot flash the background through.
       */}
-      {SLIDES.map((s, i) => (
+      {visible.map((s, i) => (
         <Image
-          key={s.src}
-          src={s.src}
+          key={s.id || s.image}
+          src={s.image}
           alt={s.alt}
           fill
           // Only the first is priority: it is the LCP element. Preloading all
@@ -73,7 +61,7 @@ export function Hero() {
           sizes="100vw"
           style={{ objectPosition: s.objectPosition }}
           className={`object-cover transition-opacity duration-1000 ease-in-out ${
-            i === index ? "opacity-70" : "opacity-0"
+            i === index % visible.length ? "opacity-70" : "opacity-0"
           }`}
         />
       ))}
@@ -102,14 +90,14 @@ export function Hero() {
         <div className="min-h-[4.6rem] sm:min-h-[5.6rem] lg:min-h-[6.8rem] xl:min-h-[8rem]">
           <AnimatePresence mode="wait">
             <motion.h1
-              key={slide.src}
+              key={slide.id}
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
               className="max-w-[22ch] font-serif text-[1.85rem] font-bold leading-[1.12] tracking-tightest [text-shadow:0_2px_24px_rgb(0_0_0/0.55)] sm:text-[2.25rem] lg:text-[2.75rem] xl:text-[3.25rem]"
             >
-              {slide.text}
+              {slide.headline}
               {slide.emoji && (
                 <>
                   {" "}

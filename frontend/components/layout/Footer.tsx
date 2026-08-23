@@ -4,44 +4,16 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Instagram, Facebook, Twitter } from "lucide-react";
+import type { FooterContent } from "@/lib/content";
 
-const columns = [
-  {
-    title: "Shop",
-    links: [
-      { label: "Eyewear", href: "/shop?category=eyewear" },
-      { label: "Jewellery", href: "/shop?category=jewellery" },
-      { label: "Bags", href: "/shop?category=bags" },
-      { label: "New Arrivals", href: "/shop?sort=new" },
-      { label: "Best Sellers", href: "/shop?sort=bestseller" },
-    ],
-  },
-  {
-    title: "Support",
-    links: [
-      { label: "Contact Us", href: "/contact" },
-      { label: "Shipping & Returns", href: "/shipping" },
-      { label: "Size Guide", href: "/size-guide" },
-      { label: "Track Order", href: "/account/orders" },
-    ],
-  },
-  {
-    title: "The House",
-    links: [
-      { label: "Our Ethos", href: "/ethos" },
-      { label: "What We Stand For", href: "/ethos" },
-      { label: "Careers", href: "/careers" },
-    ],
-  },
-];
-
-export function Footer() {
+export function Footer({ content }: { content: FooterContent }) {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
   return (
     <footer className="border-t border-line bg-surface-raised text-ink">
-      <div className="container-elevated grid grid-cols-1 gap-12 py-16 md:grid-cols-[1.3fr_1fr_1fr_1fr]">
+      <div className="container-elevated grid grid-cols-1 gap-12 py-16 md:grid-cols-2 lg:grid-cols-[1.3fr_repeat(var(--footer-cols,3),1fr)]"
+        style={{ ["--footer-cols" as string]: content.columns.length }}>
         <div>
           <Image
             src="/images/brand/logo-footer.png"
@@ -50,10 +22,7 @@ export function Footer() {
             height={280}
             className="h-14 w-auto"
           />
-          <p className="mt-4 max-w-xs text-sm text-ink-muted">
-            Curated eyewear, jewellery and bags for the woman who wants to express herself
-            with confidence, sophistication and individuality.
-          </p>
+          <p className="mt-4 max-w-xs text-sm text-ink-muted">{content.blurb}</p>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -78,12 +47,12 @@ export function Footer() {
           </form>
         </div>
 
-        {columns.map((col) => (
-          <div key={col.title}>
+        {content.columns.map((col) => (
+          <div key={col.id}>
             <p className="eyebrow mb-4 text-ink/50">{col.title}</p>
             <ul className="space-y-3">
               {col.links.map((link) => (
-                <li key={link.label}>
+                <li key={link.id}>
                   <Link href={link.href} className="inline-block py-1.5 text-sm text-ink-muted transition-colors hover:text-gold">
                     {link.label}
                   </Link>
@@ -97,7 +66,7 @@ export function Footer() {
       <div className="container-elevated flex flex-col items-center justify-between gap-4 border-t border-line py-6 sm:flex-row">
         <div className="text-center sm:text-left">
           <p className="font-sans text-xs uppercase tracking-widest2 text-gold">
-            Created with purpose &middot; Worn with confidence &middot; Inspired by legacy
+            {content.tagline}
           </p>
           <p className="mt-2 text-xs text-ink-subtle">
             &copy; {new Date().getFullYear()} JULES &amp; CO. All rights reserved.

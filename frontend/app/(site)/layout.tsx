@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CartDrawer } from "@/components/layout/CartDrawer";
 import { fetchFacets } from "@/lib/api";
+import { fetchSiteContent } from "@/lib/content";
 
 // Roboto carries everything functional: body copy, navigation, buttons,
 // prices and any other number. It is engineered for screen legibility, which
@@ -26,29 +27,38 @@ const serif = Playfair_Display({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "JULES & CO — Wear the Difference",
-  description:
-    "Curated eyewear, jewellery and bags for the woman who wants to express herself with confidence, sophistication and individuality. Born from loss, created from love.",
-  icons: {
-    icon: [
-      { url: "/images/brand/favicon-32.png", sizes: "32x32", type: "image/png" },
-      { url: "/images/brand/favicon-192.png", sizes: "192x192", type: "image/png" },
-    ],
-    apple: "/images/brand/apple-icon.png",
-  },
-  openGraph: {
-    title: "JULES & CO — Wear the Difference",
-    description:
-      "Curated eyewear, jewellery and bags for the woman who wants to express herself with confidence, sophistication and individuality. Born from loss, created from love.",
-    images: ["/images/brand/og-image.jpg"],
-  },
-};
+/**
+ * Title, description and share image come from the admin, so they can be tuned
+ * without a deploy. generateMetadata rather than a static export because that
+ * is the only form that can await a fetch.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const content = await fetchSiteContent();
+  const seo = content["site.seo"];
+
+  return {
+    title: seo.title,
+    description: seo.description,
+    icons: {
+      icon: [
+        { url: "/images/brand/favicon-32.png", sizes: "32x32", type: "image/png" },
+        { url: "/images/brand/favicon-192.png", sizes: "192x192", type: "image/png" },
+      ],
+      apple: "/images/brand/apple-icon.png",
+    },
+    openGraph: {
+      title: seo.title,
+      description: seo.description,
+      images: seo.ogImage ? [seo.ogImage] : undefined,
+    },
+  };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Fetched here rather than in the Header so the counts are server-rendered:
-  // no request from the browser, and no flash of numberless links.
-  const facets = await fetchFacets();
+  // no request from the browser, and no flash of numberless links. Content
+  // comes along for the ride — the menu and the footer both need it.
+  const [facets, content] = await Promise.all([fetchFacets(), fetchSiteContent()]);
 
   return (
     <html lang="en" className={`${sans.variable} ${serif.variable}`}>
@@ -59,9 +69,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         hydration bugs inside the tree still surface.
       */}
       <body className="font-sans" suppressHydrationWarning>
-        <Header counts={facets.counts} />
+        <Header counts={facets.counts} menu={content["nav.megaMenu"]} />
         <main className="pt-20">{children}</main>
-        <Footer />
+        <Footer content={content["layout.footer"]} />
         <CartDrawer />
       </body>
     </html>

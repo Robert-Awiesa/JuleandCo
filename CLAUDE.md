@@ -328,3 +328,98 @@ refetch competes with Next compiling other routes.
 Verified: backend **158 → 160** (+3 delete-guard, +3 storefront search, −4
 deleted `toVariants`), `tsc` clean, Playwright **15 → 20**, green twice
 consecutively. Catalogue left at 24 products, 0 orders, no residue.
+
+### 2026-08-23 — Admin dashboard Phase 3: the storefront's own words
+
+Plan: `docs/superpowers/plans/2026-08-22-admin-dashboard-completion.md`. Phase 1
+is `2cf4a92`, Phase 2 is `fa6ea9a`.
+
+**The problem:** every word and photograph outside the catalogue was hardcoded.
+The hero headlines lived in `Hero.tsx`, the collection tiles and testimonials in
+`lib/mockData.ts`, the mega menu in `lib/navigation.ts`, the footer links in
+`Footer.tsx`, the ethos copy in its own page, and the site title in the layout's
+`metadata`. Changing a client quote meant a code change and a redeploy — the
+same trap the catalogue was in before the storefront was wired to the API.
+
+#### One collection, seven slots
+
+`SiteContent` holds one document per slot (`hero.slides`, `home.collections`,
+`home.testimonials`, `nav.megaMenu`, `layout.footer`, `page.ethos`, `site.seo`).
+Deliberately one collection rather than a model each: the shapes differ but the
+operations never do — read one, write one, by key. `data` is `Mixed` with
+`minimize: false`, without which Mongoose drops an empty array and clearing
+every testimonial would silently leave the old ones in place.
+
+**`utils/contentSlots.js` is the whole design.** Each slot declares its shape as
+`fields`, and that single declaration does three jobs: validates what the API
+accepts, tells the admin what form to draw, and supplies the storefront's
+fallback. Field types are `text | textarea | image | boolean | url | select |
+list | group`, and `list`/`group` recurse — which is how the mega menu's columns
+of links and the footer's link groups get an editor without one being written.
+
+**The defaults are the exact values that were hardcoded.** So the API answers
+for a slot nobody has edited, and a database with no content documents renders
+precisely the site that shipped before. Seeding is optional rather than a
+migration step someone forgets and ends up with a blank homepage. It also means
+"Restore original" is a real feature: deleting the document un-edits the slot.
+
+#### The admin
+
+`/admin/content` renders `FieldEditor` recursively from the API's field specs,
+so **no slot has a hand-written form**. Rows carry a generated `id` rather than
+using list position as identity — position breaks the moment anything moves —
+and reorder/delete work off it. Every row is labelled by its own content
+(`itemTitle`), so a collapsed list stays readable. The sidebar marks a slot
+"original" until it has been edited.
+
+#### The storefront
+
+`lib/content.ts` reads through the same uncached `getJson` the catalogue uses,
+so an edit is live on the next page load. The homepage fetches once and passes
+down rather than each section fetching. Layout metadata became
+`generateMetadata` — a static `metadata` export cannot await a fetch.
+
+`lib/mockData.ts` is **deleted**. `lib/navigation.ts` keeps only `countForHref`,
+which is genuinely logic, not content. `Collection` and `Testimonial` left
+`lib/types.ts` — their types travel with the data now. The header's primary nav
+is derived from the menu sections, so adding a section in the admin puts it in
+the header; New Arrivals and Our Ethos bracket them because one is a sort and
+one is a page, neither a category.
+
+#### Two things worth remembering
+
+- **The defaults had to match the live site exactly, and my first drafts did
+  not.** The footer columns, the mega menu's column titles ("Shop by Piece", not
+  "Shop by Type") and its metal/material slugs, and the whole ethos page were
+  written from memory and were wrong. Each was corrected against the file it
+  replaced. Verified by asserting seventeen specific strings across `/` and
+  `/ethos` render exactly as before.
+- **`FieldEditor`'s labels were not bound to their inputs.** Caught by the e2e
+  using `getByLabel`, but it was a real accessibility defect, not a test
+  problem: clicking a label focused nothing and a screen reader had no
+  association. Every control now carries a `useId`-generated id.
+
+#### Test-timing fix that was overdue
+
+`playwright.config.ts` raised the *test* timeout to 90s for Next's per-route
+compilation but left assertions at Playwright's 5s default. On a cold dev server
+seven pre-existing specs failed at once — an app that looks broken but is only
+slow. `expect: { timeout: 15_000 }` fixes the class; the per-assertion timeouts
+added earlier stay for the genuinely slow paths.
+
+Also learned: **do not assert on a toast.** Sonner auto-dismisses, so under a
+full-suite run the assertion can start after the toast has gone. The content
+specs assert the rendered page and the sidebar's "original" badge instead.
+
+Verified: backend **160 → 174** (14 new), `tsc --noEmit` clean, Playwright
+**20 → 25**. The acceptance test the plan named passes: a hero headline changed
+in the admin appears on the homepage with no code change and no redeploy, and
+restoring puts it back. Catalogue left at 24 products, 0 orders, every content
+slot back to original.
+
+#### Still outstanding
+- Phase 4 (customer accounts, `/admin/customers`, reviews) and Phase 5 (store
+  settings) are untouched. `rating`/`reviewCount` remain modelled but unrendered.
+- Payment is still a label, not a processor — PayPal deferred by the owner.
+- The placeholder Unsplash imagery and stand-in testimonials are now editable in
+  the admin, which is where they should be replaced before launch.

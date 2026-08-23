@@ -15,6 +15,7 @@ const subcategoryRoutes = require("./routes/subcategoryRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const attributeRoutes = require("./routes/attributeRoutes");
 const attributeGroupRoutes = require("./routes/attributeGroupRoutes");
+const contentRoutes = require("./routes/contentRoutes");
 
 const app = express();
 
@@ -79,6 +80,7 @@ app.use("/api/subcategories", subcategoryRoutes);
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/attributes", attributeRoutes);
 app.use("/api/attribute-groups", attributeGroupRoutes);
+app.use("/api/content", contentRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

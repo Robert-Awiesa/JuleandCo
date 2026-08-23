@@ -27,6 +27,12 @@ export default defineConfig({
   timeout: 90_000,
   // The specs share one fixture product: the create test makes it, later tests
   // publish, unpublish and re-stock it. They must run in order.
+  // Assertions get longer than Playwright's 5s default for the same reason the
+  // test timeout is raised: on a cold dev server the first hit to a route
+  // compiles it, and the admin pages then wait on their own API queries. At 5s
+  // a suite that passes on a warm server fails wholesale on a fresh one, which
+  // reads as a broken app rather than a slow one.
+  expect: { timeout: 15_000 },
   workers: 1,
   fullyParallel: false,
   use: {

@@ -1,8 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { testimonials } from "@/lib/mockData";
-import type { Testimonial } from "@/lib/types";
+import type { ClientTestimonial } from "@/lib/content";
 
 /** "Adjoa M." -> "AM". Used when a client has no photograph on file. */
 function initials(name: string) {
@@ -14,7 +13,7 @@ function initials(name: string) {
     .join("");
 }
 
-function ClientAvatar({ testimonial }: { testimonial: Testimonial }) {
+function ClientAvatar({ testimonial }: { testimonial: ClientTestimonial }) {
   const ring = "ring-1 ring-gold/40";
 
   if (testimonial.image) {
@@ -41,7 +40,9 @@ function ClientAvatar({ testimonial }: { testimonial: Testimonial }) {
   );
 }
 
-export function Testimonials() {
+export function Testimonials({ testimonials }: { testimonials: ClientTestimonial[] }) {
+  if (testimonials.length === 0) return null;
+
   const loop = [...testimonials, ...testimonials];
 
   return (

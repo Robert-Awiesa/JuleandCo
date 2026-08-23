@@ -29,7 +29,7 @@ const API_URL = API_ORIGIN
   ? `${API_ORIGIN}/api`
   : process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
-async function getJson<T>(path: string, fallback: T): Promise<T> {
+export async function getJson<T>(path: string, fallback: T): Promise<T> {
   try {
     // Deliberately uncached.
     //

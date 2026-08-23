@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { MegaMenuSection, countForHref } from "@/lib/navigation";
+import { countForHref } from "@/lib/navigation";
+import type { MegaMenuSection } from "@/lib/content";
 
 interface MegaMenuProps {
   section: MegaMenuSection;
@@ -24,13 +25,13 @@ export function MegaMenu({ section, counts, onNavigate }: MegaMenuProps) {
     >
       <div className="container-elevated grid grid-cols-1 gap-10 py-10 md:grid-cols-[1fr_1fr_1.1fr]">
         {section.columns.map((column) => (
-          <div key={column.title}>
+          <div key={column.id}>
             <p className="eyebrow mb-4">{column.title}</p>
             <ul className="space-y-3">
               {column.links.map((link) => {
                 const count = countForHref(link.href, counts);
                 return (
-                  <li key={link.label}>
+                  <li key={link.id}>
                     <Link
                       href={link.href}
                       onClick={onNavigate}

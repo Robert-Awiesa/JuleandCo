@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { collections } from "@/lib/mockData";
+import type { CollectionTile } from "@/lib/content";
 import { cn } from "@/lib/utils";
 
 const spanClass: Record<string, string> = {
@@ -13,7 +13,10 @@ const spanClass: Record<string, string> = {
   default: "aspect-[3/4]",
 };
 
-export function CuratedCollections() {
+export function CuratedCollections({ collections }: { collections: CollectionTile[] }) {
+  // An empty edit would leave a heading over nothing.
+  if (collections.length === 0) return null;
+
   return (
     <section className="container-elevated py-24">
       <div className="mb-12 flex items-end justify-between">

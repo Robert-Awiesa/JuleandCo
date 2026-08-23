@@ -5,16 +5,40 @@ import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, Menu, Search, ShoppingBag, X } from "lucide-react";
-import { primaryNav, megaMenu } from "@/lib/navigation";
+import type { MegaMenuSection } from "@/lib/content";
 import { MegaMenu } from "./MegaMenu";
 import { SearchModal } from "./SearchModal";
 import { useCartStore } from "@/store/useCartStore";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { cn } from "@/lib/utils";
 
-export function Header({ counts = {} }: { counts?: Record<string, Record<string, number>> }) {
+export function Header({
+  counts = {},
+  menu = [],
+}: {
+  counts?: Record<string, Record<string, number>>;
+  menu?: MegaMenuSection[];
+}) {
   const [scrolled, setScrolled] = useState(false);
-  const [activeMega, setActiveMega] = useState<keyof typeof megaMenu | null>(null);
+  const [activeMega, setActiveMega] = useState<string | null>(null);
+
+  /**
+   * The category links come from the menu the admin manages, so adding a
+   * section there puts it in the header with no code change. New Arrivals and
+   * Our Ethos bracket them: one is a sort and one is a page, neither is a
+   * category, so neither belongs in the menu content.
+   */
+  const primaryNav = [
+    { label: "New Arrivals", href: "/shop?sort=new", mega: null as string | null },
+    ...menu.map((section) => ({
+      label: section.label,
+      href: section.href,
+      mega: section.key as string | null,
+    })),
+    { label: "Our Ethos", href: "/ethos", mega: null as string | null },
+  ];
+
+  const activeSection = menu.find((section) => section.key === activeMega);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -122,9 +146,9 @@ export function Header({ counts = {} }: { counts?: Record<string, Record<string,
         </div>
 
         <AnimatePresence>
-          {activeMega && (
+          {activeSection && (
             <MegaMenu
-              section={megaMenu[activeMega]}
+              section={activeSection}
               counts={counts}
               onNavigate={() => setActiveMega(null)}
             />
