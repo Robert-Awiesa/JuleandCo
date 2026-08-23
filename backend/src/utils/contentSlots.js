@@ -506,6 +506,53 @@ const SLOTS = {
     },
   },
 
+  "store.delivery": {
+    label: "Delivery",
+    group: "settings",
+    description:
+      "What customers are told about delivery at checkout. There is no price here on purpose: what delivery costs depends on where a piece is going, and it is agreed with the customer once the order is confirmed. The charge is recorded against the order itself, on the Orders page.",
+    kind: "group",
+    fields: [
+      {
+        key: "checkoutNote",
+        label: "Message at checkout",
+        type: "textarea",
+        required: true,
+        help: "Shown where a delivery total would otherwise be, so nobody is left wondering what it will cost.",
+      },
+    ],
+    defaults: {
+      checkoutNote:
+        "Delivery is arranged with you once your order is confirmed — we will be in touch with the cost before anything is dispatched.",
+    },
+  },
+
+  "store.contact": {
+    label: "Contact & social",
+    group: "settings",
+    description:
+      "How customers reach the house. Anything left blank is simply not shown — the footer's social icons used to be drawn whether or not there was an account behind them.",
+    kind: "group",
+    fields: [
+      { key: "email", label: "Email", type: "text" },
+      { key: "phone", label: "Phone", type: "text" },
+      { key: "whatsapp", label: "WhatsApp number", type: "text", help: "Digits only, with country code." },
+      { key: "address", label: "Address", type: "textarea" },
+      { key: "instagram", label: "Instagram URL", type: "url" },
+      { key: "facebook", label: "Facebook URL", type: "url" },
+      { key: "twitter", label: "X / Twitter URL", type: "url" },
+    ],
+    defaults: {
+      email: "",
+      phone: "",
+      whatsapp: "",
+      address: "",
+      instagram: "",
+      facebook: "",
+      twitter: "",
+    },
+  },
+
   "site.seo": {
     label: "Search & sharing",
     description:
@@ -602,6 +649,23 @@ function normaliseValue(field, value, path) {
     return Boolean(value);
   }
 
+  /**
+   * Numbers are settled before the text handling below, which would otherwise
+   * turn a blank into "" and store a quantity as a string — and a shipping
+   * threshold has to come back as a number to be compared against a subtotal.
+   */
+  if (field.type === "number") {
+    if (value === undefined || value === null || value === "") {
+      if (field.required) fail(`${where} is required`);
+      return field.default ?? 0;
+    }
+    const n = Number(value);
+    if (!Number.isFinite(n)) fail(`${where} must be a number`);
+    if (field.min !== undefined && n < field.min) fail(`${where} cannot be below ${field.min}`);
+    if (field.max !== undefined && n > field.max) fail(`${where} cannot be above ${field.max}`);
+    return n;
+  }
+
   const text = value === undefined || value === null ? "" : String(value).trim();
 
   if (!text) {
@@ -659,6 +723,9 @@ function slotDescriptors() {
     slot,
     label: SLOTS[slot].label,
     description: SLOTS[slot].description,
+    // Content is what the storefront says; settings are how the shop runs.
+    // They live in one collection but belong on different admin screens.
+    group: SLOTS[slot].group || "content",
     kind: SLOTS[slot].kind,
     itemLabel: SLOTS[slot].itemLabel,
     itemTitle: SLOTS[slot].itemTitle,

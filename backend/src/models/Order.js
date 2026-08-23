@@ -59,7 +59,13 @@ const orderSchema = new mongoose.Schema(
     // Always recomputed server-side from live product prices — never taken from
     // the client, which would let a buyer name their own total.
     itemsPrice: { type: Number, required: true },
-    shippingPrice: { type: Number, required: true, default: 0 },
+    /**
+     * The delivery charge agreed with the customer after the order is
+     * confirmed. Null until then — the system never sets it, because what
+     * delivery costs depends on where the piece is going. Null and 0 mean
+     * different things: nothing agreed yet, versus agreed at no charge.
+     */
+    shippingPrice: { type: Number, default: null },
     totalPrice: { type: Number, required: true },
 
     status: {

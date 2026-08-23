@@ -171,7 +171,12 @@ export interface AdminOrder {
   paymentMethod: "mobile_money" | "card";
   paymentStatus: "pending" | "paid" | "failed";
   itemsPrice: number;
-  shippingPrice: number;
+  /**
+   * The agreed delivery charge, or null while it is still being discussed.
+   * The system never sets it: what delivery costs depends on where the order
+   * is going, so it is agreed with the customer after confirmation.
+   */
+  shippingPrice: number | null;
   totalPrice: number;
   status: OrderStatus;
   trackingNumber?: string;

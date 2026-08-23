@@ -71,7 +71,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="font-sans" suppressHydrationWarning>
         <Header counts={facets.counts} menu={content["nav.megaMenu"]} />
         <main className="pt-20">{children}</main>
-        <Footer content={content["layout.footer"]} />
+        <Footer content={content["layout.footer"]} contact={content["store.contact"]} />
         <CartDrawer />
       </body>
     </html>

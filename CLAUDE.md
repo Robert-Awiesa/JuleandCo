@@ -565,3 +565,69 @@ grows enough for collisions to be plausible.
 Verified: backend **178 → 182**, `tsc` clean, Playwright **27/27** (the SKU
 generation is asserted inside the existing create journey). Live: the two
 refusals now read as instructions. Catalogue left at 24 products, 0 orders.
+
+### 2026-08-23 — Merge to master, then store settings and the delivery rule
+
+`category-model-pivot` merged into `master` (`8a1b5aa`, 29 commits) and pushed.
+Verified green first — one run of 182 showed a single failure and two more were
+clean, which was machine contention, not a regression.
+
+#### A money bug found while looking for what was necessary next
+The shipping rule existed twice and the copies disagreed: the API used
+`>= 1000`, the checkout page `> 1000`. At a subtotal of exactly 1000 the
+customer was **shown a 45 delivery charge and then charged 0** — a quoted total
+that differed from the charged one.
+
+#### Which the owner then corrected properly
+**Delivery is not priced by the system at all.** It varies by where a piece is
+going and is agreed with the customer after the admin confirms the order. So the
+threshold-and-flat-rate model was removed rather than reconfigured — my
+assumption, not their business.
+
+- Orders are created with **`shippingPrice: null`** and a total of the pieces
+  alone. **Null and 0 mean different things**: nothing agreed yet, versus agreed
+  at no charge. Without the distinction an order cannot say whether the step has
+  been done.
+- The charge is recorded on the order, in `/admin/orders`, and `totalPrice` is
+  recomputed with it via `orderTotal()` — shared by the create path and the
+  admin edit so both add up the same way. Negative charges are refused; setting
+  one leaves the status alone; clearing it returns the order to "not yet agreed".
+- Checkout shows the subtotal as the total with the delivery message beneath.
+  Saying nothing there would let the customer assume the figure is final.
+- `store.delivery` holds **a message, not a price** — what customers are told at
+  checkout, editable by the owner.
+
+Verified live: order at 90 → delivery null, total 90; admin agrees 75 → total
+165; cancelled and deleted afterwards.
+
+#### Store settings (Phase 5, partly)
+`/admin/settings` was a stub saying settings were "coming in Phase 3". It now
+edits the `store.*` slots through the same machinery as Content — declared once
+in `contentSlots.js`, validated there, editor generated from the field specs —
+on its own screen, because nobody looking for delivery terms would open a page
+about hero headlines. Added a **`number` field type**, settled before the text
+branch so a blank does not become `""` and a quantity is not stored as a string.
+
+**The footer's social icons linked nowhere** — bare icons that looked clickable.
+They are real links now, drawn only where an account is actually configured, and
+carry accessible labels. Contact details, WhatsApp and address sit in the same
+settings slot.
+
+#### Structural fix Next forced
+The shared slot editor was exported from `admin/(dashboard)/content/page.tsx`,
+and Next refuses a route module that exports anything beyond the names the
+framework recognises. It lives in `_components/content/SlotEditor.tsx` now, which
+both Content and Settings import — where it belonged.
+
+Verified: backend **182 → 187**, `tsc` clean, Playwright **27/27**. Catalogue at
+24 products, 0 orders.
+
+#### Still outstanding
+- **Payment is a label, not a processor.** PayPal, deferred by the owner. This
+  is the one thing between the site and taking money.
+- Phase 4: customer accounts, `/admin/customers`, and reviews — `rating` and
+  `reviewCount` remain modelled but unrendered and uneditable.
+- **One administrator, no way to add another from the interface.** The password
+  is changed with `npm run set-admin-password -w backend`.
+- Real products and photography; the Unsplash imagery and stand-in testimonials
+  are placeholders, now editable under `/admin/content`.

@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const app = require("../app");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
+const SiteContent = require("../models/SiteContent");
 const User = require("../models/User");
 const { connectTestDB, clearTestDB, closeTestDB } = require("../test/setupTestDb");
 const { seedCatalogConfig, productFixture } = require("../test/catalogFixtures");
@@ -83,15 +84,17 @@ describe("placing an order", () => {
 
     expect(res.status).toBe(201);
     expect(res.body.itemsPrice).toBe(500);
-    // Under the free-shipping threshold, so the flat rate applies.
-    expect(res.body.shippingPrice).toBe(45);
-    expect(res.body.totalPrice).toBe(545);
+    // Delivery is not priced by the system, so the total is the pieces alone.
+    expect(res.body.shippingPrice).toBeNull();
+    expect(res.body.totalPrice).toBe(500);
   });
 
-  test("shipping is free above the threshold", async () => {
+  test("an order carries no delivery charge until one is agreed", async () => {
     const product = await Product.create(productFixture({ price: 1200 }));
     const res = await request(app).post("/api/orders").send(orderBody(product._id));
-    expect(res.body.shippingPrice).toBe(0);
+
+    // Null, not zero: nothing has been agreed, which is not the same as free.
+    expect(res.body.shippingPrice).toBeNull();
     expect(res.body.totalPrice).toBe(1200);
   });
 
@@ -279,8 +282,8 @@ describe("the admin order list", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.orders).toBe(1);
-    expect(res.body.revenue).toBe(545);
-    expect(res.body.averageOrderValue).toBe(545);
+    expect(res.body.revenue).toBe(500);
+    expect(res.body.averageOrderValue).toBe(500);
     expect(res.body.unfulfilled).toBe(1);
   });
 
@@ -332,5 +335,82 @@ describe("deleting an order", () => {
     const created = await request(app).post("/api/orders").send(orderBody(product._id));
     const res = await request(app).delete(`/api/orders/${created.body._id}`);
     expect(res.status).toBe(401);
+  });
+});
+
+describe("the delivery charge", () => {
+  test("the admin records what was agreed, and the total follows", async () => {
+    const token = await adminToken();
+    const product = await Product.create(productFixture({ price: 500 }));
+    const created = await request(app).post("/api/orders").send(orderBody(product._id));
+
+    expect(created.body.totalPrice).toBe(500);
+
+    const res = await request(app)
+      .put(`/api/orders/${created.body._id}/status`)
+      .set("Cookie", [`token=${token}`])
+      .send({ shippingPrice: 60 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.shippingPrice).toBe(60);
+    expect(res.body.totalPrice).toBe(560);
+  });
+
+  test("an agreed charge of nothing is different from none agreed", async () => {
+    const token = await adminToken();
+    const product = await Product.create(productFixture({ price: 500 }));
+    const created = await request(app).post("/api/orders").send(orderBody(product._id));
+
+    const res = await request(app)
+      .put(`/api/orders/${created.body._id}/status`)
+      .set("Cookie", [`token=${token}`])
+      .send({ shippingPrice: 0 });
+
+    expect(res.body.shippingPrice).toBe(0);
+    expect(res.body.totalPrice).toBe(500);
+  });
+
+  test("it can be cleared again while it is still being discussed", async () => {
+    const token = await adminToken();
+    const product = await Product.create(productFixture({ price: 500 }));
+    const created = await request(app).post("/api/orders").send(orderBody(product._id));
+
+    const put = (shippingPrice) =>
+      request(app)
+        .put(`/api/orders/${created.body._id}/status`)
+        .set("Cookie", [`token=${token}`])
+        .send({ shippingPrice });
+
+    await put(60);
+    const res = await put(null);
+
+    expect(res.body.shippingPrice).toBeNull();
+    expect(res.body.totalPrice).toBe(500);
+  });
+
+  test("a negative charge is refused", async () => {
+    const token = await adminToken();
+    const product = await Product.create(productFixture({ price: 500 }));
+    const created = await request(app).post("/api/orders").send(orderBody(product._id));
+
+    const res = await request(app)
+      .put(`/api/orders/${created.body._id}/status`)
+      .set("Cookie", [`token=${token}`])
+      .send({ shippingPrice: -10 });
+
+    expect(res.status).toBe(400);
+  });
+
+  test("setting it does not disturb the status", async () => {
+    const token = await adminToken();
+    const product = await Product.create(productFixture({ price: 500 }));
+    const created = await request(app).post("/api/orders").send(orderBody(product._id));
+
+    const res = await request(app)
+      .put(`/api/orders/${created.body._id}/status`)
+      .set("Cookie", [`token=${token}`])
+      .send({ shippingPrice: 25 });
+
+    expect(res.body.status).toBe("pending");
   });
 });

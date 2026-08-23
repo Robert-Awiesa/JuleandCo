@@ -49,6 +49,11 @@ function OrderRow({ order }: { order: AdminOrder }) {
   const invalidate = useInvalidate();
   const [open, setOpen] = useState(false);
   const [tracking, setTracking] = useState(order.trackingNumber ?? "");
+  const [delivery, setDelivery] = useState(
+    order.shippingPrice === null || order.shippingPrice === undefined
+      ? ""
+      : String(order.shippingPrice)
+  );
 
   const remove = useMutation({
     mutationFn: () => api.del(`/orders/${order._id}`),
@@ -60,10 +65,16 @@ function OrderRow({ order }: { order: AdminOrder }) {
   });
 
   const update = useMutation({
-    mutationFn: (patch: { status?: OrderStatus; trackingNumber?: string }) =>
+    mutationFn: (patch: { status?: OrderStatus; trackingNumber?: string; shippingPrice?: number | null }) =>
       api.put<AdminOrder>(`/orders/${order._id}/status`, patch),
     onSuccess: (_data, patch) => {
-      toast.success(patch.status ? `Marked ${patch.status}` : "Tracking saved");
+      toast.success(
+        patch.status
+          ? `Marked ${patch.status}`
+          : patch.shippingPrice !== undefined
+            ? "Delivery charge saved"
+            : "Tracking saved"
+      );
       // Cancelling returns stock, so the catalogue figures move with the order.
       invalidate.orders();
     },
@@ -145,9 +156,15 @@ function OrderRow({ order }: { order: AdminOrder }) {
                     <span>{formatCurrency(order.itemsPrice)}</span>
                   </div>
                   <div className="flex justify-between text-obsidian/70">
-                    <span>Shipping</span>
+                    <span>Delivery</span>
                     <span>
-                      {order.shippingPrice === 0 ? "Free" : formatCurrency(order.shippingPrice)}
+                      {order.shippingPrice === null || order.shippingPrice === undefined ? (
+                        <span className="text-amber-700">Not yet agreed</span>
+                      ) : order.shippingPrice === 0 ? (
+                        "No charge"
+                      ) : (
+                        formatCurrency(order.shippingPrice)
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-between font-medium text-obsidian">
@@ -174,6 +191,41 @@ function OrderRow({ order }: { order: AdminOrder }) {
                   <p className="mb-1 text-xs uppercase tracking-widest2 text-obsidian/50">Payment</p>
                   <p className="capitalize text-obsidian/70">
                     {order.paymentMethod.replace("_", " ")} · {order.paymentStatus}
+                  </p>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor={`delivery-${order._id}`}
+                    className="mb-1 block text-xs uppercase tracking-widest2 text-obsidian/50"
+                  >
+                    Delivery charge
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      id={`delivery-${order._id}`}
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={delivery}
+                      onChange={(e) => setDelivery(e.target.value)}
+                      placeholder="Agreed with the customer"
+                    />
+                    <button
+                      onClick={() =>
+                        update.mutate({
+                          shippingPrice: delivery === "" ? null : Number(delivery),
+                        })
+                      }
+                      disabled={update.isPending}
+                      className="shrink-0 rounded bg-obsidian px-4 text-xs uppercase tracking-wide text-alabaster hover:bg-gold hover:text-obsidian disabled:opacity-40"
+                    >
+                      Save
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-obsidian/45">
+                    Set once you have agreed it with the customer — the order total updates to
+                    match. Leave blank while it is still being discussed.
                   </p>
                 </div>
 

@@ -80,6 +80,25 @@ export interface EthosContent {
   promiseBody?: string;
 }
 
+export interface DeliverySettings {
+  /**
+   * What customers are told about delivery at checkout. There is no price:
+   * delivery depends on where an order is going and is agreed with the customer
+   * once the order is confirmed.
+   */
+  checkoutNote: string;
+}
+
+export interface ContactSettings {
+  email?: string;
+  phone?: string;
+  whatsapp?: string;
+  address?: string;
+  instagram?: string;
+  facebook?: string;
+  twitter?: string;
+}
+
 export interface SeoContent {
   title: string;
   description: string;
@@ -94,6 +113,8 @@ export interface SiteContent {
   "layout.footer": FooterContent;
   "page.ethos": EthosContent;
   "site.seo": SeoContent;
+  "store.delivery": DeliverySettings;
+  "store.contact": ContactSettings;
 }
 
 /**
@@ -121,6 +142,10 @@ const OFFLINE_FALLBACK: SiteContent = {
     description:
       "Curated eyewear, jewellery and bags for the woman who wants to express herself with confidence, sophistication and individuality.",
   },
+  "store.delivery": {
+    checkoutNote: "Delivery is arranged with you once your order is confirmed.",
+  },
+  "store.contact": {},
 };
 
 /** Every slot in one request. Layouts need several, so this beats N calls. */

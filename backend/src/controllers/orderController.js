@@ -1,6 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const Order = require("../models/Order");
-const { buildOrderLines, reserveStock, releaseStock } = require("../utils/orderPricing");
+const { buildOrderLines, reserveStock, releaseStock, orderTotal } = require("../utils/orderPricing");
 const { searchRegex } = require("../utils/searchRegex");
 
 /** JC for JULES & CO. Was AO-, left over from the Aura & Optic name. */
@@ -159,7 +159,7 @@ const getOrderById = asyncHandler(async (req, res) => {
 // @route   PUT /api/orders/:id/status
 // @access  Private/Admin
 const updateOrderStatus = asyncHandler(async (req, res) => {
-  const { status, trackingNumber } = req.body;
+  const { status, trackingNumber, shippingPrice } = req.body;
   const order = await Order.findById(req.params.id);
 
   if (!order) {
@@ -176,6 +176,23 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
 
   if (status) order.status = status;
   if (trackingNumber !== undefined) order.trackingNumber = trackingNumber;
+
+  /**
+   * The delivery charge, once it has been agreed with the customer. The system
+   * never works it out, so this is the only place it is ever set — and the
+   * total has to move with it or the order says one thing and its lines another.
+   */
+  if (shippingPrice !== undefined) {
+    const charge = shippingPrice === null || shippingPrice === "" ? null : Number(shippingPrice);
+
+    if (charge !== null && (!Number.isFinite(charge) || charge < 0)) {
+      res.status(400);
+      throw new Error("A delivery charge has to be a number, and cannot be negative");
+    }
+
+    order.shippingPrice = charge;
+    order.totalPrice = orderTotal(order.itemsPrice, charge);
+  }
 
   const updated = await order.save();
   res.json(updated);

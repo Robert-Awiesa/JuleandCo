@@ -7,15 +7,21 @@ const Product = require("../models/Product");
  * stored whatever itemsPrice/shippingPrice/totalPrice the client posted, so a
  * buyer could have named their own total.
  *
- * TODO(settings): these two constants are duplicated in the storefront's
- * checkout page. Phase 5 moves them into store settings so there is one source.
+ * **Delivery is not priced here, and not by the system at all.** It varies by
+ * where a piece is going and is agreed with the customer once the order has
+ * been confirmed. An order is therefore created with no delivery charge —
+ * `shippingPrice: null`, meaning "not yet agreed", which is a different thing
+ * from an agreed charge of zero — and the admin records what was settled.
+ * Quoting a figure the shop had not agreed to would be worse than quoting
+ * nothing.
  */
-const FREE_SHIPPING_THRESHOLD = 1000;
-const FLAT_SHIPPING_RATE = 45;
 
-function calculateShipping(itemsPrice) {
-  if (itemsPrice <= 0) return 0;
-  return itemsPrice >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING_RATE;
+/**
+ * What an order comes to once a delivery charge has been agreed. Kept here so
+ * the create path and the admin's later edit compute the total the same way.
+ */
+function orderTotal(itemsPrice, shippingPrice) {
+  return round(Number(itemsPrice) + Number(shippingPrice || 0));
 }
 
 /** Money is stored in major units, so round to cents to avoid float drift. */
@@ -76,13 +82,13 @@ async function buildOrderLines(cartItems) {
   }
 
   const itemsPrice = round(lines.reduce((sum, l) => sum + l.price * l.quantity, 0));
-  const shippingPrice = calculateShipping(itemsPrice);
 
   return {
     lines,
     itemsPrice,
-    shippingPrice,
-    totalPrice: round(itemsPrice + shippingPrice),
+    // Null rather than 0: nothing has been agreed yet.
+    shippingPrice: null,
+    totalPrice: itemsPrice,
   };
 }
 
@@ -148,7 +154,5 @@ module.exports = {
   buildOrderLines,
   reserveStock,
   releaseStock,
-  calculateShipping,
-  FREE_SHIPPING_THRESHOLD,
-  FLAT_SHIPPING_RATE,
+  orderTotal,
 };

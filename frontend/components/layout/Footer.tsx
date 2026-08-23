@@ -4,11 +4,25 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Instagram, Facebook, Twitter } from "lucide-react";
-import type { FooterContent } from "@/lib/content";
+import type { ContactSettings, FooterContent } from "@/lib/content";
 
-export function Footer({ content }: { content: FooterContent }) {
+export function Footer({
+  content,
+  contact = {},
+}: {
+  content: FooterContent;
+  contact?: ContactSettings;
+}) {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+
+  const social = [
+    { key: "instagram", href: contact.instagram, label: "JULES & CO on Instagram", Icon: Instagram },
+    { key: "facebook", href: contact.facebook, label: "JULES & CO on Facebook", Icon: Facebook },
+    { key: "twitter", href: contact.twitter, label: "JULES & CO on X", Icon: Twitter },
+  ].filter((item): item is { key: string; href: string; label: string; Icon: typeof Instagram } =>
+    Boolean(item.href)
+  );
 
   return (
     <footer className="border-t border-line bg-surface-raised text-ink">
@@ -72,10 +86,21 @@ export function Footer({ content }: { content: FooterContent }) {
             &copy; {new Date().getFullYear()} JULES &amp; CO. All rights reserved.
           </p>
         </div>
+        {/* Drawn only where there is an account behind them. These were bare
+            icons before — decoration that looked clickable and went nowhere. */}
         <div className="flex items-center gap-5">
-          <Instagram size={16} className="text-ink-muted hover:text-gold" />
-          <Facebook size={16} className="text-ink-muted hover:text-gold" />
-          <Twitter size={16} className="text-ink-muted hover:text-gold" />
+          {social.map(({ key, href, label, Icon }) => (
+            <a
+              key={key}
+              href={href}
+              target="_blank"
+              rel="noreferrer noopener"
+              aria-label={label}
+              className="flex h-11 w-11 items-center justify-center text-ink-muted transition-colors hover:text-gold"
+            >
+              <Icon size={16} />
+            </a>
+          ))}
         </div>
       </div>
     </footer>
