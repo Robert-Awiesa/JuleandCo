@@ -6,6 +6,7 @@ const Product = require("../models/Product");
 const Order = require("../models/Order");
 const Review = require("../models/Review");
 const Category = require("../models/Category");
+const AttributeGroup = require("../models/AttributeGroup");
 const User = require("../models/User");
 const { connectTestDB, clearTestDB, closeTestDB } = require("../test/setupTestDb");
 const { seedCatalogConfig, productFixture } = require("../test/catalogFixtures");
@@ -278,5 +279,89 @@ describe("a retired category is off sale", () => {
     const res = await request(app).get(`/api/products/slug/${product.slug}`);
     // An old link would otherwise still sell something withdrawn.
     expect(res.status).toBe(404);
+  });
+});
+
+describe("attributes belong to their category", () => {
+  /**
+   * The house is a women's shop. Frames are the one line where a men's cut is
+   * worth calling out, so "Designed For" is bound to eyewear — offering it
+   * elsewhere invites marking a piece for an audience the shop does not sell to.
+   */
+  beforeEach(async () => {
+    await AttributeGroup.updateOne({ key: "gender" }, { $set: { categories: ["eyewear"] } });
+  });
+
+  test("eyewear may carry Designed For", async () => {
+    const token = await adminToken();
+
+    const res = await asAdmin(request(app).post("/api/products"), token).send(
+      productFixture({ attributes: { gender: "mens" } })
+    );
+
+    expect(res.status).toBe(201);
+  });
+
+  test("jewellery may not, and is told which field and why", async () => {
+    const token = await adminToken();
+
+    const res = await asAdmin(request(app).post("/api/products"), token).send(
+      productFixture({
+        slug: "a-necklace",
+        category: "jewellery",
+        subCategory: "necklaces",
+        attributes: { gender: "mens" },
+      })
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/Designed For/);
+    expect(res.body.message).toMatch(/Jewellery/);
+  });
+
+  test("an existing product cannot have it added by an update either", async () => {
+    const token = await adminToken();
+    const product = await Product.create(
+      productFixture({ slug: "a-necklace", category: "jewellery", subCategory: "necklaces" })
+    );
+
+    const res = await asAdmin(request(app).put(`/api/products/${product._id}`), token).send({
+      attributes: { gender: "mens" },
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  test("a group that applies everywhere is still accepted anywhere", async () => {
+    const token = await adminToken();
+    await AttributeGroup.updateOne({ key: "gender" }, { $set: { categories: [] } });
+
+    const res = await asAdmin(request(app).post("/api/products"), token).send(
+      productFixture({
+        slug: "a-necklace",
+        category: "jewellery",
+        subCategory: "necklaces",
+        attributes: { gender: "mens" },
+      })
+    );
+
+    // An empty categories list means "applies everywhere" and must keep working.
+    expect(res.status).toBe(201);
+  });
+
+  test("an empty value is not treated as carrying the attribute", async () => {
+    const token = await adminToken();
+
+    const res = await asAdmin(request(app).post("/api/products"), token).send(
+      productFixture({
+        slug: "a-necklace",
+        category: "jewellery",
+        subCategory: "necklaces",
+        attributes: { gender: "" },
+      })
+    );
+
+    // Clearing a field must not become a reason to refuse the save.
+    expect(res.status).toBe(201);
   });
 });

@@ -297,6 +297,7 @@ const SLOTS = {
               { id: "bracelets", label: "Bracelets", href: "/shop?category=jewellery&subCategory=bracelets" },
               { id: "rings", label: "Rings", href: "/shop?category=jewellery&subCategory=rings" },
               { id: "earrings", label: "Earrings", href: "/shop?category=jewellery&subCategory=earrings" },
+              { id: "new", label: "New Arrivals", href: "/shop?category=jewellery&sort=new" },
             ],
           },
           {
@@ -331,6 +332,7 @@ const SLOTS = {
               { id: "shoulder", label: "Shoulder Bags", href: "/shop?category=bags&subCategory=shoulder-bags" },
               { id: "crossbody", label: "Crossbody Bags", href: "/shop?category=bags&subCategory=crossbody-bags" },
               { id: "clutches", label: "Clutches", href: "/shop?category=bags&subCategory=clutches" },
+              { id: "new", label: "New Arrivals", href: "/shop?category=bags&sort=new" },
             ],
           },
           {

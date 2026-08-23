@@ -84,6 +84,46 @@ async function assertCategoryActive(res, product) {
 }
 
 /**
+ * Refuses attribute values that do not belong to the product's category.
+ *
+ * The admin form only draws the groups bound to a category, so this cannot be
+ * reached by using the interface — but nothing stopped a value arriving another
+ * way, and once stored it would sit on the product invisibly, count towards a
+ * facet, and never be editable from the form that refuses to show it.
+ *
+ * "Designed For" is the case that prompted it: the house is a women's shop and
+ * frames are the one line where a men's cut is meaningful, so the group is
+ * bound to eyewear. A jewellery piece carrying it is not a preference, it is a
+ * mistake nobody can see.
+ */
+async function assertAttributesBelong(res, product) {
+  const attributes = product.attributes instanceof Map
+    ? Object.fromEntries(product.attributes)
+    : product.attributes;
+
+  const keys = Object.keys(attributes || {}).filter((k) => {
+    const v = attributes[k];
+    return Array.isArray(v) ? v.length > 0 : v !== "" && v !== null && v !== undefined;
+  });
+  if (keys.length === 0) return;
+
+  const groups = await AttributeGroup.find({ key: { $in: keys } }, "key label categories").lean();
+
+  const wrong = groups.filter(
+    (g) => g.categories?.length && !g.categories.includes(product.category)
+  );
+
+  if (wrong.length > 0) {
+    const category = await Category.findOne({ slug: product.category }, "name").lean();
+    res.status(400);
+    throw new Error(
+      `${wrong.map((g) => `"${g.label}"`).join(", ")} ${wrong.length === 1 ? "does" : "do"} not apply to ${category?.name || product.category}. ` +
+        `Clear ${wrong.length === 1 ? "it" : "them"} before saving.`
+    );
+  }
+}
+
+/**
  * Category and sub-category are validated here rather than by a schema enum.
  * The enum was a hard write gate that made adding a category a code change.
  */
@@ -134,7 +174,12 @@ const getProducts = asyncHandler(async (req, res) => {
   const activeSlugs = (await Category.find({ isActive: true }, "slug").lean()).map((c) => c.slug);
   const query = { publishStatus: "published", category: { $in: activeSlugs } };
 
-  if (category && category !== "all") query.category = category;
+  // Narrowed to the one asked for, but only if it is still on sale — assigning
+  // the slug straight over the top would have let a retired line be browsed by
+  // typing its name into the URL.
+  if (category && category !== "all") {
+    query.category = activeSlugs.includes(category) ? category : "__retired__";
+  }
   if (subCategory) query.subCategory = { $in: csv(subCategory) };
 
   // Partial matches, so a shopper typing "avia" sees The Aviator rather than
@@ -217,6 +262,7 @@ const createProduct = asyncHandler(async (req, res) => {
 
   assertPublishable(res, req.body);
   await assertCategoryActive(res, req.body);
+  await assertAttributesBelong(res, req.body);
 
   const product = await Product.create(req.body);
   res.status(201).json(product);
@@ -249,6 +295,7 @@ const updateProduct = asyncHandler(async (req, res) => {
   // flips publishStatus has to be judged on the product it produces.
   assertPublishable(res, product);
   await assertCategoryActive(res, product);
+  await assertAttributesBelong(res, product);
 
   const updated = await product.save();
   res.json(updated);
@@ -755,6 +802,64 @@ const getProductFacets = asyncHandler(async (req, res) => {
 
   const price = (raw.priceBounds || [])[0] || {};
 
+  /**
+   * The same counts again, split by category.
+   *
+   * The mega menu's links are category-scoped — "Eyewear › Men" filters to
+   * eyewear *and* men's — but the count beside them read the global figure. A
+   * men's jewellery piece therefore rendered "Men (1)" under Eyewear and gave
+   * an empty shop when clicked: the number promised something the link could
+   * not deliver.
+   *
+   * Skipped when the caller already asked for one category, since `counts` is
+   * then scoped to it anyway.
+   */
+  let countsByCategory;
+  if (!category || category === "all") {
+    const perCategory = await Product.aggregate([
+      { $match: { publishStatus: "published" } },
+      {
+        $facet: {
+          // Sub-category belongs here too. Leaving it out made every
+          // sub-category link in the menu read zero while returning products,
+          // because the lookup found no table for it and fell back to a zero.
+          subCategory: [
+            {
+              $group: {
+                _id: { category: "$category", value: "$subCategory" },
+                n: { $sum: 1 },
+              },
+            },
+          ],
+          ...Object.fromEntries(
+            applicable.map((group) => [
+              group.key,
+              [
+                { $unwind: `$attributes.${group.key}` },
+                {
+                  $group: {
+                    _id: { category: "$category", value: `$attributes.${group.key}` },
+                    n: { $sum: 1 },
+                  },
+                },
+              ],
+            ])
+          ),
+        },
+      },
+    ]);
+
+    countsByCategory = {};
+    [{ key: "subCategory" }, ...applicable].forEach((group) => {
+      ((perCategory[0] || {})[group.key] || []).forEach(({ _id, n }) => {
+        if (_id?.value === null || _id?.value === undefined || _id?.value === "") return;
+        countsByCategory[_id.category] ||= {};
+        countsByCategory[_id.category][group.key] ||= {};
+        countsByCategory[_id.category][group.key][_id.value] = n;
+      });
+    });
+  }
+
   res.json({
     groups,
     // Lets the storefront render a facet it has never heard of, with the right
@@ -766,6 +871,9 @@ const getProductFacets = asyncHandler(async (req, res) => {
     // value -> product count, keyed by group. Consumed by the navigation, which
     // needs a number per link without re-deriving it from `groups`.
     counts,
+    // counts, narrowed by category, so a category-scoped link can show the
+    // number it will actually deliver.
+    countsByCategory,
     priceBounds: [price.min ?? 0, price.max ?? 0],
   });
 });

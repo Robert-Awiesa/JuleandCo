@@ -12,6 +12,7 @@
     "pivot": "node src/scripts/pivotToJewelleryAndBags.js",
     "set-admin-password": "node src/scripts/setAdminPassword.js",
     "migrate:is-new-arrival": "node src/scripts/renameIsNewField.js",
+    "migrate:gender-eyewear": "node src/scripts/scopeGenderToEyewear.js",
     "test": "jest --runInBand"
   },
   "dependencies": {

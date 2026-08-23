@@ -71,7 +71,6 @@ const PRODUCTS = [
       gemstone: "freshwater-pearl",
       claspType: "lobster",
       occasion: "everyday",
-      gender: "womens",
       careInstructions: "Remove before swimming. Polish with the supplied cloth; avoid perfume and lotions.",
     },
     options: [{ name: "Metal", groupKey: "metal", values: [METALS.yellow, METALS.silver] }],
@@ -91,7 +90,6 @@ const PRODUCTS = [
       gemstone: "none",
       claspType: "spring-ring",
       occasion: "everyday",
-      gender: "womens",
       careInstructions: "Rinse after contact with sand or salt water and dry thoroughly.",
     },
     options: [
@@ -114,7 +112,6 @@ const PRODUCTS = [
       purity: "14k-gold",
       gemstone: "none",
       occasion: "gifting",
-      gender: "unisex",
       careInstructions: "Solid gold — safe to wear daily. Re-polish annually to restore the brushed finish.",
     },
     options: [
@@ -135,7 +132,6 @@ const PRODUCTS = [
       purity: "925-sterling-silver",
       gemstone: "cubic-zirconia",
       occasion: "evening",
-      gender: "womens",
       careInstructions: "Store in the pouch provided to prevent scratching.",
     },
     // No options at all — the single-item case.

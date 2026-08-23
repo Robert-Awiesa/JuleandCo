@@ -67,7 +67,10 @@ const GROUPS = [
   { key: "composition", label: "Composition", categories: ["apparel"], inputType: "text", role: "spec", showInFilters: false, sortOrder: 4 },
 
   // --- Every category ---
-  { key: "gender", label: "Designed For", categories: [], inputType: "select", role: "spec", filterStyle: "chips", sortOrder: 20 },
+  // Eyewear only. The house is a women's shop; frames are the one line where
+  // a men's cut is worth calling out, so offering "Designed For" anywhere else
+  // invites marking a piece for an audience the shop does not sell to.
+  { key: "gender", label: "Designed For", categories: ["eyewear"], inputType: "select", role: "spec", filterStyle: "chips", sortOrder: 20 },
   { key: "careInstructions", label: "Care", categories: [], inputType: "text", role: "spec", showInFilters: false, sortOrder: 21 },
 ];
 
