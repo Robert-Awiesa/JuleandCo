@@ -57,4 +57,3 @@ playwright/.cache/
 backend/backups/
 
 # port chosen by frontend/scripts/dev.js at runtime
-.next-dev-port

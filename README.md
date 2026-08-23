@@ -82,8 +82,8 @@ npm install
 # Add --with-examples for a few draft jewellery pieces to look at.
 npm run seed -w backend
 
-# run frontend + backend together. The frontend takes the first free port and
-# prints it; the API is on http://localhost:5000
+# run frontend + backend together
+# frontend http://localhost:3000, API http://localhost:5000
 npm run dev
 ```
 

@@ -423,3 +423,22 @@ slot back to original.
 - Payment is still a label, not a processor — PayPal deferred by the owner.
 - The placeholder Unsplash imagery and stand-in testimonials are now editable in
   the admin, which is where they should be replaced before launch.
+
+### 2026-08-23 — Frontend dev port back to 3000
+
+Reverted at the owner's request. The dynamic port added on 2026-08-22 did stop
+the EADDRINUSE crash, but it moved the address on every restart, so bookmarks,
+the Playwright base URL and anything holding the API's CORS origin all had to
+chase it. That churn was worse than the crash.
+
+`frontend/scripts/dev.js` now pins 3000 and **checks the port before starting**.
+That check is the part worth keeping: Next's own behaviour on a busy port is to
+drift to 3001 with a one-line notice, and two dev servers then share one `.next`
+directory and clobber each other's chunks — which surfaces much later as a
+`ChunkLoadError` on a page that was fine. A clash is now reported plainly, with
+the `netstat` command to find the offender, and the process exits rather than
+starting a second server. `PORT=3005 npm run dev -w frontend` still overrides.
+
+`.next-dev-port` is gone, along with its gitignore entry; `playwright.config.ts`
+reads `http://localhost:3000` again, with `E2E_BASE_URL` still winning for a run
+against a deployed environment.
