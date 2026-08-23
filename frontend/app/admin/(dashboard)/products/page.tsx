@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/admin-ui/table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/admin-ui/select";
@@ -11,6 +11,7 @@ import { Button } from "@/components/admin-ui/button";
 import { Input } from "@/components/admin-ui/input";
 import { api } from "../../_lib/api";
 import { useCategories } from "../../_lib/useCatalogConfig";
+import { useInvalidate } from "../../_lib/invalidate";
 import { formatCurrency, stockTone } from "../../_lib/format";
 import type { AdminProduct, PaginatedResult } from "../../_lib/types";
 
@@ -55,7 +56,7 @@ export default function ProductsPage() {
 
   const { data, isLoading } = useAdminProducts(filters, page);
   const { data: categories = [] } = useCategories();
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidate();
 
   // Any filter change re-pages from the start, otherwise you can land on page 4
   // of a two-page result and see nothing.
@@ -65,10 +66,6 @@ export default function ProductsPage() {
     setSelected([]);
   }
 
-  function invalidate() {
-    queryClient.invalidateQueries({ queryKey: ["admin-products"] });
-  }
-
   const markOutOfStock = useMutation({
     mutationFn: (product: AdminProduct) =>
       api.patch(`/products/${product._id}/stock`, {
@@ -76,7 +73,7 @@ export default function ProductsPage() {
       }),
     onSuccess: () => {
       toast.success("Marked out of stock");
-      invalidate();
+      invalidate.catalogue();
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -85,7 +82,7 @@ export default function ProductsPage() {
     mutationFn: (id: string) => api.del(`/products/${id}`),
     onSuccess: () => {
       toast.success("Product deleted");
-      invalidate();
+      invalidate.catalogue();
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -94,7 +91,7 @@ export default function ProductsPage() {
     mutationFn: (id: string) => api.post<AdminProduct>(`/products/${id}/duplicate`, {}),
     onSuccess: (copy) => {
       toast.success(`Created "${copy.name}" as a draft`);
-      invalidate();
+      invalidate.catalogue();
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -115,7 +112,7 @@ export default function ProductsPage() {
         toast.success(`${result.updated} ${result.updated === 1 ? "product" : "products"} updated`);
       }
       setSelected([]);
-      invalidate();
+      invalidate.catalogue();
     },
     onError: (err: Error) => toast.error(err.message),
   });

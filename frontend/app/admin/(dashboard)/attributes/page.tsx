@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { X } from "lucide-react";
 import { api } from "../../_lib/api";
 import { resolveColorHex } from "../../_components/products/colorNames";
 import { useAttributeGroups, useCategories } from "../../_lib/useCatalogConfig";
 import type { Attribute, AttributeGroup, Category } from "../../_lib/types";
+import { useInvalidate } from "../../_lib/invalidate";
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -21,17 +22,13 @@ const ROLE_BLURB: Record<string, string> = {
 };
 
 function GroupPanel({ group, categories }: { group: AttributeGroup; categories: Category[] }) {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidate();
   const [draft, setDraft] = useState("");
 
   const { data: options = [], isLoading } = useQuery({
     queryKey: ["attributes", group.key],
     queryFn: () => api.get<Attribute[]>(`/attributes?group=${group.key}`),
   });
-
-  function invalidate() {
-    queryClient.invalidateQueries({ queryKey: ["attributes"] });
-  }
 
   const createMutation = useMutation({
     mutationFn: (label: string) =>
@@ -47,7 +44,7 @@ function GroupPanel({ group, categories }: { group: AttributeGroup; categories: 
     onSuccess: () => {
       toast.success("Option added");
       setDraft("");
-      invalidate();
+      invalidate.configuration();
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -57,14 +54,14 @@ function GroupPanel({ group, categories }: { group: AttributeGroup; categories: 
       api.put<Attribute>(`/attributes/${id}`, { label }),
     onSuccess: () => {
       toast.success("Renamed");
-      invalidate();
+      invalidate.configuration();
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
   const recolorMutation = useMutation({
     mutationFn: ({ id, hex }: { id: string; hex: string }) => api.put<Attribute>(`/attributes/${id}`, { hex }),
-    onSuccess: invalidate,
+    onSuccess: () => invalidate.configuration(),
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -72,7 +69,7 @@ function GroupPanel({ group, categories }: { group: AttributeGroup; categories: 
     mutationFn: (id: string) => api.del(`/attributes/${id}`),
     onSuccess: () => {
       toast.success("Option removed");
-      invalidate();
+      invalidate.configuration();
     },
     // A 409 means products still reference it; the API names how many.
     onError: (err: Error) => toast.error(err.message),
@@ -173,7 +170,7 @@ function GroupPanel({ group, categories }: { group: AttributeGroup; categories: 
 
 /** Creates a whole new vocabulary — previously only possible in code. */
 function NewGroupForm({ categories }: { categories: Category[] }) {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidate();
   const [open, setOpen] = useState(false);
   const [label, setLabel] = useState("");
   const [category, setCategory] = useState("");
@@ -195,7 +192,7 @@ function NewGroupForm({ categories }: { categories: Category[] }) {
       toast.success("Attribute group created");
       setLabel("");
       setOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["attribute-groups"] });
+      invalidate.configuration();
     },
     onError: (err: Error) => toast.error(err.message),
   });

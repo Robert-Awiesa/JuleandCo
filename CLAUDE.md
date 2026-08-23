@@ -442,3 +442,68 @@ starting a second server. `PORT=3005 npm run dev -w frontend` still overrides.
 `.next-dev-port` is gone, along with its gitignore entry; `playwright.config.ts`
 reads `http://localhost:3000` again, with `E2E_BASE_URL` still winning for a run
 against a deployed environment.
+
+### 2026-08-23 — Making the admin tell the truth about current state
+
+Asked for after Phase 3: everything should be up to date — edits, new products,
+retired categories. Confirmed with the owner that this means **fresh on the next
+load**, not live push to an already-open page. No SSE, no WebSockets; those stay
+out until something actually needs them.
+
+**The storefront was already fine.** Every read is `cache: "no-store"`, so
+publishing, retiring and content edits show on the next page load. The staleness
+was all on the admin side.
+
+#### One line was most of it
+`QueryProvider` set `refetchOnWindowFocus: false` with a 30s `staleTime`. So the
+admin never re-asked when a tab regained focus: leave it open, take an order on
+the storefront or edit in a second tab, come back, and the figures were whatever
+they had been when you left. Nothing was broken — the screen was simply never
+asked again — but it reads as the dashboard lying, which is worse than a slow
+page. Now `refetchOnWindowFocus: true`, `refetchOnReconnect: true`,
+`staleTime: 0` for live figures, `retry: 1` so a failure surfaces instead of
+being retried three times behind a spinner.
+
+#### Invalidation is declared once
+Every mutation hand-picked its own query keys and they had drifted: saving a
+product refreshed the list but not the dashboard tiles; creating a sub-category
+from the product form refreshed only that dropdown; retiring a category
+refreshed the Categories page while the product form kept offering it from a
+five-minute cache. The screens that went stale were never the ones you were
+looking at.
+
+`frontend/app/admin/_lib/invalidate.ts` declares a change by **what happened**
+rather than by which caches to clear — `catalogue()`, `orders()`,
+`configuration()`, `content()`, `uploads()`. Callers say what they did. Keys are
+invalidated by prefix, so `["admin-products"]` covers the list, the dashboard
+tiles and the cross-sell picker without naming each. Every admin mutation now
+goes through it; no page hand-picks keys any more.
+
+`useCatalogConfig`'s cache went 5 min → 30s: long enough to save a refetch per
+tab switch, short enough that a category retired elsewhere is never offered for
+minutes afterwards. Edits made in the same tab do not wait for it at all.
+
+Also: a photo just uploaded now appears in "Reuse a shot" immediately rather
+than after its 60s cache window.
+
+#### Two test-writing faults, both mine
+- **Sub-category names render inside a rename `<input>`**, so `getByText` could
+  never match them whatever the app did. The delete control carries the name as
+  its accessible label; assert on that.
+- **Headless Chromium keeps every page "visible"**, so `page.bringToFront()`
+  never fires the `visibilitychange` event React Query listens for, and the
+  focus-refetch test failed against working code. The spec dispatches that event
+  on `window` — which is where `@tanstack/query-core` v5 listens, not
+  `document`. The app's half of the exchange, going and re-asking, is still what
+  is asserted.
+
+#### Process note worth keeping
+Two runs were wrecked by me, not by the code: running the backend suite
+concurrently with Playwright produced "61 failed" from resource contention (the
+same 178 pass alone), and editing backend files mid-run made nodemon restart the
+API, which failed a login `beforeEach`. **Run one suite at a time, and do not
+edit source while either is running.**
+
+Verified: backend **174 → 178**, `tsc` clean, Playwright **25 → 27**. Catalogue
+left at 24 products, 0 orders, sub-categories unchanged, every content slot
+still original.

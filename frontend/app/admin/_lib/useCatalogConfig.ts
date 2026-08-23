@@ -4,9 +4,18 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
 import type { Attribute, AttributeGroup, Category, CategorySlug } from "./types";
 
-// Categories and vocabularies change rarely but are read by nearly every admin
-// screen, so they are cached for the session rather than refetched per tab.
-const CONFIG_STALE_TIME = 5 * 60_000;
+/**
+ * Categories and vocabularies are read by nearly every admin screen and change
+ * rarely, so they are worth caching — but five minutes was too long. A category
+ * retired in one tab went on being offered by the product form in another for
+ * the rest of that window, which looks like the form ignoring the change.
+ *
+ * Thirty seconds keeps the saving (a tab switch does not refetch the whole
+ * vocabulary) while staying inside the time it takes to notice. Edits made in
+ * this tab do not wait for it at all: they invalidate through
+ * _lib/invalidate.ts.
+ */
+const CONFIG_STALE_TIME = 30_000;
 
 export function useCategories() {
   return useQuery({

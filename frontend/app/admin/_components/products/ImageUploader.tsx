@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { X, Upload, Images, GripVertical } from "lucide-react";
 import { api } from "../../_lib/api";
 
@@ -111,6 +111,7 @@ export function ImageUploader({
   multiple?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRecent, setShowRecent] = useState(false);
@@ -124,6 +125,9 @@ export function ImageUploader({
     try {
       const urls = await Promise.all(Array.from(files).map(uploadToCloudinary));
       onChange(multiple ? [...images, ...urls] : urls);
+      // The picker lists what Cloudinary holds; a shot just uploaded belongs in
+      // it immediately, not after its cache window expires.
+      queryClient.invalidateQueries({ queryKey: ["recent-uploads"] });
     } catch {
       setError("Upload failed — check your connection and try again.");
     } finally {

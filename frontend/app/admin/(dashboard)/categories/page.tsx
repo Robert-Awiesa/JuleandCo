@@ -1,29 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { X } from "lucide-react";
 import { api } from "../../_lib/api";
 import { useCategories } from "../../_lib/useCatalogConfig";
 import type { Category, Subcategory } from "../../_lib/types";
+import { useInvalidate } from "../../_lib/invalidate";
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
 function CategoryPanel({ category }: { category: Category }) {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidate();
   const [newName, setNewName] = useState("");
 
   const { data: subcategories = [], isLoading } = useQuery({
     queryKey: ["subcategories", category.slug],
     queryFn: () => api.get<Subcategory[]>(`/subcategories?categoryType=${category.slug}`),
   });
-
-  function invalidate() {
-    queryClient.invalidateQueries({ queryKey: ["subcategories"] });
-  }
 
   const createMutation = useMutation({
     mutationFn: (name: string) =>
@@ -36,7 +33,7 @@ function CategoryPanel({ category }: { category: Category }) {
     onSuccess: () => {
       toast.success("Sub-category added");
       setNewName("");
-      invalidate();
+      invalidate.configuration();
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -46,7 +43,7 @@ function CategoryPanel({ category }: { category: Category }) {
       api.put<Subcategory>(`/subcategories/${id}`, { name }),
     onSuccess: () => {
       toast.success("Sub-category renamed");
-      invalidate();
+      invalidate.configuration();
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -55,7 +52,7 @@ function CategoryPanel({ category }: { category: Category }) {
     mutationFn: (id: string) => api.del(`/subcategories/${id}`),
     onSuccess: () => {
       toast.success("Sub-category deleted");
-      invalidate();
+      invalidate.configuration();
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -65,7 +62,7 @@ function CategoryPanel({ category }: { category: Category }) {
       api.put<Category>(`/categories/id/${category._id}`, { isActive }),
     onSuccess: () => {
       toast.success(category.isActive ? "Category retired" : "Category reactivated");
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      invalidate.configuration();
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -169,7 +166,7 @@ function CategoryPanel({ category }: { category: Category }) {
  * unions and a Zod schema. It is a form now.
  */
 function NewCategoryForm() {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidate();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [primaryAxis, setPrimaryAxis] = useState("Colour");
@@ -190,7 +187,7 @@ function NewCategoryForm() {
       toast.success("Category created");
       setName("");
       setOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      invalidate.configuration();
     },
     onError: (err: Error) => toast.error(err.message),
   });

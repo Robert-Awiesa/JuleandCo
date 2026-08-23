@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "../../_lib/api";
 import type { Subcategory } from "../../_lib/types";
 import { useAttributeGroups, useCategories } from "../../_lib/useCatalogConfig";
 import { TagsInput } from "./TagsInput";
 import { evaluateReadiness } from "./readiness";
+import { useInvalidate } from "../../_lib/invalidate";
 import type { ProductFormInput } from "./schema";
 
 function slugify(value: string) {
@@ -18,7 +19,7 @@ function slugify(value: string) {
 export function DetailsTab() {
   const { control, register, watch, setValue, formState } = useFormContext<ProductFormInput>();
   const category = watch("category");
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidate();
 
   const [addingSub, setAddingSub] = useState(false);
   const [newSubName, setNewSubName] = useState("");
@@ -50,7 +51,7 @@ export function DetailsTab() {
         categoryType: category,
       }),
     onSuccess: (created) => {
-      queryClient.invalidateQueries({ queryKey: ["subcategories", category] });
+      invalidate.configuration();
       // Select it straight away — creating one is always in order to use it.
       setValue("subCategory", created.slug, { shouldDirty: true, shouldValidate: true });
       setAddingSub(false);

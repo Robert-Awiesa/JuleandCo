@@ -4,11 +4,12 @@ import { useEffect } from "react";
 import { useForm, FormProvider, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/admin-ui/tabs";
 import { api } from "../../_lib/api";
 import type { AdminProduct } from "../../_lib/types";
+import { useInvalidate } from "../../_lib/invalidate";
 import { productFormSchema, type ProductFormInput, type ProductFormValues } from "./schema";
 import { DetailsTab } from "./DetailsTab";
 import { AttributesTab } from "./AttributesTab";
@@ -67,7 +68,7 @@ function toFormValues(product?: AdminProduct): ProductFormInput {
 
 export function ProductForm({ product }: { product?: AdminProduct }) {
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidate();
   const isEditing = Boolean(product);
 
   const form = useForm<ProductFormInput, unknown, ProductFormValues>({
@@ -92,7 +93,7 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
         : api.post<AdminProduct>("/products", values),
     onSuccess: () => {
       toast.success(isEditing ? "Product updated" : "Product created");
-      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      invalidate.catalogue();
       router.push("/admin/products");
     },
     onError: (err: Error) => toast.error(err.message),

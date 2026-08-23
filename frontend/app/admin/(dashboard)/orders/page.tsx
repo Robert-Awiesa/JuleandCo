@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/admin-ui/badge";
@@ -15,6 +15,7 @@ import {
 } from "@/components/admin-ui/select";
 import { api } from "../../_lib/api";
 import { formatCurrency } from "../../_lib/format";
+import { useInvalidate } from "../../_lib/invalidate";
 import type { AdminOrder, OrderStatus, PaginatedResult } from "../../_lib/types";
 
 const STATUSES: OrderStatus[] = ["pending", "processing", "shipped", "delivered", "cancelled"];
@@ -45,7 +46,7 @@ function describeLine(item: AdminOrder["items"][number]) {
 }
 
 function OrderRow({ order }: { order: AdminOrder }) {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidate();
   const [open, setOpen] = useState(false);
   const [tracking, setTracking] = useState(order.trackingNumber ?? "");
 
@@ -53,8 +54,7 @@ function OrderRow({ order }: { order: AdminOrder }) {
     mutationFn: () => api.del(`/orders/${order._id}`),
     onSuccess: () => {
       toast.success(`${order.orderNumber} deleted`);
-      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["order-stats"] });
+      invalidate.orders();
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -64,10 +64,8 @@ function OrderRow({ order }: { order: AdminOrder }) {
       api.put<AdminOrder>(`/orders/${order._id}/status`, patch),
     onSuccess: (_data, patch) => {
       toast.success(patch.status ? `Marked ${patch.status}` : "Tracking saved");
-      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["order-stats"] });
-      // Cancelling returns stock, so the catalogue figures move too.
-      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      // Cancelling returns stock, so the catalogue figures move with the order.
+      invalidate.orders();
     },
     onError: (err: Error) => toast.error(err.message),
   });

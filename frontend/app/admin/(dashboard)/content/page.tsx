@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ExternalLink } from "lucide-react";
 import { api } from "../../_lib/api";
 import { FieldEditor, type FieldSpec } from "../../_components/content/FieldEditor";
+import { useInvalidate } from "../../_lib/invalidate";
 
 interface SlotDescriptor {
   slot: string;
@@ -31,7 +32,7 @@ const PREVIEW: Record<string, string> = {
 };
 
 function SlotEditor({ descriptor }: { descriptor: SlotDescriptor }) {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidate();
   const [draft, setDraft] = useState<unknown>(null);
 
   const { data, isLoading } = useQuery({
@@ -49,8 +50,7 @@ function SlotEditor({ descriptor }: { descriptor: SlotDescriptor }) {
     mutationFn: () => api.put(`/content/${descriptor.slot}`, { data: draft }),
     onSuccess: () => {
       toast.success(`${descriptor.label} saved — live on the site now`);
-      queryClient.invalidateQueries({ queryKey: ["content"] });
-      queryClient.invalidateQueries({ queryKey: ["content-slots"] });
+      invalidate.content();
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -59,8 +59,7 @@ function SlotEditor({ descriptor }: { descriptor: SlotDescriptor }) {
     mutationFn: () => api.del(`/content/${descriptor.slot}`),
     onSuccess: () => {
       toast.success(`${descriptor.label} restored to the original content`);
-      queryClient.invalidateQueries({ queryKey: ["content"] });
-      queryClient.invalidateQueries({ queryKey: ["content-slots"] });
+      invalidate.content();
     },
     onError: (err: Error) => toast.error(err.message),
   });
