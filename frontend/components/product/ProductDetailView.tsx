@@ -13,7 +13,7 @@ import { useVariantSelection } from "./useVariantSelection";
 import { CompleteTheLook } from "./CompleteTheLook";
 import { useCartStore } from "@/store/useCartStore";
 import { useWishlistStore } from "@/store/useWishlistStore";
-import { cn, stockLabel } from "@/lib/utils";
+import { cn, discountPercent, stockLabel } from "@/lib/utils";
 
 interface ProductDetailViewProps {
   product: Product;
@@ -21,6 +21,7 @@ interface ProductDetailViewProps {
 }
 
 export function ProductDetailView({ product, related }: ProductDetailViewProps) {
+  const discount = discountPercent(product.price, product.compareAtPrice);
   const {
     options,
     selections,
@@ -51,6 +52,7 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
           </nav>
 
           <div className="mb-3 flex gap-2">
+            {discount !== null && <Badge tone="sale">{discount}% Off</Badge>}
             {product.isNewArrival && <Badge tone="sage">New</Badge>}
             {product.isBestSeller && <Badge tone="gold">Best Seller</Badge>}
           </div>

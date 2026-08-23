@@ -50,3 +50,22 @@ export function cartLineKey(line: {
     .join(",");
   return `${line.productId}__${line.variantId ?? ""}__${chosen}`;
 }
+
+/**
+ * How much a piece is reduced by, as a whole percentage.
+ *
+ * Defined once because three surfaces show it — the shop card, quick view and
+ * the product page — and a discount that reads 25% in one place and 26% in
+ * another is the kind of small dishonesty customers notice.
+ *
+ * **Rounded down on purpose.** A saving of 15.8% shown as 16% claims a
+ * reduction that was not given; understating it slightly never does. Returns
+ * null when there is nothing to announce, so callers render nothing rather than
+ * a "0% off" badge.
+ */
+export function discountPercent(price: number, compareAtPrice?: number): number | null {
+  if (!compareAtPrice || compareAtPrice <= price || price < 0) return null;
+
+  const percent = Math.floor(((compareAtPrice - price) / compareAtPrice) * 100);
+  return percent >= 1 ? percent : null;
+}

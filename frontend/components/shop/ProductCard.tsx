@@ -7,7 +7,7 @@ import { Eye, Heart } from "lucide-react";
 import { Product } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { PriceTag } from "@/components/ui/PriceTag";
-import { stockLabel } from "@/lib/utils";
+import { discountPercent, stockLabel } from "@/lib/utils";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { QuickViewModal } from "./QuickViewModal";
 
@@ -20,6 +20,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const wishlisted = useWishlistStore((s) => s.has(product.id));
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const stock = stockLabel(product.stock);
+  const discount = discountPercent(product.price, product.compareAtPrice);
 
   return (
     <>
@@ -43,6 +44,9 @@ export function ProductCard({ product }: ProductCardProps) {
           </Link>
 
           <div className="absolute left-3 top-3 flex flex-col gap-1.5">
+            {/* First in the stack: a reduction is the thing that makes someone
+                look twice, and the struck-through price alone is easy to miss. */}
+            {discount !== null && <Badge tone="sale">{discount}% Off</Badge>}
             {product.isNewArrival && <Badge tone="sage">New</Badge>}
             {product.isBestSeller && <Badge tone="gold">Best Seller</Badge>}
             {stock.tone !== "in" && (

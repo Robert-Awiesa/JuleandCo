@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 interface BadgeProps {
-  tone?: "gold" | "sage" | "obsidian" | "low";
+  tone?: "gold" | "sage" | "obsidian" | "low" | "sale";
   children: React.ReactNode;
   className?: string;
 }
@@ -11,6 +11,9 @@ const toneClass: Record<NonNullable<BadgeProps["tone"]>, string> = {
   sage: "bg-sage/15 text-sage-light border-sage/30",
   obsidian: "bg-ink/10 text-ink border-line-strong",
   low: "bg-ink/5 text-ink-muted border-line",
+  // Solid rather than tinted: a reduction is the one badge meant to be seen
+  // first, and a tinted one would sit at the same weight as "New".
+  sale: "bg-gold text-surface border-gold",
 };
 
 export function Badge({ tone = "obsidian", children, className }: BadgeProps) {

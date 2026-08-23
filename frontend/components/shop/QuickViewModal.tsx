@@ -11,7 +11,7 @@ import { PriceTag } from "@/components/ui/PriceTag";
 import { VariantSelector } from "@/components/product/VariantSelector";
 import { useVariantSelection } from "@/components/product/useVariantSelection";
 import { useCartStore } from "@/store/useCartStore";
-import { cn, stockLabel } from "@/lib/utils";
+import { cn, stockLabel, discountPercent } from "@/lib/utils";
 
 interface QuickViewModalProps {
   product: Product;
@@ -20,6 +20,7 @@ interface QuickViewModalProps {
 }
 
 export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps) {
+  const discount = discountPercent(product.price, product.compareAtPrice);
   const {
     options,
     selections,
@@ -93,12 +94,16 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                       {product.subCategory}
                     </p>
                     <h3 className="mt-1 font-serif text-2xl">{product.name}</h3>
-                    <PriceTag
-                      price={product.price}
-                      compareAtPrice={product.compareAtPrice}
-                      size="lg"
-                      className="mt-2"
-                    />
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      <PriceTag
+                        price={product.price}
+                        compareAtPrice={product.compareAtPrice}
+                        size="lg"
+                      />
+                      {/* Same figure as the card this opened from — both read it
+                          from one calculation, so they cannot disagree. */}
+                      {discount !== null && <Badge tone="sale">{discount}% Off</Badge>}
+                    </div>
                     <p className="mt-3 line-clamp-2 text-sm text-ink-muted">{product.description}</p>
                     <p
                       className={cn(
