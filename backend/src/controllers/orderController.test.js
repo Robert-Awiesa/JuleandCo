@@ -290,7 +290,19 @@ describe("the admin order list", () => {
   test("stats do not divide by zero on an empty store", async () => {
     const token = await adminToken();
     const res = await request(app).get("/api/orders/stats").set("Cookie", [`token=${token}`]);
-    expect(res.body).toEqual({ orders: 0, revenue: 0, averageOrderValue: 0, unfulfilled: 0 });
+
+    // The guard is what matters: an average over no orders must be 0, not NaN.
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        orders: 0,
+        revenue: 0,
+        averageOrderValue: 0,
+        unfulfilled: 0,
+        awaitingDelivery: 0,
+        month: { orders: 0, revenue: 0 },
+        lastMonth: { orders: 0, revenue: 0 },
+      })
+    );
   });
 });
 

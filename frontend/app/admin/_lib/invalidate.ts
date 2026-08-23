@@ -21,6 +21,8 @@ import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 /** Query key prefixes, so a typo is a compile error rather than a silent no-op. */
 export const QK = {
   products: ["admin-products"] as const,
+  productStats: ["product-stats"] as const,
+  productAttention: ["product-attention"] as const,
   product: ["admin-product"] as const,
   orders: ["admin-orders"] as const,
   orderStats: ["order-stats"] as const,
@@ -48,7 +50,7 @@ export function useInvalidate() {
     () => ({
       /** A product was created, edited, duplicated, deleted or re-stocked. */
       catalogue: () =>
-        invalidateAll(client, [QK.products, QK.product]),
+        invalidateAll(client, [QK.products, QK.product, QK.productStats, QK.productAttention]),
 
       /**
        * An order was placed, advanced or cancelled. Cancelling returns stock to
@@ -64,6 +66,8 @@ export function useInvalidate() {
           QK.customers,
           QK.customer,
           QK.customerStats,
+          // Revenue, orders to fulfil and the delivery queue are all order-derived.
+          QK.productStats,
         ]),
 
       /**
@@ -74,6 +78,8 @@ export function useInvalidate() {
        */
       configuration: () =>
         invalidateAll(client, [
+          QK.productStats,
+          QK.productAttention,
           QK.categories,
           QK.subcategories,
           QK.attributeGroups,
@@ -86,7 +92,8 @@ export function useInvalidate() {
       content: () => invalidateAll(client, [QK.content, QK.contentSlots]),
 
       /** A review was approved, rejected or deleted — the product's score moves. */
-      reviews: () => invalidateAll(client, [QK.reviews, QK.products, QK.product]),
+      reviews: () =>
+        invalidateAll(client, [QK.reviews, QK.products, QK.product, QK.productStats]),
 
       /** A new image was uploaded, so "Reuse a shot" has one more to offer. */
       uploads: () => invalidateAll(client, [QK.recentUploads]),

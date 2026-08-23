@@ -9,6 +9,8 @@ const {
   duplicateProduct,
   bulkUpdateProducts,
   getAdminProducts,
+  getProductStats,
+  getProductsNeedingAttention,
   getAdminProductById,
   updateProductStock,
 } = require("../controllers/productController");
@@ -21,6 +23,8 @@ router.route("/").get(getProducts).post(protect, admin, createProduct);
 
 router.get("/facets", getProductFacets);
 router.get("/admin", protect, admin, getAdminProducts);
+router.get("/stats", protect, admin, getProductStats);
+router.get("/attention", protect, admin, getProductsNeedingAttention);
 router.get("/id/:id", protect, admin, getAdminProductById);
 router.get("/slug/:slug", getProductBySlug);
 

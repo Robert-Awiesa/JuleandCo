@@ -772,3 +772,42 @@ CLI.
 
 Verified: `render.yaml` covers every variable the code reads, `/api/health`
 exists, and both `start` scripts are correct.
+
+### 2026-08-23 — Dashboard rebuilt for production
+
+Reviewed tab by tab at the owner's request, starting here. The Dashboard was the
+least finished screen in the admin: built before Orders, Reviews, Customers and
+publish-gating existed, and never caught up. It reported; it routed nowhere.
+
+- **Live and draft are now separate figures.** It said "Total Products 24" while
+  the shop showed 13. That is the distinction all of Phase 2's publish-gating was
+  built around, and the headline tile ignored it.
+- **Per-tile loading.** `isLoading` came from the products query alone, so
+  Revenue rendered `GH₵0.00` while its own request was in flight — a wrong number
+  presented as fact rather than a loading state.
+- **The database counts now.** `GET /products/stats` and `/products/attention`
+  replaced `limit=1000`: **31 KB of catalogue became 123 bytes**, and the totals
+  stay correct past the page limit instead of silently understating.
+- **Every figure links** to the screen that acts on it.
+- **"Needs attention" knows more than stock**: sold-out live pieces, low stock,
+  **drafts with nothing blocking them** (judged by the same `publishBlockers`
+  the API gates on), and live products missing something, each with the reason.
+- **Revenue has a period** — this month against last. A lifetime figure only
+  grows and stops meaning anything.
+- **Stock value at retail and cost**, and it says when no cost prices exist
+  rather than showing a misleading zero.
+
+**A queue the delivery change created and nothing surfaced:** orders with no
+delivery charge agreed. `/orders/stats` now returns `awaitingDelivery` and the
+dashboard shows it as a banner.
+
+Every mutation that moves a figure invalidates it — publishing, stock, order
+status, cancellation, review moderation, category changes — so with
+refetch-on-focus the dashboard cannot sit on stale numbers.
+
+An existing test failed and was right to: it asserted the exact `/orders/stats`
+shape, and fields were added. The assertion now checks the guard it cared about
+(an average over no orders is 0, not NaN).
+
+Verified: backend **225 → 238**, `tsc` clean, Playwright **32/32**. Live:
+13 published / 11 drafts, 1 sold out, 5 low, 12 attention items.

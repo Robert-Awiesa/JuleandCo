@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Star, Check, X, Trash2, BadgeCheck } from "lucide-react";
 import { Badge } from "@/components/admin-ui/badge";
@@ -15,6 +15,7 @@ import {
   SelectItem,
 } from "@/components/admin-ui/select";
 import { api } from "../../_lib/api";
+import { useInvalidate } from "../../_lib/invalidate";
 
 type ReviewStatus = "pending" | "approved" | "rejected";
 
@@ -69,7 +70,7 @@ function formatDate(iso: string) {
  * own product page by reading it.
  */
 export default function ReviewsPage() {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidate();
   const [status, setStatus] = useState<string>("pending");
   const [search, setSearch] = useState("");
 
@@ -81,11 +82,8 @@ export default function ReviewsPage() {
     queryFn: () => api.get<ReviewPage>(`/reviews?${params}`),
   });
 
-  function refresh() {
-    queryClient.invalidateQueries({ queryKey: ["reviews"] });
-    // An approved review changes the product's score.
-    queryClient.invalidateQueries({ queryKey: ["admin-products"] });
-  }
+  // An approved review changes the product's score and the dashboard's queue.
+  const refresh = invalidate.reviews;
 
   const moderate = useMutation({
     mutationFn: ({ id, next }: { id: string; next: ReviewStatus }) =>

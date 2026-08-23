@@ -99,29 +99,53 @@ const getOrders = asyncHandler(async (req, res) => {
 // @route   GET /api/orders/stats
 // @access  Private/Admin
 const getOrderStats = asyncHandler(async (req, res) => {
-  const [byStatus] = await Order.aggregate([
+  // Month boundaries in the server's timezone. A lifetime revenue figure only
+  // ever grows and stops telling you anything after the first year, so the
+  // dashboard needs a period to compare against.
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const previousStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+  const live = { status: { $ne: "cancelled" } };
+  const revenue = [{ $group: { _id: null, orders: { $sum: 1 }, revenue: { $sum: "$totalPrice" } } }];
+
+  const [facets] = await Order.aggregate([
     {
       $facet: {
-        totals: [
-          { $match: { status: { $ne: "cancelled" } } },
-          { $group: { _id: null, orders: { $sum: 1 }, revenue: { $sum: "$totalPrice" } } },
+        totals: [{ $match: live }, ...revenue],
+        thisMonth: [{ $match: { ...live, createdAt: { $gte: monthStart } } }, ...revenue],
+        lastMonth: [
+          { $match: { ...live, createdAt: { $gte: previousStart, $lt: monthStart } } },
+          ...revenue,
         ],
-        unfulfilled: [
-          { $match: { status: { $in: ["pending", "processing"] } } },
+        unfulfilled: [{ $match: { status: { $in: ["pending", "processing"] } } }, { $count: "n" }],
+        /**
+         * Orders with no delivery charge agreed yet. Delivery is settled with
+         * the customer after confirmation, so this is a real queue — and one
+         * nothing surfaced until now.
+         */
+        awaitingDelivery: [
+          { $match: { ...live, shippingPrice: null } },
           { $count: "n" },
         ],
       },
     },
   ]);
 
-  const totals = byStatus?.totals?.[0] || { orders: 0, revenue: 0 };
+  const empty = { orders: 0, revenue: 0 };
+  const totals = facets?.totals?.[0] || empty;
+  const thisMonth = facets?.thisMonth?.[0] || empty;
+  const lastMonth = facets?.lastMonth?.[0] || empty;
 
   res.json({
     orders: totals.orders,
     revenue: totals.revenue,
     // Guarded: dividing by zero orders would return NaN and break the tile.
     averageOrderValue: totals.orders > 0 ? totals.revenue / totals.orders : 0,
-    unfulfilled: byStatus?.unfulfilled?.[0]?.n || 0,
+    unfulfilled: facets?.unfulfilled?.[0]?.n || 0,
+    awaitingDelivery: facets?.awaitingDelivery?.[0]?.n || 0,
+    month: { orders: thisMonth.orders, revenue: thisMonth.revenue },
+    lastMonth: { orders: lastMonth.orders, revenue: lastMonth.revenue },
   });
 });
 

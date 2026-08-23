@@ -328,6 +328,133 @@ const deleteProduct = asyncHandler(async (req, res) => {
   res.json({ message: "Product removed" });
 });
 
+// @desc    Catalogue figures and what needs doing about it
+// @route   GET /api/products/stats
+// @access  Private/Admin
+const getProductStats = asyncHandler(async (req, res) => {
+  /**
+   * Counted by the database rather than by fetching the catalogue and counting
+   * in the browser, which is what the dashboard used to do. That worked at two
+   * dozen products; past the page limit the totals silently went wrong, and it
+   * sent the whole catalogue over the wire to produce four numbers.
+   *
+   * Live and draft are separated because it is the distinction that matters
+   * most: "24 products" reads as a shop with 24 things in it, when 11 of them
+   * are invisible to customers.
+   */
+  const [figures] = await Product.aggregate([
+    {
+      $facet: {
+        counts: [
+          {
+            $group: {
+              _id: null,
+              total: { $sum: 1 },
+              published: {
+                $sum: { $cond: [{ $eq: ["$publishStatus", "published"] }, 1, 0] },
+              },
+            },
+          },
+        ],
+        // Out of stock matters most for published pieces: those are on the shop
+        // right now, visible and unbuyable.
+        stock: [
+          { $match: { publishStatus: "published" } },
+          {
+            $group: {
+              _id: null,
+              outOfStock: { $sum: { $cond: [{ $lte: ["$stock", 0] }, 1, 0] } },
+              lowStock: {
+                $sum: {
+                  $cond: [{ $and: [{ $gt: ["$stock", 0] }, { $lte: ["$stock", 5] }] }, 1, 0],
+                },
+              },
+            },
+          },
+        ],
+        value: [
+          {
+            $group: {
+              _id: null,
+              retail: { $sum: { $multiply: ["$price", "$stock"] } },
+              // What the stock actually cost, where a cost price is recorded.
+              cost: { $sum: { $multiply: [{ $ifNull: ["$costPrice", 0] }, "$stock"] } },
+              withCost: { $sum: { $cond: [{ $gt: ["$costPrice", 0] }, 1, 0] } },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  const counts = figures?.counts?.[0] || { total: 0, published: 0 };
+  const stock = figures?.stock?.[0] || { outOfStock: 0, lowStock: 0 };
+  const value = figures?.value?.[0] || { retail: 0, cost: 0, withCost: 0 };
+
+  res.json({
+    total: counts.total,
+    published: counts.published,
+    drafts: counts.total - counts.published,
+    outOfStock: stock.outOfStock,
+    lowStock: stock.lowStock,
+    retailValue: Math.round(value.retail * 100) / 100,
+    costValue: Math.round(value.cost * 100) / 100,
+    // So the admin knows the cost figure only covers part of the catalogue.
+    productsWithCost: value.withCost,
+  });
+});
+
+// @desc    The products actually needing work, with the reason
+// @route   GET /api/products/attention
+// @access  Private/Admin
+const getProductsNeedingAttention = asyncHandler(async (req, res) => {
+  const limit = Math.min(20, Math.max(1, Number(req.query.limit) || 6));
+  const fields = "name slug stock images publishStatus subCategory options variants price";
+
+  const [soldOut, running, drafts, live] = await Promise.all([
+    Product.find({ publishStatus: "published", stock: { $lte: 0 } }, fields).limit(limit).lean(),
+    Product.find({ publishStatus: "published", stock: { $gt: 0, $lte: 5 } }, fields)
+      .sort({ stock: 1 })
+      .limit(limit)
+      .lean(),
+    // Bounded: readiness is JS logic, so a handful of candidates are judged
+    // rather than the whole catalogue.
+    Product.find({ publishStatus: "draft" }, fields).sort({ updatedAt: -1 }).limit(50).lean(),
+    Product.find({ publishStatus: "published" }, fields).sort({ updatedAt: -1 }).limit(50).lean(),
+  ]);
+
+  const items = [];
+
+  soldOut.forEach((p) =>
+    items.push({ ...p, reason: "outOfStock", detail: "On the shop but sold out" })
+  );
+  running.forEach((p) =>
+    items.push({ ...p, reason: "lowStock", detail: `Only ${p.stock} left` })
+  );
+
+  // A draft with nothing blocking it is a piece that could be earning.
+  drafts
+    .filter((p) => publishBlockers(p).length === 0)
+    .slice(0, limit)
+    .forEach((p) => items.push({ ...p, reason: "readyToPublish", detail: "Ready to go live" }));
+
+  // Should not happen — the publish gate refuses it — but data predating the
+  // gate, or written directly, would show here rather than break a shop page.
+  live
+    .map((p) => ({ product: p, blockers: publishBlockers(p) }))
+    .filter(({ blockers }) => blockers.length > 0)
+    .slice(0, limit)
+    .forEach(({ product, blockers }) =>
+      items.push({
+        ...product,
+        reason: "incomplete",
+        detail: `Live but missing ${blockers.map((b) => b.label.toLowerCase()).join(", ")}`,
+      })
+    );
+
+  res.json(items);
+});
+
 // @desc    Get paginated/filterable product list for the admin dashboard
 // @route   GET /api/products/admin
 // @access  Private/Admin
@@ -511,6 +638,8 @@ module.exports = {
   duplicateProduct,
   bulkUpdateProducts,
   getAdminProducts,
+  getProductStats,
+  getProductsNeedingAttention,
   getAdminProductById,
   updateProductStock,
 };

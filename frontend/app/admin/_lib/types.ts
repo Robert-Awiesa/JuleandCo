@@ -185,8 +185,18 @@ export interface AdminOrder {
 }
 
 export interface OrderStats {
+  /** All time, excluding cancellations. */
   orders: number;
   revenue: number;
   averageOrderValue: number;
+  /** Pending or processing — waiting on someone here. */
   unfulfilled: number;
+  /**
+   * Orders with no delivery charge agreed yet. Delivery is settled with the
+   * customer after confirmation, so this is a queue rather than a statistic.
+   */
+  awaitingDelivery: number;
+  /** A lifetime figure only grows; a period is what you can act on. */
+  month: { orders: number; revenue: number };
+  lastMonth: { orders: number; revenue: number };
 }
