@@ -39,6 +39,10 @@ yarn-error.log*
 Thumbs.db
 .vscode/*
 !.vscode/extensions.json
+# Shared because it silences 14 phantom "Unknown at rule" problems from
+# Tailwind's directives — an annoyance for anyone who opens this repo, not a
+# personal preference.
+!.vscode/settings.json
 .idea/
 
 # vercel

@@ -1,0 +1,24 @@
+{
+  // Tailwind's directives are not standard CSS, so VS Code's built-in validator
+  // reports every @tailwind and @apply as "Unknown at rule" — 14 of them in
+  // app/globals.css alone. They are correct and compile fine; the editor simply
+  // does not know the dialect. Silencing the rule keeps the Problems panel
+  // meaningful instead of permanently red over nothing.
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore",
+
+  // Use the repo's own TypeScript, so the editor and `tsc --noEmit` agree.
+  "typescript.tsdk": "node_modules/typescript/lib",
+
+  "editor.formatOnSave": false,
+  "files.eol": "\n",
+
+  // These are generated or vendored; searching them buries real results.
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/test-results": true,
+    "**/playwright-report": true
+  }
+}

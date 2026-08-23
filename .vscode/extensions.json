@@ -1,0 +1,5 @@
+{
+  // Tailwind IntelliSense understands @apply and class names, which the built-in
+  // CSS support does not. Not required to build — a convenience for editing.
+  "recommendations": ["bradlc.vscode-tailwindcss", "dbaeumer.vscode-eslint"]
+}

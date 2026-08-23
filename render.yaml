@@ -20,12 +20,18 @@ services:
     plan: free
     region: oregon
     branch: master
+    # No --include=dev here on purpose: the API needs nothing from
+    # devDependencies at runtime, so omitting them keeps the deploy smaller.
     buildCommand: npm ci
     startCommand: npm start -w backend
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
+      # Pinned so a Render default upgrade cannot change the runtime under the
+      # app between deploys. Matches .node-version and the engines field.
+      - key: NODE_VERSION
+        value: 22.14.0
       # Render injects PORT; backend/server.js already reads it.
       - key: MONGO_URI
         sync: false
@@ -61,11 +67,17 @@ services:
     plan: free
     region: oregon
     branch: master
-    buildCommand: npm ci && npm run build -w frontend
+    # --include=dev is not optional. NODE_ENV=production is set on this service,
+    # which makes npm omit devDependencies — and typescript, tailwindcss, postcss
+    # and autoprefixer all live there while being needed to *build*. Without the
+    # flag the very first deploy fails on a missing TypeScript compiler.
+    buildCommand: npm ci --include=dev && npm run build -w frontend
     startCommand: npm start -w frontend
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: 22.14.0
       # Relative on purpose: the browser calls this app, which proxies onward.
       - key: NEXT_PUBLIC_API_URL
         value: /api

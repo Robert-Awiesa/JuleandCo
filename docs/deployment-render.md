@@ -97,11 +97,64 @@ If you later move to a custom domain, `jules.com` + `api.jules.com` with a
 
 ---
 
+## Moving to a paid instance later
+
+**Nothing has to be rebuilt or migrated.** Changing a Render service's instance
+type is an in-place setting — Settings → Instance Type → pick the new one — and
+the service redeploys onto it keeping the same URL, environment variables,
+custom domains and deploy history. There is no second service to create and no
+data to move.
+
+The reason it is that simple here is worth stating plainly: **the database is not
+on Render.** Products, orders, customers, reviews and site content all live in
+MongoDB Atlas, which the API connects to over `MONGO_URI`. Render only runs the
+two Node processes. Resizing them cannot touch the data, because the data was
+never there.
+
+Upgrading Atlas later is the same kind of change: its shared tiers scale in place
+from the Atlas dashboard. A move between *cloud providers or regions* would be a
+real migration; changing tier is not.
+
+Practically, upgrade **before** launch rather than after, because of the sleeping
+described below.
+
+## Custom domain
+
+Do this once both services are deployed and working on their `onrender.com`
+URLs.
+
+1. **Point the domain at the web service, not the API.** Customers only ever talk
+   to the storefront; the API is reached through it via the `/api` rewrite. The
+   API can stay on its `onrender.com` hostname indefinitely.
+2. In Render, open the **web service** → Settings → Custom Domains → add both
+   `julesandco.com` and `www.julesandco.com`.
+3. At the registrar, add the records Render shows — typically a `CNAME` for
+   `www` and an `ALIAS`/`ANAME` (or Render's IP via `A`) for the apex. Render
+   issues the TLS certificate automatically once DNS resolves.
+4. **Nothing in the app needs changing.** `NEXT_PUBLIC_API_URL` stays `/api`
+   because it is relative, and `API_ORIGIN` still points at the API service.
+   The auth cookie stays same-origin, which is the whole reason for the proxy.
+5. Set `CLIENT_URL` on the **API** service to the new domain so its CORS list is
+   correct for any direct call. Not required for the storefront, which is
+   same-origin, but it keeps the header honest.
+
+> Check whether your plan allows custom domains before buying the domain —
+> Render's free tier limits have changed over time, and this is worth confirming
+> in their current pricing page rather than taking on trust here.
+
 ## Notes
 
 - **Free-plan services sleep** after inactivity. The first request after a spin-down
   takes 30s or so, and because the storefront reads the API on every render,
   a cold web service *and* a cold API compound. Consider paid instances before launch.
+- **The web service builds with `npm ci --include=dev`.** `NODE_ENV=production`
+  is set on the service, which makes npm omit devDependencies — and `typescript`,
+  `tailwindcss`, `postcss` and `autoprefixer` are devDependencies that are needed
+  to *build*. Drop the flag and the first deploy fails on a missing TypeScript
+  compiler. The API keeps plain `npm ci`: it needs none of them at runtime.
+- **Node is pinned to 22.14.0** in `.node-version`, `engines`, and `NODE_VERSION`
+  on both services, so a change to Render's default cannot move the runtime under
+  the app between deploys.
 - **Health check** is `/api/health` on the API service, defined in `backend/src/app.js`.
 - **`trust proxy` is enabled** on the API. Render terminates TLS at its edge and
   forwards over HTTP; without it Express sees an insecure request and refuses to
