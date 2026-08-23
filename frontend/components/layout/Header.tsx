@@ -5,16 +5,40 @@ import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, Menu, Search, ShoppingBag, X } from "lucide-react";
-import { primaryNav, megaMenu } from "@/lib/navigation";
+import type { MegaMenuSection } from "@/lib/content";
 import { MegaMenu } from "./MegaMenu";
 import { SearchModal } from "./SearchModal";
 import { useCartStore } from "@/store/useCartStore";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { cn } from "@/lib/utils";
 
-export function Header() {
+export function Header({
+  counts = {},
+  menu = [],
+}: {
+  counts?: Record<string, Record<string, number>>;
+  menu?: MegaMenuSection[];
+}) {
   const [scrolled, setScrolled] = useState(false);
-  const [activeMega, setActiveMega] = useState<keyof typeof megaMenu | null>(null);
+  const [activeMega, setActiveMega] = useState<string | null>(null);
+
+  /**
+   * The category links come from the menu the admin manages, so adding a
+   * section there puts it in the header with no code change. New Arrivals and
+   * Our Ethos bracket them: one is a sort and one is a page, neither is a
+   * category, so neither belongs in the menu content.
+   */
+  const primaryNav = [
+    { label: "New Arrivals", href: "/shop?sort=new", mega: null as string | null },
+    ...menu.map((section) => ({
+      label: section.label,
+      href: section.href,
+      mega: section.key as string | null,
+    })),
+    { label: "Our Ethos", href: "/ethos", mega: null as string | null },
+  ];
+
+  const activeSection = menu.find((section) => section.key === activeMega);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -36,7 +60,7 @@ export function Header() {
         className={cn(
           "fixed inset-x-0 top-0 z-50 transition-all duration-500",
           scrolled || activeMega
-            ? "bg-alabaster/80 backdrop-blur-md shadow-soft border-b border-obsidian/5"
+            ? "bg-surface/85 backdrop-blur-md shadow-soft border-b border-line"
             : "bg-transparent"
         )}
       >
@@ -61,7 +85,7 @@ export function Header() {
               >
                 <Link
                   href={item.href}
-                  className="text-sm uppercase tracking-wide text-obsidian/80 transition-colors hover:text-obsidian"
+                  className="font-sans text-sm font-medium uppercase tracking-wide text-ink transition-colors hover:text-ink"
                 >
                   {item.label}
                 </Link>
@@ -69,42 +93,52 @@ export function Header() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-5">
+          {/*
+            Each control is a 44px hit box with the icon centred inside it.
+            They previously had no padding at all, so the tappable area was the
+            19px icon itself — well under the 44px minimum and genuinely hard to
+            hit on a phone. The icons are unchanged; only the target grew.
+          */}
+          <div className="flex items-center gap-0.5 sm:gap-1">
             <button
               onClick={() => setSearchOpen(true)}
               aria-label="Search"
-              className="text-obsidian/80 hover:text-obsidian"
+              className="flex h-11 w-11 items-center justify-center text-ink transition-colors hover:text-gold"
             >
               <Search size={19} />
             </button>
             <Link
               href="/account/wishlist"
               aria-label="Wishlist"
-              className="relative hidden text-obsidian/80 hover:text-obsidian sm:block"
+              className="hidden h-11 w-11 items-center justify-center text-ink transition-colors hover:text-gold sm:flex"
             >
-              <Heart size={19} />
-              {wishlistCount > 0 && (
-                <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center bg-gold text-[10px] text-obsidian">
-                  {wishlistCount}
-                </span>
-              )}
+              <span className="relative">
+                <Heart size={19} />
+                {wishlistCount > 0 && (
+                  <span className="numeric absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center bg-gold text-[10px] text-surface">
+                    {wishlistCount}
+                  </span>
+                )}
+              </span>
             </Link>
             <button
               onClick={cartOpen}
               aria-label="Open cart"
-              className="relative text-obsidian/80 hover:text-obsidian"
+              className="flex h-11 w-11 items-center justify-center text-ink transition-colors hover:text-gold"
             >
-              <ShoppingBag size={19} />
-              {itemCount > 0 && (
-                <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center bg-gold text-[10px] text-obsidian">
-                  {itemCount}
-                </span>
-              )}
+              <span className="relative">
+                <ShoppingBag size={19} />
+                {itemCount > 0 && (
+                  <span className="numeric absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center bg-gold text-[10px] text-surface">
+                    {itemCount}
+                  </span>
+                )}
+              </span>
             </button>
             <button
               onClick={() => setMobileOpen(true)}
               aria-label="Open menu"
-              className="text-obsidian/80 hover:text-obsidian lg:hidden"
+              className="flex h-11 w-11 items-center justify-center text-ink transition-colors hover:text-gold lg:hidden"
             >
               <Menu size={20} />
             </button>
@@ -112,7 +146,13 @@ export function Header() {
         </div>
 
         <AnimatePresence>
-          {activeMega && <MegaMenu section={megaMenu[activeMega]} onNavigate={() => setActiveMega(null)} />}
+          {activeSection && (
+            <MegaMenu
+              section={activeSection}
+              counts={counts}
+              onNavigate={() => setActiveMega(null)}
+            />
+          )}
         </AnimatePresence>
       </header>
 
@@ -120,14 +160,14 @@ export function Header() {
         {mobileOpen && (
           <>
             <motion.div
-              className="fixed inset-0 z-[90] bg-obsidian/50"
+              className="fixed inset-0 z-[90] bg-black/70"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileOpen(false)}
             />
             <motion.div
-              className="fixed right-0 top-0 z-[91] h-full w-[85%] max-w-sm bg-alabaster p-6"
+              className="fixed right-0 top-0 z-[91] h-full w-[85%] max-w-sm bg-surface-raised p-6"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}

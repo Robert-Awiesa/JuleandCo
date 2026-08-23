@@ -6,6 +6,8 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
+  duplicateProduct,
+  bulkUpdateProducts,
   getAdminProducts,
   getAdminProductById,
   updateProductStock,
@@ -21,7 +23,11 @@ router.get("/admin", protect, admin, getAdminProducts);
 router.get("/id/:id", protect, admin, getAdminProductById);
 router.get("/slug/:slug", getProductBySlug);
 
+// Declared before /:id so "bulk" is never parsed as a product id.
+router.patch("/bulk", protect, admin, bulkUpdateProducts);
+
 router.route("/:id").put(protect, admin, updateProduct).delete(protect, admin, deleteProduct);
 router.patch("/:id/stock", protect, admin, updateProductStock);
+router.post("/:id/duplicate", protect, admin, duplicateProduct);
 
 module.exports = router;

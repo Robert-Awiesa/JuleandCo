@@ -1,4 +1,4 @@
-import { fetchFacets, fetchProducts, type ProductQuery } from "@/lib/api";
+import { fetchCategories, fetchFacets, fetchProducts, type ProductQuery } from "@/lib/api";
 import { ShopView } from "@/components/shop/ShopView";
 
 export const metadata = {
@@ -20,28 +20,36 @@ function one(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
+// Params the shop owns itself; everything else is treated as an attribute facet.
+const RESERVED_PARAMS = new Set(["category", "minPrice", "maxPrice", "search", "sort"]);
+
 export default async function ShopPage({ searchParams }: { searchParams: SearchParams }) {
   const category = one(searchParams.category) ?? "all";
 
   const query: ProductQuery = {
     category,
-    subCategory: list(searchParams.subCategory),
-    frameShape: list(searchParams.frameShape),
-    frameMaterial: list(searchParams.frameMaterial),
-    lensType: list(searchParams.lensType),
-    gender: list(searchParams.gender),
-    fit: list(searchParams.fit),
-    fabric: list(searchParams.fabric),
-    size: list(searchParams.size),
     minPrice: one(searchParams.minPrice) ? Number(one(searchParams.minPrice)) : undefined,
     maxPrice: one(searchParams.maxPrice) ? Number(one(searchParams.maxPrice)) : undefined,
     search: one(searchParams.search),
     sort: one(searchParams.sort),
   };
 
+  // Attribute facets are passed straight through rather than named one by one.
+  // A filter added in the admin therefore works without an edit here; the API
+  // validates the keys against its own AttributeGroup records.
+  Object.entries(searchParams).forEach(([key, value]) => {
+    if (RESERVED_PARAMS.has(key)) return;
+    const values = list(value);
+    if (values) query[key] = values;
+  });
+
   // Filtering and sorting happen in Mongo, not in the browser, so the shop can
   // scale past the handful of products the old mock array held.
-  const [products, facets] = await Promise.all([fetchProducts(query), fetchFacets(category)]);
+  const [products, facets, categories] = await Promise.all([
+    fetchProducts(query),
+    fetchFacets(category),
+    fetchCategories(),
+  ]);
 
-  return <ShopView products={products} facets={facets} />;
+  return <ShopView products={products} facets={facets} categories={categories} />;
 }

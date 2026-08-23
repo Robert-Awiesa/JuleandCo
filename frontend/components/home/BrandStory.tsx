@@ -2,25 +2,33 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 
-const pillars = [
+/**
+ * The three values that speak to the customer rather than about the brand.
+ * Legacy, Elegance and Purpose are the founder's own framing and live on the
+ * full /ethos page; these three answer "why this piece, for me".
+ *
+ * Wording is verbatim from the brand's copy — not paraphrased.
+ */
+const values = [
   {
-    title: "Considered Materials",
-    body: "Italian acetate, Mongolian cashmere, and mulberry silk — sourced from mills we've worked with for years.",
+    title: "Individuality",
+    body: "Your style should speak before you do. We encourage every woman to embrace what makes her different.",
   },
   {
-    title: "Made to Last",
-    body: "Every piece is built for repair, not replacement. Lifetime frame adjustments, always complimentary.",
+    title: "Confidence",
+    body: "Designed for women who know that looking good is not vanity — it is a form of self-expression.",
   },
   {
-    title: "Quietly Confident",
-    body: "No logos, no noise. Just proportion, material, and fit that speak for themselves.",
+    title: "Affordability",
+    body: "Luxury should feel attainable. Pieces that look sophisticated, feel special and remain accessible.",
   },
 ];
 
 export function BrandStory() {
   return (
-    <section id="brand-story" className="bg-obsidian py-24 text-alabaster">
+    <section id="brand-story" className="border-y border-line bg-surface-raised py-24 text-ink">
       <div className="container-elevated grid grid-cols-1 items-center gap-14 md:grid-cols-2">
         <motion.div
           initial={{ opacity: 0, x: -24 }}
@@ -30,8 +38,8 @@ export function BrandStory() {
           className="relative aspect-[4/5] overflow-hidden"
         >
           <Image
-            src="https://picsum.photos/seed/brand-story/900/1125"
-            alt="JULES & CO craftsmanship"
+            src="/images/brand/ethos-image.jpeg"
+            alt="JULES &amp; CO"
             fill
             sizes="(min-width: 768px) 50vw, 100vw"
             className="object-cover"
@@ -40,28 +48,35 @@ export function BrandStory() {
 
         <div>
           <p className="eyebrow mb-4 text-gold">Our Ethos</p>
-          <h2 className="font-serif text-4xl leading-tight md:text-5xl">
-            Craftsmanship, edited for a modern wardrobe.
+          <h2 className="font-serif text-4xl font-bold leading-[1.18] md:text-5xl">
+            Born from loss, created from love.
           </h2>
-          <p className="mt-6 max-w-lg text-alabaster/70">
-            JULES &amp; CO started with a simple belief: what you wear should set you apart,
-            not blend in. Too much of what&apos;s sold as &ldquo;premium&rdquo; is neither
-            considered nor built to last. We work directly with a small circle of ateliers to
-            produce fewer, better pieces — each one designed to pair effortlessly with the
-            rest of your wardrobe. That&apos;s the difference we mean when we say wear it.
+          {/*
+            The homepage carries only the essence. The origin story, the six
+            values in full, and the founder's own words live on /ethos, where
+            they have room — rather than being compressed into a scroll-past band.
+          */}
+          <p className="mt-6 max-w-lg text-ink-muted">
+            We believe that style is personal, confidence is powerful, and elegance should never
+            require compromise. Every piece is thoughtfully selected for the woman who wants to
+            express herself with confidence, sophistication and individuality.
           </p>
 
+          <Link href="/ethos" className="btn-ghost mt-6 !px-0">
+            Read our story
+          </Link>
+
           <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-3">
-            {pillars.map((pillar, i) => (
+            {values.map((value, i) => (
               <motion.div
-                key={pillar.title}
+                key={value.title}
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
               >
-                <p className="mb-2 font-serif text-lg text-gold">{pillar.title}</p>
-                <p className="text-sm text-alabaster/60">{pillar.body}</p>
+                <p className="mb-2 font-serif text-lg text-gold">{value.title}</p>
+                <p className="text-sm text-ink-muted">{value.body}</p>
               </motion.div>
             ))}
           </div>

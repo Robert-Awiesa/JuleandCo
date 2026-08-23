@@ -4,7 +4,7 @@ import { useCallback, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { SlidersHorizontal, X } from "lucide-react";
-import type { FacetResponse, Product } from "@/lib/types";
+import type { FacetResponse, Product, StoreCategory } from "@/lib/types";
 import { FilterSidebar } from "./FilterSidebar";
 import { ProductGrid } from "./ProductGrid";
 
@@ -13,6 +13,7 @@ type SortOption = "featured" | "new" | "bestseller" | "price-asc" | "price-desc"
 interface ShopViewProps {
   products: Product[];
   facets: FacetResponse;
+  categories: StoreCategory[];
 }
 
 /**
@@ -22,7 +23,7 @@ interface ShopViewProps {
  * queries Mongo, so every filter change is a navigation: the URL is the single
  * source of truth, which also makes filtered views shareable and bookmarkable.
  */
-export function ShopView({ products, facets }: ShopViewProps) {
+export function ShopView({ products, facets, categories }: ShopViewProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -54,23 +55,24 @@ export function ShopView({ products, facets }: ShopViewProps) {
     <div className="container-elevated py-12">
       <div className="mb-10">
         <p className="eyebrow mb-2">Full Collection</p>
-        <h1 className="font-serif text-4xl">Shop Eyewear &amp; Apparel</h1>
+        {/* TODO(copy): placeholder heading — refine before launch. */}
+        <h1 className="font-serif text-4xl font-bold leading-[1.15] md:text-5xl">Shop the Collection</h1>
       </div>
 
-      <div className="flex items-center justify-between border-y border-obsidian/10 py-4">
+      <div className="flex items-center justify-between border-y border-line py-4">
         <button
           onClick={() => setMobileFiltersOpen(true)}
-          className="flex items-center gap-2 text-sm lg:hidden"
+          className="-ml-2 flex items-center gap-2 px-2 py-2.5 text-sm lg:hidden"
         >
           <SlidersHorizontal size={15} /> Filters
         </button>
-        <p className="hidden text-sm text-obsidian/50 lg:block">
+        <p className="hidden text-sm text-ink-subtle lg:block">
           {isPending ? "Updating…" : `${products.length} ${products.length === 1 ? "piece" : "pieces"}`}
         </p>
         <select
           value={sort}
           onChange={(e) => setParams({ sort: e.target.value === "featured" ? null : e.target.value })}
-          className="border-none bg-transparent text-sm focus:outline-none"
+          className="-mr-1 border-none bg-transparent py-2.5 pr-1 text-sm focus:outline-none"
         >
           <option value="featured">Sort: Featured</option>
           <option value="new">Newest</option>
@@ -82,13 +84,13 @@ export function ShopView({ products, facets }: ShopViewProps) {
 
       <div className="grid grid-cols-1 gap-10 py-10 lg:grid-cols-[240px_1fr]">
         <aside className="hidden lg:block">
-          <FilterSidebar facets={facets} onChange={setParams} onReset={handleReset} />
+          <FilterSidebar facets={facets} categories={categories} onChange={setParams} onReset={handleReset} />
         </aside>
 
         <div className={isPending ? "opacity-60 transition-opacity" : "transition-opacity"}>
           {products.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-24 text-center">
-              <p className="text-obsidian/50">Nothing matches these filters.</p>
+              <p className="text-ink-subtle">Nothing matches these filters.</p>
               <button onClick={handleReset} className="text-sm underline underline-offset-4">
                 Clear all filters
               </button>
@@ -103,14 +105,14 @@ export function ShopView({ products, facets }: ShopViewProps) {
         {mobileFiltersOpen && (
           <>
             <motion.div
-              className="fixed inset-0 z-[85] bg-obsidian/50 lg:hidden"
+              className="fixed inset-0 z-[85] bg-black/70 lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileFiltersOpen(false)}
             />
             <motion.div
-              className="fixed left-0 top-0 z-[86] h-full w-[85%] max-w-xs overflow-y-auto bg-alabaster p-6 lg:hidden"
+              className="fixed left-0 top-0 z-[86] h-full w-[85%] max-w-xs overflow-y-auto bg-surface-raised p-6 lg:hidden"
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
@@ -122,7 +124,7 @@ export function ShopView({ products, facets }: ShopViewProps) {
                   <X size={18} />
                 </button>
               </div>
-              <FilterSidebar facets={facets} onChange={setParams} onReset={handleReset} />
+              <FilterSidebar facets={facets} categories={categories} onChange={setParams} onReset={handleReset} />
             </motion.div>
           </>
         )}

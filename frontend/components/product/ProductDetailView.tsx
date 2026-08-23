@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment } from "react";
 import Link from "next/link";
 import { Heart, RefreshCw, ShieldCheck, Truck } from "lucide-react";
 import { Product } from "@/lib/types";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { PriceTag } from "@/components/ui/PriceTag";
 import { ImageGallery } from "./ImageGallery";
 import { VariantSelector } from "./VariantSelector";
+import { useVariantSelection } from "./useVariantSelection";
 import { CompleteTheLook } from "./CompleteTheLook";
 import { useCartStore } from "@/store/useCartStore";
 import { useWishlistStore } from "@/store/useWishlistStore";
@@ -20,9 +21,17 @@ interface ProductDetailViewProps {
 }
 
 export function ProductDetailView({ product, related }: ProductDetailViewProps) {
-  const [color, setColor] = useState(product.colors[0]?.label);
-  const [size, setSize] = useState(product.sizes?.[0]?.label);
-  const [lens, setLens] = useState(product.lensOptions?.[0]?.value);
+  const {
+    options,
+    selections,
+    setOption,
+    setSelection,
+    variant,
+    image,
+    optionLabels,
+    selectionLabels,
+    isAvailable,
+  } = useVariantSelection(product);
   const addLine = useCartStore((s) => s.addLine);
   const wishlisted = useWishlistStore((s) => s.has(product.id));
   const toggleWishlist = useWishlistStore((s) => s.toggle);
@@ -34,8 +43,8 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
         <ImageGallery images={product.images} name={product.name} />
 
         <div className="lg:max-w-lg">
-          <nav className="mb-6 text-xs text-obsidian/45">
-            <Link href="/shop" className="hover:text-obsidian">
+          <nav className="mb-6 text-xs text-ink-subtle">
+            <Link href="/shop" className="inline-block py-1.5 transition-colors hover:text-gold">
               Shop
             </Link>{" "}
             / {product.subCategory}
@@ -46,16 +55,16 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
             {product.isBestSeller && <Badge tone="gold">Best Seller</Badge>}
           </div>
 
-          <h1 className="font-serif text-4xl">{product.name}</h1>
+          <h1 className="font-serif text-4xl font-medium leading-[1.2]">{product.name}</h1>
           <PriceTag price={product.price} compareAtPrice={product.compareAtPrice} size="lg" className="mt-3" />
 
-          <p className="mt-6 text-sm leading-relaxed text-obsidian/65">{product.description}</p>
+          <p className="mt-6 text-sm leading-relaxed text-ink-muted">{product.description}</p>
 
           {product.specs.length > 0 && (
             <dl className="mt-6 grid grid-cols-2 gap-y-2 text-sm">
               {product.specs.map((spec) => (
                 <Fragment key={spec.key}>
-                  <dt className="text-obsidian/45">{spec.label}</dt>
+                  <dt className="text-ink-subtle">{spec.label}</dt>
                   <dd>{spec.value}</dd>
                 </Fragment>
               ))}
@@ -65,7 +74,7 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
           <p
             className={cn(
               "mt-5 text-xs uppercase tracking-wide",
-              stock.tone === "out" && "text-obsidian/40",
+              stock.tone === "out" && "text-ink-subtle",
               stock.tone === "low" && "text-gold-dark",
               stock.tone === "in" && "text-sage-dark"
             )}
@@ -83,47 +92,45 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
             </div>
           )}
 
-          <div className="mt-6 border-t border-obsidian/10 pt-6">
+          <div className="mt-6 border-t border-line pt-6">
             <VariantSelector
               product={product}
-              color={color}
-              size={size}
-              lens={lens}
-              onColorChange={setColor}
-              onSizeChange={setSize}
-              onLensChange={setLens}
+              options={options}
+              selections={selections}
+              onOptionChange={setOption}
+              onSelectionChange={setSelection}
             />
           </div>
 
           <div className="mt-8 flex gap-3">
             <Button
               className="flex-1"
-              disabled={product.stock === 0}
+              disabled={!isAvailable}
               onClick={() =>
                 addLine({
                   productId: product.id,
+                  variantId: variant?.id,
                   slug: product.slug,
                   name: product.name,
-                  image: product.images[0],
+                  image,
                   price: product.price,
-                  color,
-                  size,
-                  lens: product.lensOptions?.find((o) => o.value === lens)?.label,
+                  options: optionLabels,
+                  selections: selectionLabels,
                 })
               }
             >
-              {product.stock === 0 ? "Sold Out" : "Add to Bag"}
+              {isAvailable ? "Add to Bag" : "Sold Out"}
             </Button>
             <button
               onClick={() => toggleWishlist(product.id)}
               aria-label="Toggle wishlist"
-              className="flex h-[52px] w-[52px] shrink-0 items-center justify-center border border-obsidian/20 hover:border-obsidian"
+              className="flex h-[52px] w-[52px] shrink-0 items-center justify-center border border-line-strong hover:border-ink"
             >
-              <Heart size={18} fill={wishlisted ? "#D4AF37" : "none"} />
+              <Heart size={18} fill={wishlisted ? "#CDAD54" : "none"} />
             </button>
           </div>
 
-          <div className="mt-8 space-y-3 border-t border-obsidian/10 pt-6 text-sm text-obsidian/60">
+          <div className="mt-8 space-y-3 border-t border-line pt-6 text-sm text-ink-muted">
             <p className="flex items-center gap-2">
               <Truck size={15} /> Complimentary shipping within Ghana on orders over GH₵1,000
             </p>

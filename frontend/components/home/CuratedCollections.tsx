@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { collections } from "@/lib/mockData";
+import type { CollectionTile } from "@/lib/content";
 import { cn } from "@/lib/utils";
 
 const spanClass: Record<string, string> = {
@@ -13,15 +13,18 @@ const spanClass: Record<string, string> = {
   default: "aspect-[3/4]",
 };
 
-export function CuratedCollections() {
+export function CuratedCollections({ collections }: { collections: CollectionTile[] }) {
+  // An empty edit would leave a heading over nothing.
+  if (collections.length === 0) return null;
+
   return (
     <section className="container-elevated py-24">
       <div className="mb-12 flex items-end justify-between">
         <div>
           <p className="eyebrow mb-3">Curated Edits</p>
-          <h2 className="font-serif text-4xl">Shop the Season</h2>
+          <h2 className="font-serif text-4xl font-bold leading-[1.18]">Shop the Season</h2>
         </div>
-        <Link href="/shop" className="hidden text-sm underline-offset-4 hover:underline sm:block">
+        <Link href="/shop" className="hidden py-2 text-sm text-ink-muted underline-offset-4 transition-colors hover:text-gold hover:underline sm:inline-block">
           View all collections
         </Link>
       </div>
@@ -39,7 +42,7 @@ export function CuratedCollections() {
               spanClass[collection.span ?? "default"]
             )}
           >
-            <Link href={collection.href}>
+            <Link href={collection.href} className="absolute inset-0 block">
               <Image
                 src={collection.image}
                 alt={collection.title}
@@ -47,10 +50,10 @@ export function CuratedCollections() {
                 sizes="(min-width: 768px) 33vw, 100vw"
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-obsidian/80 via-obsidian/10 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-6 text-alabaster">
-                <p className="font-serif text-2xl">{collection.title}</p>
-                <p className="mt-1 text-sm text-alabaster/75">{collection.subtitle}</p>
+              <div className="absolute inset-0 bg-gradient-to-t from-surface/90 via-surface/25 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-6 text-ink">
+                <p className="font-serif text-2xl font-medium leading-snug">{collection.title}</p>
+                <p className="mt-1 text-sm text-ink/75">{collection.subtitle}</p>
                 <span className="mt-4 inline-flex items-center gap-1 text-xs uppercase tracking-widest2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                   Shop the edit <ArrowUpRight size={13} />
                 </span>

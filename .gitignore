@@ -52,3 +52,8 @@ next-env.d.ts
 test-results/
 playwright-report/
 playwright/.cache/
+
+# database backups taken before migrations (contain real catalogue data)
+backend/backups/
+
+# port chosen by frontend/scripts/dev.js at runtime

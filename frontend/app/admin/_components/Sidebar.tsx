@@ -11,6 +11,7 @@ import {
   ShoppingBag,
   Users,
   Settings,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/admin/categories", label: "Categories", icon: Tags },
   { href: "/admin/attributes", label: "Attributes", icon: SlidersHorizontal },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/admin/content", label: "Content", icon: FileText },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];

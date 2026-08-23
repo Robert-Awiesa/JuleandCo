@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Check, CreditCard, Smartphone } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 import { Button } from "@/components/ui/Button";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cartLineKey, cn, describeCartLine, formatCurrency } from "@/lib/utils";
 
 type Step = "shipping" | "payment" | "review" | "confirmation";
 type PaymentMethod = "mobile_money" | "card";
@@ -30,24 +30,73 @@ export default function CheckoutPage() {
     city: "",
     region: "",
   });
+  // Checkout is guest-only, so an email is the only way to send a receipt or
+  // reach the buyer about the order.
+  const [email, setEmail] = useState("");
+  const [placing, setPlacing] = useState(false);
+  const [orderError, setOrderError] = useState("");
 
   const shippingCost = subtotal() > 1000 || subtotal() === 0 ? 0 : 45;
   const total = useMemo(() => subtotal() + shippingCost, [subtotal, shippingCost]);
 
   const stepIndex = steps.findIndex((s) => s.id === step);
 
-  const handlePlaceOrder = () => {
-    const generated = `AO-${Math.floor(100000 + Math.random() * 900000)}`;
-    setOrderNumber(generated);
-    clear();
-    setStep("confirmation");
+  /**
+   * Creates the order for real. This used to invent an order number, empty the
+   * cart and show a confirmation without contacting the server at all, so a
+   * customer could "buy" something and nothing was recorded anywhere.
+   *
+   * Only the cart contents are sent. Prices, shipping and stock are resolved
+   * server-side, so the totals shown above are a preview and the order carries
+   * whatever the catalogue actually says.
+   */
+  const handlePlaceOrder = async () => {
+    setPlacing(true);
+    setOrderError("");
+
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      const res = await fetch(`${base}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer: { name: shipping.fullName, email, phone: shipping.phone },
+          shippingAddress: shipping,
+          paymentMethod,
+          items: lines.map((line) => ({
+            productId: line.productId,
+            variantId: line.variantId,
+            quantity: line.quantity,
+            options: line.options,
+            selections: line.selections,
+          })),
+        }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        // A sold-out line is the common case here, and the customer needs to
+        // know rather than see a success screen for an order that never existed.
+        setOrderError(body.message || "We could not place your order. Please try again.");
+        return;
+      }
+
+      setOrderNumber(body.orderNumber);
+      clear();
+      setStep("confirmation");
+    } catch {
+      setOrderError("We could not reach the store. Check your connection and try again.");
+    } finally {
+      setPlacing(false);
+    }
   };
 
   if (lines.length === 0 && step !== "confirmation") {
     return (
       <div className="container-elevated flex flex-col items-center justify-center gap-4 py-32 text-center">
         <p className="font-serif text-2xl">Your bag is empty</p>
-        <p className="text-sm text-obsidian/50">Add something you love before checking out.</p>
+        <p className="text-sm text-ink-subtle">Add something you love before checking out.</p>
         <Link href="/shop" className="btn-primary mt-2">
           Continue Shopping
         </Link>
@@ -62,8 +111,8 @@ export default function CheckoutPage() {
           <Check size={26} />
         </div>
         <p className="font-serif text-3xl">Order Confirmed</p>
-        <p className="max-w-sm text-sm text-obsidian/60">
-          Thank you — your order <span className="font-medium text-obsidian">{orderNumber}</span> has
+        <p className="max-w-sm text-sm text-ink-muted">
+          Thank you — your order <span className="font-medium text-ink">{orderNumber}</span> has
           been placed. A confirmation and tracking notifications will be sent to your phone.
         </p>
         <Link href="/shop" className="btn-primary mt-2">
@@ -85,17 +134,17 @@ export default function CheckoutPage() {
                 className={cn(
                   "flex h-7 w-7 items-center justify-center rounded-full border text-xs",
                   i <= stepIndex
-                    ? "border-obsidian bg-obsidian text-alabaster"
-                    : "border-obsidian/25 text-obsidian/40"
+                    ? "border-ink bg-ink text-surface"
+                    : "border-line-strong text-ink-subtle"
                 )}
               >
                 {i + 1}
               </span>
-              <span className={cn("text-sm", i <= stepIndex ? "text-obsidian" : "text-obsidian/40")}>
+              <span className={cn("text-sm", i <= stepIndex ? "text-ink" : "text-ink-subtle")}>
                 {s.label}
               </span>
             </div>
-            {i < steps.length - 1 && <span className="h-px w-8 bg-obsidian/15" />}
+            {i < steps.length - 1 && <span className="h-px w-8 bg-line-strong" />}
           </div>
         ))}
       </div>
@@ -117,7 +166,7 @@ export default function CheckoutPage() {
                   placeholder="Full Name"
                   value={shipping.fullName}
                   onChange={(e) => setShipping({ ...shipping, fullName: e.target.value })}
-                  className="border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                  className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                 />
                 <input
                   required
@@ -125,15 +174,23 @@ export default function CheckoutPage() {
                   placeholder="Phone Number"
                   value={shipping.phone}
                   onChange={(e) => setShipping({ ...shipping, phone: e.target.value })}
-                  className="border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                  className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                 />
               </div>
+              <input
+                required
+                type="email"
+                placeholder="Email Address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
+              />
               <input
                 required
                 placeholder="Street Address"
                 value={shipping.address}
                 onChange={(e) => setShipping({ ...shipping, address: e.target.value })}
-                className="w-full border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                className="w-full border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
               />
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <input
@@ -141,14 +198,14 @@ export default function CheckoutPage() {
                   placeholder="City"
                   value={shipping.city}
                   onChange={(e) => setShipping({ ...shipping, city: e.target.value })}
-                  className="border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                  className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                 />
                 <input
                   required
                   placeholder="Region"
                   value={shipping.region}
                   onChange={(e) => setShipping({ ...shipping, region: e.target.value })}
-                  className="border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                  className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                 />
               </div>
               <Button type="submit" className="mt-2">
@@ -165,26 +222,26 @@ export default function CheckoutPage() {
                   onClick={() => setPaymentMethod("mobile_money")}
                   className={cn(
                     "flex items-center gap-3 border p-4 text-left transition-colors",
-                    paymentMethod === "mobile_money" ? "border-obsidian" : "border-obsidian/20"
+                    paymentMethod === "mobile_money" ? "border-line-strong" : "border-line-strong"
                   )}
                 >
                   <Smartphone size={20} />
                   <div>
                     <p className="text-sm font-medium">Mobile Money</p>
-                    <p className="text-xs text-obsidian/50">MTN, Vodafone, AirtelTigo</p>
+                    <p className="text-xs text-ink-subtle">MTN, Vodafone, AirtelTigo</p>
                   </div>
                 </button>
                 <button
                   onClick={() => setPaymentMethod("card")}
                   className={cn(
                     "flex items-center gap-3 border p-4 text-left transition-colors",
-                    paymentMethod === "card" ? "border-obsidian" : "border-obsidian/20"
+                    paymentMethod === "card" ? "border-line-strong" : "border-line-strong"
                   )}
                 >
                   <CreditCard size={20} />
                   <div>
                     <p className="text-sm font-medium">Card</p>
-                    <p className="text-xs text-obsidian/50">Visa, Mastercard</p>
+                    <p className="text-xs text-ink-subtle">Visa, Mastercard</p>
                   </div>
                 </button>
               </div>
@@ -192,22 +249,22 @@ export default function CheckoutPage() {
               {paymentMethod === "mobile_money" ? (
                 <input
                   placeholder="Mobile Money Number"
-                  className="w-full border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                  className="w-full border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                 />
               ) : (
                 <div className="space-y-4">
                   <input
                     placeholder="Card Number"
-                    className="w-full border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                    className="w-full border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                   />
                   <div className="grid grid-cols-2 gap-4">
                     <input
                       placeholder="MM / YY"
-                      className="border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                      className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                     />
                     <input
                       placeholder="CVC"
-                      className="border border-obsidian/20 bg-transparent px-4 py-3 text-sm focus:border-obsidian focus:outline-none"
+                      className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                     />
                   </div>
                 </div>
@@ -226,42 +283,53 @@ export default function CheckoutPage() {
             <div className="space-y-6">
               <h2 className="font-serif text-2xl">Review &amp; Place Order</h2>
 
-              <div className="border border-obsidian/10 p-5 text-sm">
-                <p className="mb-1 text-xs uppercase tracking-widest2 text-obsidian/45">Ship To</p>
+              <div className="border border-line p-5 text-sm">
+                <p className="mb-1 text-xs uppercase tracking-widest2 text-ink-subtle">Ship To</p>
                 <p>{shipping.fullName}</p>
-                <p className="text-obsidian/60">
+                <p className="text-ink-muted">
                   {shipping.address}, {shipping.city}, {shipping.region}
                 </p>
-                <p className="text-obsidian/60">{shipping.phone}</p>
+                <p className="text-ink-muted">{shipping.phone}</p>
               </div>
 
-              <div className="border border-obsidian/10 p-5 text-sm">
-                <p className="mb-1 text-xs uppercase tracking-widest2 text-obsidian/45">Payment</p>
+              <div className="border border-line p-5 text-sm">
+                <p className="mb-1 text-xs uppercase tracking-widest2 text-ink-subtle">Payment</p>
                 <p className="capitalize">{paymentMethod.replace("_", " ")}</p>
               </div>
+
+              {orderError && (
+                <p
+                  role="alert"
+                  className="border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+                >
+                  {orderError}
+                </p>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <Button variant="secondary" onClick={() => setStep("payment")}>
                   Back
                 </Button>
-                <Button onClick={handlePlaceOrder}>Place Order</Button>
+                <Button onClick={handlePlaceOrder} disabled={placing}>
+                  {placing ? "Placing order…" : "Place Order"}
+                </Button>
               </div>
             </div>
           )}
         </div>
 
-        <div className="h-fit border border-obsidian/10 p-6">
+        <div className="h-fit border border-line p-6">
           <p className="mb-5 font-serif text-xl">Order Summary</p>
           <ul className="space-y-4">
             {lines.map((line) => (
-              <li key={`${line.productId}-${line.color}-${line.size}`} className="flex gap-3">
-                <div className="relative h-16 w-14 shrink-0 overflow-hidden bg-obsidian/5">
+              <li key={cartLineKey(line)} className="flex gap-3">
+                <div className="relative h-16 w-14 shrink-0 overflow-hidden bg-surface-tile">
                   <Image src={line.image} alt={line.name} fill sizes="56px" className="object-cover" />
                 </div>
                 <div className="flex-1 text-sm">
                   <p className="font-medium">{line.name}</p>
-                  <p className="text-xs text-obsidian/50">
-                    {[line.color, line.size].filter(Boolean).join(" / ")} &times; {line.quantity}
+                  <p className="text-xs text-ink-subtle">
+                    {describeCartLine(line)} &times; {line.quantity}
                   </p>
                 </div>
                 <p className="text-sm">{formatCurrency(line.price * line.quantity)}</p>
@@ -269,16 +337,16 @@ export default function CheckoutPage() {
             ))}
           </ul>
 
-          <div className="mt-6 space-y-2 border-t border-obsidian/10 pt-4 text-sm">
-            <div className="flex justify-between text-obsidian/60">
+          <div className="mt-6 space-y-2 border-t border-line pt-4 text-sm">
+            <div className="flex justify-between text-ink-muted">
               <span>Subtotal</span>
               <span>{formatCurrency(subtotal())}</span>
             </div>
-            <div className="flex justify-between text-obsidian/60">
+            <div className="flex justify-between text-ink-muted">
               <span>Shipping</span>
               <span>{shippingCost === 0 ? "Complimentary" : formatCurrency(shippingCost)}</span>
             </div>
-            <div className="flex justify-between border-t border-obsidian/10 pt-2 text-base font-medium">
+            <div className="flex justify-between border-t border-line pt-2 text-base font-medium">
               <span>Total</span>
               <span>{formatCurrency(total)}</span>
             </div>

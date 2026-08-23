@@ -8,6 +8,9 @@
     "dev": "nodemon server.js",
     "seed": "node src/seed/seedData.js",
     "seed:attributes": "node src/scripts/seedAttributes.js",
+    "seed:jewellery-examples": "node src/scripts/seedJewelleryExamples.js",
+    "pivot": "node src/scripts/pivotToJewelleryAndBags.js",
+    "set-admin-password": "node src/scripts/setAdminPassword.js",
     "migrate:is-new-arrival": "node src/scripts/renameIsNewField.js",
     "test": "jest --runInBand"
   },

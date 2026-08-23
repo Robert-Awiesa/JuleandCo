@@ -1,10 +1,20 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
+import { Roboto, Playfair_Display } from "next/font/google";
 import "../globals.css";
 import { QueryProvider } from "./_lib/QueryProvider";
 
-const sans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
-const serif = Playfair_Display({ subsets: ["latin"], variable: "--font-serif", display: "swap" });
+const sans = Roboto({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "700"],
+  variable: "--font-sans",
+  display: "swap",
+});
+const serif = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-serif",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Admin — JULES & CO",
@@ -21,7 +31,16 @@ export const metadata: Metadata = {
 export default function AdminRootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${sans.variable} ${serif.variable}`}>
-      <body className="font-sans bg-alabaster text-obsidian antialiased" suppressHydrationWarning>
+      {/*
+        theme-admin re-declares the colour variables as light values, so the
+        admin keeps its current appearance while the storefront runs warm-dark
+        from the same token names. The literal bg-alabaster/text-obsidian stay
+        because every admin panel already uses them directly.
+      */}
+      <body
+        className="theme-admin bg-alabaster font-sans text-obsidian antialiased"
+        suppressHydrationWarning
+      >
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>

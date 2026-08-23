@@ -24,8 +24,8 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <>
       <div className="group relative">
-        <div className="relative aspect-[3/4] overflow-hidden bg-obsidian/5">
-          <Link href={`/product/${product.slug}`}>
+        <div className="relative aspect-[3/4] overflow-hidden bg-surface-tile">
+          <Link href={`/product/${product.slug}`} className="absolute inset-0 block">
             <Image
               src={product.images[0]}
               alt={product.name}
@@ -53,21 +53,21 @@ export function ProductCard({ product }: ProductCardProps) {
           <button
             onClick={() => toggleWishlist(product.id)}
             aria-label="Toggle wishlist"
-            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center bg-alabaster/90 text-obsidian transition-transform hover:scale-105"
+            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center bg-surface/80 text-ink backdrop-blur-sm transition-transform hover:scale-105"
           >
-            <Heart size={14} fill={wishlisted ? "#D4AF37" : "none"} />
+            <Heart size={14} fill={wishlisted ? "#CDAD54" : "none"} />
           </button>
 
           <button
             onClick={() => setQuickViewOpen(true)}
-            className="absolute inset-x-3 bottom-3 flex translate-y-3 items-center justify-center gap-2 bg-alabaster/95 py-3 text-xs uppercase tracking-wide opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100"
+            className="absolute inset-x-3 bottom-3 flex translate-y-3 items-center justify-center gap-2 bg-surface/90 py-3 text-xs font-medium uppercase tracking-wide text-ink opacity-0 backdrop-blur-sm transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100"
           >
             <Eye size={14} /> Quick View
           </button>
         </div>
 
         <Link href={`/product/${product.slug}`} className="mt-4 block">
-          <p className="text-xs uppercase tracking-widest2 text-obsidian/45">
+          <p className="text-xs uppercase tracking-widest2 text-ink-subtle">
             {product.subCategory}
           </p>
           <h3 className="mt-1 font-serif text-lg">{product.name}</h3>

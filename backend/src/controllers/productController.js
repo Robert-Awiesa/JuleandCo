@@ -1,47 +1,129 @@
 const asyncHandler = require("express-async-handler");
 const Product = require("../models/Product");
 const Subcategory = require("../models/Subcategory");
+const Category = require("../models/Category");
 const Attribute = require("../models/Attribute");
+const AttributeGroup = require("../models/AttributeGroup");
 const { toPublicProduct } = require("../utils/publicProduct");
-const { buildLabelMap } = require("../utils/labelMap");
+const { buildCatalogContext } = require("../utils/catalogContext");
+const { publishBlockers, describeBlockers } = require("../utils/productReadiness");
+const { searchRegex } = require("../utils/searchRegex");
+
+/** Reserved query params that are not attribute filters. */
+const NON_ATTRIBUTE_PARAMS = new Set([
+  "category",
+  "subCategory",
+  "minPrice",
+  "maxPrice",
+  "search",
+  "sort",
+  "page",
+  "limit",
+]);
+
+const csv = (v) => String(v).split(",").filter(Boolean);
+
+/**
+ * Builds the attribute part of a product query from whatever filterable groups
+ * exist. This replaced a hand-written `if (frameShape) … if (fabric) …` block,
+ * which meant every new filter was a code change in this file plus four others.
+ */
+async function buildAttributeFilters(query) {
+  const groups = await AttributeGroup.find({ showInFilters: true }, "key").lean();
+  const filters = {};
+
+  groups.forEach(({ key }) => {
+    const value = query[key];
+    if (!value || NON_ATTRIBUTE_PARAMS.has(key)) return;
+    // $in matches scalars and array members alike, so multiselect groups
+    // (lens options, sizes offered) need no special handling.
+    filters[`attributes.${key}`] = { $in: csv(value) };
+  });
+
+  return filters;
+}
+
+/**
+ * Refuses a write that would put an incomplete product on the storefront.
+ * Saving as a draft is always allowed — the point is to catch the problem at
+ * the moment of publishing, not to stop work in progress being saved.
+ */
+function assertPublishable(res, product) {
+  if (product.publishStatus !== "published") return;
+
+  const blockers = publishBlockers(product);
+  if (blockers.length === 0) return;
+
+  res.status(400);
+  const error = new Error(describeBlockers(blockers));
+  error.blockers = blockers;
+  throw error;
+}
+
+/**
+ * Category and sub-category are validated here rather than by a schema enum.
+ * The enum was a hard write gate that made adding a category a code change.
+ */
+async function assertValidCategorisation(categorySlug, subCategorySlug) {
+  // Absent is a different problem from wrong, and said "undefined is not a
+  // known category" before — which reads as a bug rather than a missing field.
+  if (!categorySlug) {
+    const error = new Error("Choose a category on the Details tab");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const category = await Category.findOne({ slug: categorySlug });
+  if (!category) {
+    const error = new Error(`"${categorySlug}" is not a known category`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!subCategorySlug) {
+    const error = new Error(`Choose a sub-category for ${category.name}`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const subcategory = await Subcategory.findOne({
+    slug: subCategorySlug,
+    categoryType: categorySlug,
+  });
+  if (!subcategory) {
+    const error = new Error(
+      `"${subCategorySlug}" is not a valid sub-category for "${category.name}"`
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+}
 
 // @desc    Get products with optional multi-facet filtering
 // @route   GET /api/products
 // @access  Public
 const getProducts = asyncHandler(async (req, res) => {
-  const {
-    category,
-    frameShape,
-    frameMaterial,
-    lensType,
-    gender,
-    fit,
-    lensColor,
-    size,
-    fabric,
-    subCategory,
-    minPrice,
-    maxPrice,
-    search,
-    sort,
-  } = req.query;
+  const { category, subCategory, minPrice, maxPrice, search, sort } = req.query;
 
   // Draft products must never reach the storefront.
   const query = { publishStatus: "published" };
 
-  const csv = (v) => String(v).split(",").filter(Boolean);
-
   if (category && category !== "all") query.category = category;
   if (subCategory) query.subCategory = { $in: csv(subCategory) };
-  if (frameShape) query.frameShape = { $in: csv(frameShape) };
-  if (frameMaterial) query.frameMaterial = { $in: csv(frameMaterial) };
-  if (lensType) query.lensOptions = { $in: csv(lensType) };
-  if (gender) query.gender = { $in: csv(gender) };
-  if (fit) query.fit = { $in: csv(fit) };
-  if (lensColor) query.lensColor = { $in: csv(lensColor) };
-  if (size) query.clothingSize = { $in: csv(size) };
-  if (fabric) query.fabric = { $in: csv(fabric) };
-  if (search) query.$text = { $search: search };
+
+  // Partial matches, so a shopper typing "avia" sees The Aviator rather than
+  // an empty shop. $text could only match whole words.
+  const searchRx = searchRegex(search);
+  if (searchRx) {
+    query.$or = [
+      { name: searchRx },
+      { tags: searchRx },
+      { subCategory: searchRx },
+      { description: searchRx },
+    ];
+  }
+
+  Object.assign(query, await buildAttributeFilters(req.query));
 
   if (minPrice || maxPrice) {
     query.price = {};
@@ -55,11 +137,12 @@ const getProducts = asyncHandler(async (req, res) => {
   if (sort === "new") sortOption = { isNewArrival: -1, createdAt: -1 };
   if (sort === "bestseller") sortOption = { isBestSeller: -1, createdAt: -1 };
 
-  const [products, labels] = await Promise.all([
+  const [products, context] = await Promise.all([
     Product.find(query).sort(sortOption),
-    buildLabelMap(),
+    buildCatalogContext(),
   ]);
-  res.json(products.map((p) => toPublicProduct(p, labels)));
+
+  res.json(products.map((p) => toPublicProduct(p, context.forProduct(p))));
 });
 
 // @desc    Get single product by slug
@@ -78,14 +161,14 @@ const getProductBySlug = asyncHandler(async (req, res) => {
 
   // "Complete the Look" needs whole products, not just ids — and a paired
   // product that has since been unpublished must not surface.
-  const [related, labels] = await Promise.all([
+  const [related, context] = await Promise.all([
     Product.find({ _id: { $in: product.pairsWith || [] }, publishStatus: "published" }),
-    buildLabelMap(),
+    buildCatalogContext(),
   ]);
 
   res.json({
-    ...toPublicProduct(product, labels),
-    related: related.map((p) => toPublicProduct(p, labels)),
+    ...toPublicProduct(product, context.forProduct(product)),
+    related: related.map((p) => toPublicProduct(p, context.forProduct(p))),
   });
 });
 
@@ -93,16 +176,14 @@ const getProductBySlug = asyncHandler(async (req, res) => {
 // @route   POST /api/products
 // @access  Private/Admin
 const createProduct = asyncHandler(async (req, res) => {
-  const validSubcategory = await Subcategory.findOne({
-    slug: req.body.subCategory,
-    categoryType: req.body.category,
-  });
-  if (!validSubcategory) {
-    res.status(400);
-    throw new Error(
-      `"${req.body.subCategory}" is not a valid sub-category for "${req.body.category}"`
-    );
+  try {
+    await assertValidCategorisation(req.body.category, req.body.subCategory);
+  } catch (err) {
+    res.status(err.statusCode || 400);
+    throw err;
   }
+
+  assertPublishable(res, req.body);
 
   const product = await Product.create(req.body);
   res.status(201).json(product);
@@ -121,19 +202,116 @@ const updateProduct = asyncHandler(async (req, res) => {
   const nextCategory = req.body.category || product.category;
   const nextSubCategory = req.body.subCategory || product.subCategory;
   if (req.body.category || req.body.subCategory) {
-    const validSubcategory = await Subcategory.findOne({
-      slug: nextSubCategory,
-      categoryType: nextCategory,
-    });
-    if (!validSubcategory) {
-      res.status(400);
-      throw new Error(`"${nextSubCategory}" is not a valid sub-category for "${nextCategory}"`);
+    try {
+      await assertValidCategorisation(nextCategory, nextSubCategory);
+    } catch (err) {
+      res.status(err.statusCode || 400);
+      throw err;
     }
   }
 
   Object.assign(product, req.body, { category: nextCategory, subCategory: nextSubCategory });
+
+  // Checked after the merge, not against the request body: a patch that only
+  // flips publishStatus has to be judged on the product it produces.
+  assertPublishable(res, product);
+
   const updated = await product.save();
   res.json(updated);
+});
+
+// @desc    Copy a product as a new draft
+// @route   POST /api/products/:id/duplicate
+// @access  Private/Admin
+const duplicateProduct = asyncHandler(async (req, res) => {
+  const source = await Product.findById(req.params.id).lean();
+  if (!source) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  const { _id, createdAt, updatedAt, __v, ...rest } = source;
+
+  const copy = await Product.create({
+    ...rest,
+    name: `${source.name} (copy)`,
+    slug: await uniqueSlug(source.slug),
+    // Always a draft: a copy is a starting point, and publishing it unedited
+    // would put a duplicate listing on the storefront.
+    publishStatus: "draft",
+    // Stock and barcodes belong to the original piece, not to its copy.
+    variants: (source.variants || []).map(({ _id, ...v }) => ({ ...v, stock: 0, sku: undefined })),
+    options: (source.options || []).map(({ _id, ...o }) => o),
+    stock: 0,
+    barcode: undefined,
+  });
+
+  res.status(201).json(copy);
+});
+
+/** Appends -copy, then -copy-2, -copy-3… until the slug is free. */
+async function uniqueSlug(base) {
+  const candidate = `${base}-copy`;
+  if (!(await Product.exists({ slug: candidate }))) return candidate;
+
+  for (let n = 2; n < 100; n += 1) {
+    const next = `${candidate}-${n}`;
+    if (!(await Product.exists({ slug: next }))) return next;
+  }
+  return `${candidate}-${Date.now()}`;
+}
+
+// @desc    Apply one action to several products at once
+// @route   PATCH /api/products/bulk
+// @access  Private/Admin
+const bulkUpdateProducts = asyncHandler(async (req, res) => {
+  const { ids, action } = req.body;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    res.status(400);
+    throw new Error("Select at least one product");
+  }
+
+  if (action === "unpublish") {
+    const { modifiedCount } = await Product.updateMany(
+      { _id: { $in: ids } },
+      { $set: { publishStatus: "draft" } }
+    );
+    return res.json({ updated: modifiedCount, skipped: [] });
+  }
+
+  if (action === "outOfStock") {
+    // Zeroes every variant and the rollup in one pass. $[] is the all-positional
+    // operator, so this works whatever axes a product has.
+    const { modifiedCount } = await Product.updateMany(
+      { _id: { $in: ids } },
+      { $set: { "variants.$[].stock": 0, stock: 0 } }
+    );
+    return res.json({ updated: modifiedCount, skipped: [] });
+  }
+
+  if (action === "publish") {
+    const products = await Product.find({ _id: { $in: ids } });
+
+    // Publishing in bulk must apply the same rules as publishing one at a time,
+    // otherwise select-all becomes a way to put broken cards on the storefront.
+    const ready = [];
+    const skipped = [];
+    for (const product of products) {
+      const blockers = publishBlockers(product);
+      if (blockers.length === 0) ready.push(product._id);
+      else skipped.push({ id: String(product._id), name: product.name, blockers });
+    }
+
+    const { modifiedCount } = ready.length
+      ? await Product.updateMany({ _id: { $in: ready } }, { $set: { publishStatus: "published" } })
+      : { modifiedCount: 0 };
+
+    return res.json({ updated: modifiedCount, skipped });
+  }
+
+  res.status(400);
+  throw new Error(`Unknown bulk action "${action}"`);
 });
 
 // @desc    Delete a product
@@ -154,12 +332,24 @@ const deleteProduct = asyncHandler(async (req, res) => {
 // @route   GET /api/products/admin
 // @access  Private/Admin
 const getAdminProducts = asyncHandler(async (req, res) => {
-  const { category, subCategory, stockStatus, search, page = 1, limit = 20 } = req.query;
+  const {
+    category,
+    subCategory,
+    stockStatus,
+    publishStatus,
+    search,
+    page = 1,
+    limit = 20,
+  } = req.query;
   const query = {};
 
   if (category && category !== "all") query.category = category;
   if (subCategory) query.subCategory = subCategory;
-  if (search) query.$text = { $search: search };
+  if (publishStatus && publishStatus !== "all") query.publishStatus = publishStatus;
+  const rx = searchRegex(search);
+  if (rx) {
+    query.$or = [{ name: rx }, { slug: rx }, { tags: rx }, { barcode: rx }, { "variants.sku": rx }];
+  }
   if (stockStatus === "out") query.stock = 0;
   if (stockStatus === "low") query.stock = { $gt: 0, $lte: 5 };
   if (stockStatus === "in") query.stock = { $gt: 5 };
@@ -222,8 +412,6 @@ const updateProductStock = asyncHandler(async (req, res) => {
   res.json(updated);
 });
 
-const FACET_GROUPS = ["frameShape", "frameMaterial", "lensType", "gender", "fit", "fabric", "clothingSize"];
-
 // @desc    Filter facets actually present in the published catalogue
 // @route   GET /api/products/facets
 // @access  Public
@@ -232,55 +420,84 @@ const getProductFacets = asyncHandler(async (req, res) => {
   const match = { publishStatus: "published" };
   if (category && category !== "all") match.category = category;
 
-  const [raw] = await Product.aggregate([
-    { $match: match },
-    {
-      $group: {
-        _id: null,
-        frameShape: { $addToSet: "$frameShape" },
-        frameMaterial: { $addToSet: "$frameMaterial" },
-        lensType: { $addToSet: "$lensOptions" },
-        gender: { $addToSet: "$gender" },
-        fit: { $addToSet: "$fit" },
-        fabric: { $addToSet: "$fabric" },
-        clothingSize: { $addToSet: "$clothingSize" },
-        subCategory: { $addToSet: "$subCategory" },
-        minPrice: { $min: "$price" },
-        maxPrice: { $max: "$price" },
-      },
-    },
-  ]);
+  // Which groups to aggregate is now read from the data, so a new facet needs
+  // no aggregation edit here.
+  const filterGroups = await AttributeGroup.find({ showInFilters: true }).lean();
+  const applicable = filterGroups.filter(
+    (g) => !category || category === "all" || !g.categories?.length || g.categories.includes(category)
+  );
 
-  // Callers destructure groups.<name>, so an empty catalogue must still return
-  // every key rather than an empty object.
-  const emptyGroups = Object.fromEntries(FACET_GROUPS.map((g) => [g, []]));
+  /**
+   * One sub-pipeline per group, so every option comes back with how many
+   * products carry it. $addToSet alone gave distinct values but no counts,
+   * which is what the navigation needs to show "Aviator (3)".
+   *
+   * $unwind handles both shapes a value can take: multiselect groups store an
+   * array, single-select groups store a scalar, and Mongo treats a non-array
+   * as a one-element array here. Documents missing the field drop out, which
+   * is what we want.
+   */
+  const facetStage = {
+    subCategory: [{ $group: { _id: "$subCategory", n: { $sum: 1 } } }],
+    priceBounds: [{ $group: { _id: null, min: { $min: "$price" }, max: { $max: "$price" } } }],
+  };
+  applicable.forEach((group) => {
+    facetStage[group.key] = [
+      { $unwind: `$attributes.${group.key}` },
+      { $group: { _id: `$attributes.${group.key}`, n: { $sum: 1 } } },
+    ];
+  });
 
-  if (!raw) {
-    return res.json({ groups: emptyGroups, subCategories: [], priceBounds: [0, 0] });
-  }
+  const [raw = {}] = await Product.aggregate([{ $match: match }, { $facet: facetStage }]);
 
-  // $addToSet over array fields (lensOptions, clothingSize) yields arrays of
-  // arrays; flatten and drop the nulls left by products missing that field.
-  const clean = (values) =>
-    Array.from(new Set(values.flat().filter((v) => v !== null && v !== undefined && v !== "")));
+  // Drops the nulls left by products that never set the attribute.
+  const buckets = (key) =>
+    (raw[key] || []).filter((b) => b._id !== null && b._id !== undefined && b._id !== "");
 
-  const usedValues = FACET_GROUPS.flatMap((g) => clean(raw[g]));
-  const attributes = await Attribute.find({ value: { $in: usedValues } });
+  const usedValues = applicable.flatMap((g) => buckets(g.key).map((b) => b._id));
+  const attributes = usedValues.length
+    ? await Attribute.find({ value: { $in: usedValues } }).lean()
+    : [];
 
-  const groups = { ...emptyGroups };
-  FACET_GROUPS.forEach((group) => {
-    groups[group] = clean(raw[group])
-      .map((value) => {
-        const attr = attributes.find((a) => a.group === group && a.value === value);
-        return { value, label: attr ? attr.label : value, hex: attr ? attr.hex : undefined, sortOrder: attr ? attr.sortOrder : 0 };
+  // Callers read groups.<key>, so an empty catalogue must still return every key.
+  const groups = Object.fromEntries(applicable.map((g) => [g.key, []]));
+  const counts = {};
+
+  applicable.forEach((group) => {
+    const rows = buckets(group.key);
+    counts[group.key] = Object.fromEntries(rows.map((b) => [b._id, b.n]));
+
+    groups[group.key] = rows
+      .map((b) => {
+        const attr = attributes.find((a) => a.group === group.key && a.value === b._id);
+        return {
+          value: b._id,
+          label: attr ? attr.label : String(b._id),
+          hex: attr ? attr.hex : undefined,
+          count: b.n,
+          sortOrder: attr ? attr.sortOrder : 0,
+        };
       })
       .sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label));
   });
 
+  const subCategoryRows = buckets("subCategory");
+  counts.subCategory = Object.fromEntries(subCategoryRows.map((b) => [b._id, b.n]));
+
+  const price = (raw.priceBounds || [])[0] || {};
+
   res.json({
     groups,
-    subCategories: clean(raw.subCategory).sort(),
-    priceBounds: [raw.minPrice ?? 0, raw.maxPrice ?? 0],
+    // Lets the storefront render a facet it has never heard of, with the right
+    // title and control style, without a matching JSX block being added.
+    groupMeta: applicable
+      .map(({ key, label, filterStyle, sortOrder }) => ({ key, label, filterStyle, sortOrder }))
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)),
+    subCategories: subCategoryRows.map((b) => b._id).sort(),
+    // value -> product count, keyed by group. Consumed by the navigation, which
+    // needs a number per link without re-deriving it from `groups`.
+    counts,
+    priceBounds: [price.min ?? 0, price.max ?? 0],
   });
 });
 
@@ -291,6 +508,8 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
+  duplicateProduct,
+  bulkUpdateProducts,
   getAdminProducts,
   getAdminProductById,
   updateProductStock,

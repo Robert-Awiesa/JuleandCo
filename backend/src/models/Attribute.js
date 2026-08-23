@@ -1,28 +1,24 @@
 const mongoose = require("mongoose");
 
-// The controlled vocabularies behind the product form's dropdowns and the
-// storefront's filter facets. Before this existed, attributes were free text in
-// the admin while FilterSidebar derived its checkboxes from the distinct values
-// across products — so "Aviator" and "aviator" produced two separate facets.
-const ATTRIBUTE_GROUPS = [
-  "frameShape",
-  "lensType",
-  "frameMaterial",
-  "fabric",
-  "clothingSize",
-  "fit",
-  "gender",
-];
-
+/**
+ * One option inside a vocabulary, e.g. "Rose Gold" in the `metal` group.
+ *
+ * Two enums were removed here. `group` was a fixed 7-value list, which made
+ * adding a vocabulary a code change; it is now validated against the
+ * AttributeGroup collection in the controller. `categoryType` was a second,
+ * competing way to bind options to categories, duplicating what
+ * AttributeGroup.categories already expresses — group-level binding is now the
+ * only mechanism, so there is one answer to "does this apply here?".
+ *
+ * Products store `value`, never `label`, so relabelling is free.
+ */
 const attributeSchema = new mongoose.Schema(
   {
-    group: { type: String, enum: ATTRIBUTE_GROUPS, required: true },
+    group: { type: String, required: true },
     value: { type: String, required: true },
     label: { type: String, required: true },
-    // Only meaningful for groups a swatch can represent (lensType).
+    // Swatch colour, for groups flagged `swatch` on their AttributeGroup.
     hex: String,
-    // Null/absent means the option applies to both categories.
-    categoryType: { type: String, enum: ["eyewear", "apparel"] },
     description: String,
     sortOrder: { type: Number, default: 0 },
   },
@@ -32,4 +28,3 @@ const attributeSchema = new mongoose.Schema(
 attributeSchema.index({ group: 1, value: 1 }, { unique: true });
 
 module.exports = mongoose.model("Attribute", attributeSchema);
-module.exports.ATTRIBUTE_GROUPS = ATTRIBUTE_GROUPS;

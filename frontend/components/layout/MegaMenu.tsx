@@ -4,14 +4,17 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { MegaMenuSection } from "@/lib/navigation";
+import { countForHref } from "@/lib/navigation";
+import type { MegaMenuSection } from "@/lib/content";
 
 interface MegaMenuProps {
   section: MegaMenuSection;
+  /** group key -> value -> product count, from /api/products/facets. */
+  counts: Record<string, Record<string, number>>;
   onNavigate: () => void;
 }
 
-export function MegaMenu({ section, onNavigate }: MegaMenuProps) {
+export function MegaMenu({ section, counts, onNavigate }: MegaMenuProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -8 }}
@@ -22,20 +25,34 @@ export function MegaMenu({ section, onNavigate }: MegaMenuProps) {
     >
       <div className="container-elevated grid grid-cols-1 gap-10 py-10 md:grid-cols-[1fr_1fr_1.1fr]">
         {section.columns.map((column) => (
-          <div key={column.title}>
+          <div key={column.id}>
             <p className="eyebrow mb-4">{column.title}</p>
             <ul className="space-y-3">
-              {column.links.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    onClick={onNavigate}
-                    className="text-[15px] text-obsidian/80 transition-colors hover:text-gold-dark"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
+              {column.links.map((link) => {
+                const count = countForHref(link.href, counts);
+                return (
+                  <li key={link.id}>
+                    <Link
+                      href={link.href}
+                      onClick={onNavigate}
+                      className="group/link inline-flex items-baseline gap-1.5 py-0.5 text-[15px] text-ink transition-colors hover:text-gold"
+                    >
+                      {link.label}
+                      {count !== null && (
+                        <span
+                          className={
+                            count === 0
+                              ? "numeric text-xs text-ink-subtle/60"
+                              : "numeric text-xs text-ink-subtle"
+                          }
+                        >
+                          ({count})
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}
@@ -52,10 +69,10 @@ export function MegaMenu({ section, onNavigate }: MegaMenuProps) {
             sizes="400px"
             className="object-cover transition-transform duration-700 group-hover:scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-obsidian/70 via-obsidian/10 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 p-5 text-alabaster">
+          <div className="absolute inset-0 bg-gradient-to-t from-surface/90 via-surface/25 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 p-5 text-ink">
             <p className="font-serif text-lg">{section.featured.title}</p>
-            <p className="mt-1 text-xs text-alabaster/80">{section.featured.subtitle}</p>
+            <p className="mt-1 text-xs text-ink-muted">{section.featured.subtitle}</p>
             <span className="mt-3 inline-flex items-center gap-1 text-xs uppercase tracking-widest2">
               Discover <ArrowUpRight size={13} />
             </span>

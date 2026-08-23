@@ -56,7 +56,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       {isOpen && (
         <>
           <motion.div
-            className="fixed inset-0 z-[70] bg-obsidian/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -70,20 +70,20 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
             >
-              <div className="bg-alabaster shadow-soft border border-obsidian/10">
-                <div className="flex items-center gap-3 border-b border-obsidian/10 px-5 py-4">
-                  <Search size={18} className="text-obsidian/50 shrink-0" />
+              <div className="bg-surface-raised shadow-soft border border-line">
+                <div className="flex items-center gap-3 border-b border-line px-5 py-4">
+                  <Search size={18} className="text-ink-subtle shrink-0" />
                   <input
                     autoFocus
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search eyewear, apparel, fabrics, shapes…"
-                    className="w-full bg-transparent text-sm placeholder:text-obsidian/40 focus:outline-none"
+                    placeholder="Search eyewear, jewellery, bags…"
+                    className="w-full bg-transparent text-sm placeholder:text-ink-subtle focus:outline-none"
                   />
                   <button
                     onClick={onClose}
                     aria-label="Close search"
-                    className="text-obsidian/50 hover:text-obsidian"
+                    className="text-ink-subtle hover:text-ink"
                   >
                     <X size={18} />
                   </button>
@@ -92,9 +92,9 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 {query.trim() && (
                   <div className="max-h-[60vh] overflow-y-auto p-2">
                     {searching && results.length === 0 ? (
-                      <p className="px-4 py-8 text-center text-sm text-obsidian/40">Searching…</p>
+                      <p className="px-4 py-8 text-center text-sm text-ink-subtle">Searching…</p>
                     ) : results.length === 0 ? (
-                      <p className="px-4 py-8 text-center text-sm text-obsidian/50">
+                      <p className="px-4 py-8 text-center text-sm text-ink-subtle">
                         No results for &ldquo;{query}&rdquo;
                       </p>
                     ) : (
@@ -103,9 +103,9 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                           key={product.id}
                           href={`/product/${product.slug}`}
                           onClick={onClose}
-                          className="flex items-center gap-4 p-3 hover:bg-obsidian/5 transition-colors"
+                          className="flex items-center gap-4 p-3 hover:bg-ink/5 transition-colors"
                         >
-                          <div className="relative h-16 w-14 shrink-0 overflow-hidden bg-obsidian/5">
+                          <div className="relative h-16 w-14 shrink-0 overflow-hidden bg-surface-tile">
                             <Image
                               src={product.images[0]}
                               alt={product.name}
@@ -116,7 +116,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium">{product.name}</p>
-                            <p className="text-xs text-obsidian/50">{product.subCategory}</p>
+                            <p className="text-xs text-ink-subtle">{product.subCategory}</p>
                           </div>
                           <p className="text-sm shrink-0">{formatCurrency(product.price)}</p>
                         </Link>

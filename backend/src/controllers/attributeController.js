@@ -1,30 +1,40 @@
 const asyncHandler = require("express-async-handler");
 const Attribute = require("../models/Attribute");
+const AttributeGroup = require("../models/AttributeGroup");
 const Product = require("../models/Product");
 
-// Which product field each vocabulary group feeds. Used to block deletion of an
-// option that products still reference.
-const GROUP_USAGE = {
-  frameShape: (value) => ({ frameShape: value }),
-  lensType: (value) => ({ lensOptions: value }),
-  frameMaterial: (value) => ({ frameMaterial: value }),
-  fabric: (value) => ({ fabric: value }),
-  clothingSize: (value) => ({ clothingSize: value }),
-  fit: (value) => ({ fit: value }),
-  gender: (value) => ({ gender: value }),
-};
+/**
+ * Counts products still referencing an option.
+ *
+ * This used to need a hardcoded group -> product-field map, and any group
+ * missing from it silently skipped the check, so its options could be deleted
+ * while products still used them. Now that every attribute lives under
+ * `attributes.<groupKey>`, one query covers every group, including ones that
+ * do not exist yet.
+ */
+function countProductsUsing(group, value) {
+  return Product.countDocuments({ [`attributes.${group}`]: value });
+}
 
-// @desc    List vocabulary options, optionally narrowed to one group/category
+// @desc    List vocabulary options, optionally narrowed to one group or category
 // @route   GET /api/attributes
 // @access  Public (the storefront's filters read this too)
 const getAttributes = asyncHandler(async (req, res) => {
-  const { group, categoryType } = req.query;
+  const { group, category } = req.query;
   const query = {};
-  if (group) query.group = group;
-  if (categoryType) {
-    // An option with no categoryType applies everywhere.
-    query.$or = [{ categoryType }, { categoryType: { $exists: false } }, { categoryType: null }];
+
+  if (group) {
+    query.group = group;
+  } else if (category) {
+    // Category binding lives on the group, not on individual options.
+    const groups = await AttributeGroup.find({
+      $or: [{ categories: category }, { categories: { $size: 0 } }],
+    })
+      .select("key")
+      .lean();
+    query.group = { $in: groups.map((g) => g.key) };
   }
+
   const attributes = await Attribute.find(query).sort({ group: 1, sortOrder: 1, label: 1 });
   res.json(attributes);
 });
@@ -33,11 +43,18 @@ const getAttributes = asyncHandler(async (req, res) => {
 // @route   POST /api/attributes
 // @access  Private/Admin
 const createAttribute = asyncHandler(async (req, res) => {
+  const groupExists = await AttributeGroup.exists({ key: req.body.group });
+  if (!groupExists) {
+    res.status(400);
+    throw new Error(`"${req.body.group}" is not a known attribute group`);
+  }
+
   const existing = await Attribute.findOne({ group: req.body.group, value: req.body.value });
   if (existing) {
     res.status(409);
     throw new Error(`"${req.body.value}" already exists in ${req.body.group}`);
   }
+
   const attribute = await Attribute.create(req.body);
   res.status(201).json(attribute);
 });
@@ -46,7 +63,10 @@ const createAttribute = asyncHandler(async (req, res) => {
 // @route   PUT /api/attributes/:id
 // @access  Private/Admin
 const updateAttribute = asyncHandler(async (req, res) => {
-  const attribute = await Attribute.findByIdAndUpdate(req.params.id, req.body, {
+  // `value` is what products store; changing it would orphan them silently.
+  const { value, group, ...safe } = req.body;
+
+  const attribute = await Attribute.findByIdAndUpdate(req.params.id, safe, {
     new: true,
     runValidators: true,
   });
@@ -67,13 +87,10 @@ const deleteAttribute = asyncHandler(async (req, res) => {
     throw new Error("Attribute not found");
   }
 
-  const buildQuery = GROUP_USAGE[attribute.group];
-  if (buildQuery) {
-    const inUse = await Product.countDocuments(buildQuery(attribute.value));
-    if (inUse > 0) {
-      res.status(409);
-      throw new Error(`Cannot delete "${attribute.label}" — ${inUse} product(s) still use it`);
-    }
+  const inUse = await countProductsUsing(attribute.group, attribute.value);
+  if (inUse > 0) {
+    res.status(409);
+    throw new Error(`Cannot delete "${attribute.label}" — ${inUse} product(s) still use it`);
   }
 
   await attribute.deleteOne();

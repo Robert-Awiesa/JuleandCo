@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../_lib/api";
 import { formatCurrency } from "../../_lib/format";
-import type { AdminProduct, PaginatedResult } from "../../_lib/types";
+import type { AdminProduct, OrderStats, PaginatedResult } from "../../_lib/types";
 
 async function fetchAllProducts() {
   return api.get<PaginatedResult<AdminProduct>>("/products/admin?limit=1000");
@@ -16,12 +16,23 @@ export default function DashboardPage() {
     queryFn: fetchAllProducts,
   });
 
+  const { data: stats } = useQuery({
+    queryKey: ["order-stats"],
+    queryFn: () => api.get<OrderStats>("/orders/stats"),
+  });
+
   const products = data?.items ?? [];
   const outOfStock = products.filter((p) => p.stock === 0);
   const lowStock = products.filter((p) => p.stock > 0 && p.stock <= 5);
   const catalogValue = products.reduce((sum, p) => sum + p.price * p.stock, 0);
 
+  // Trade first, then the catalogue. Revenue and unfulfilled orders are what a
+  // shop owner opens this page to see; stock levels are the follow-up.
   const tiles = [
+    { label: "Revenue", value: formatCurrency(stats?.revenue ?? 0) },
+    { label: "Orders", value: String(stats?.orders ?? 0) },
+    { label: "Avg. Order", value: formatCurrency(stats?.averageOrderValue ?? 0) },
+    { label: "To Fulfil", value: String(stats?.unfulfilled ?? 0) },
     { label: "Total Products", value: String(products.length) },
     { label: "Low Stock", value: String(lowStock.length) },
     { label: "Out of Stock", value: String(outOfStock.length) },

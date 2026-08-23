@@ -1,0 +1,82 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Two web services from one npm-workspaces repo. Both build from the repo root
+# so `npm ci` resolves the shared lockfile; the workspace flag selects which
+# package to build and run.
+#
+# Browser traffic never reaches the API host directly: the frontend rewrites
+# /api/* to API_ORIGIN (see frontend/next.config.js). That keeps the auth cookie
+# same-origin, which is what makes the admin dashboard work at all once the two
+# services sit on different hostnames.
+#
+# Secrets are marked `sync: false` so Render prompts for them instead of storing
+# them in this file. Nothing here should ever hold a real value.
+
+services:
+  # ---------------------------------------------------------------- API -----
+  - type: web
+    name: jules-and-co-api
+    runtime: node
+    plan: free
+    region: oregon
+    branch: master
+    buildCommand: npm ci
+    startCommand: npm start -w backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render injects PORT; backend/server.js already reads it.
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 30d
+      # Comma-separated list of allowed browser origins. With the /api rewrite
+      # in place the storefront is same-origin and does not need CORS, but this
+      # stays correct for any direct call and for local tooling.
+      - key: CLIENT_URL
+        fromService:
+          type: web
+          name: jules-and-co-web
+          property: host
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      # Only read when the seed script creates the admin user. Changing it later
+      # does nothing on its own — run `npm run set-admin-password -w backend`.
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+  # ----------------------------------------------------------- Storefront ---
+  - type: web
+    name: jules-and-co-web
+    runtime: node
+    plan: free
+    region: oregon
+    branch: master
+    buildCommand: npm ci && npm run build -w frontend
+    startCommand: npm start -w frontend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Relative on purpose: the browser calls this app, which proxies onward.
+      - key: NEXT_PUBLIC_API_URL
+        value: /api
+      # Where that proxy points, and what server components call directly.
+      - key: API_ORIGIN
+        fromService:
+          type: web
+          name: jules-and-co-api
+          property: host
+      # MUST be byte-identical to the API's JWT_SECRET: the API signs the auth
+      # cookie and frontend/middleware.ts verifies it. A mismatch bounces every
+      # /admin route back to the login page with no error shown.
+      - key: JWT_SECRET
+        sync: false

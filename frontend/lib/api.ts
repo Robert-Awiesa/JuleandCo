@@ -1,4 +1,4 @@
-import type { FacetResponse, Product } from "./types";
+import type { FacetResponse, Product, StoreCategory } from "./types";
 
 /**
  * Storefront data layer.
@@ -11,9 +11,25 @@ import type { FacetResponse, Product } from "./types";
  * The API only ever returns products with publishStatus "published", so drafts
  * are filtered out before they reach this layer.
  */
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+/**
+ * Server-side calls go straight to the API. NEXT_PUBLIC_API_URL is "/api" in
+ * production so the browser stays same-origin, but a relative URL is
+ * meaningless inside a server component — hence API_ORIGIN.
+ */
+function normaliseOrigin(value?: string) {
+  if (!value) return "";
+  const trimmed = value.trim().replace(/\/+$/, "");
+  if (!trimmed) return "";
+  // Render hands over a bare hostname; accept it with or without a scheme.
+  return /^https?:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
 
-async function getJson<T>(path: string, fallback: T): Promise<T> {
+const API_ORIGIN = normaliseOrigin(process.env.API_ORIGIN);
+const API_URL = API_ORIGIN
+  ? `${API_ORIGIN}/api`
+  : process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+export async function getJson<T>(path: string, fallback: T): Promise<T> {
   try {
     // Deliberately uncached.
     //
@@ -42,20 +58,20 @@ async function getJson<T>(path: string, fallback: T): Promise<T> {
   }
 }
 
+/**
+ * Filter params. The fixed facet keys are gone: which attributes are filterable
+ * is defined by AttributeGroup records, so the shop passes through whatever the
+ * facets endpoint advertised rather than a hardcoded list.
+ */
 export interface ProductQuery {
   category?: string;
   subCategory?: string[];
-  frameShape?: string[];
-  frameMaterial?: string[];
-  lensType?: string[];
-  gender?: string[];
-  fit?: string[];
-  fabric?: string[];
-  size?: string[];
   minPrice?: number;
   maxPrice?: number;
   search?: string;
   sort?: string;
+  /** Any attribute group key advertised by /products/facets. */
+  [attributeGroup: string]: string | string[] | number | undefined;
 }
 
 function toQueryString(query: ProductQuery): string {
@@ -86,17 +102,20 @@ export function fetchProductBySlug(
 /** Filter options actually present in the published catalogue, already labelled. */
 export function fetchFacets(category?: string): Promise<FacetResponse> {
   const qs = category && category !== "all" ? `?category=${category}` : "";
+  // An open shape, so a facet added in the admin needs no change here.
   return getJson<FacetResponse>(`/products/facets${qs}`, {
-    groups: {
-      frameShape: [],
-      frameMaterial: [],
-      lensType: [],
-      gender: [],
-      fit: [],
-      fabric: [],
-      clothingSize: [],
-    },
+    groups: {},
+    groupMeta: [],
+    counts: {},
     subCategories: [],
     priceBounds: [0, 0],
   });
+}
+
+/** Active categories, for the shop filters and navigation. */
+export function fetchCategories(): Promise<StoreCategory[]> {
+  // Param name must match categoryController: activeOnly, not active. With the
+// wrong key the filter is silently ignored and retired categories show up as
+// shop filters with nothing behind them.
+  return getJson<StoreCategory[]>("/categories?activeOnly=true", []);
 }

@@ -19,13 +19,13 @@ export function WishlistView({ products }: { products: Product[] }) {
   return (
     <div className="container-elevated py-12">
       <p className="eyebrow mb-2">Saved Pieces</p>
-      <h1 className="mb-10 font-serif text-4xl">Your Wishlist</h1>
+      <h1 className="mb-10 font-serif text-4xl font-bold leading-[1.15]">Your Wishlist</h1>
 
       {!hydrated ? (
-        <div className="py-20 text-center text-sm text-obsidian/40">Loading…</div>
+        <div className="py-20 text-center text-sm text-ink-subtle">Loading…</div>
       ) : saved.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-20 text-center">
-          <p className="text-obsidian/50">Nothing saved yet.</p>
+          <p className="text-ink-subtle">Nothing saved yet.</p>
           <Link href="/shop" className="btn-primary">
             Browse the Collection
           </Link>
