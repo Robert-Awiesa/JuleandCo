@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useForm, FormProvider, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/admin-ui/tabs";
@@ -69,6 +69,16 @@ function toFormValues(product?: AdminProduct): ProductFormInput {
 export function ProductForm({ product }: { product?: AdminProduct }) {
   const router = useRouter();
   const invalidate = useInvalidate();
+
+  /**
+   * Which tab to open on. "Restock" on the product list points straight at the
+   * inventory grid, because sending someone to the Details tab and asking them
+   * to find it is the sort of small friction that adds up over a catalogue.
+   */
+  const searchParams = useSearchParams();
+  const requested = searchParams.get("tab");
+  const TABS = ["details", "attributes", "options", "inventory", "cross-sell"];
+  const initialTab = requested && TABS.includes(requested) ? requested : "details";
   const isEditing = Boolean(product);
 
   const form = useForm<ProductFormInput, unknown, ProductFormValues>({
@@ -181,7 +191,7 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
         </div>
 
         <div className="flex flex-col gap-6 lg:flex-row">
-          <Tabs defaultValue="details" className="min-w-0 flex-1">
+          <Tabs defaultValue={initialTab} className="min-w-0 flex-1">
             <TabsList>
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="attributes">Attributes</TabsTrigger>

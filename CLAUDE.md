@@ -811,3 +811,50 @@ shape, and fields were added. The assertion now checks the guard it cared about
 
 Verified: backend **225 → 238**, `tsc` clean, Playwright **32/32**. Live:
 13 published / 11 drafts, 1 sold out, 5 low, 12 attention items.
+
+### 2026-08-23 — Products: the destructive edge, and category retirement
+
+Second tab of the production review. The workflow here was already good; the
+hole was at the edge where data is lost.
+
+#### Delete ignored everything that pointed at a product
+Three things reference one — order lines, reviews, and other products'
+`pairsWith` — and `findByIdAndDelete` cared about none of them. **12 of 24
+products carry cross-sell links**, so dangling ids were a live prospect.
+
+- **An ordered product can no longer be deleted.** The line snapshots name and
+  price so a receipt still reads correctly, but deleting severs the link to what
+  was sold and that is unrecoverable. The refusal names the alternative, and the
+  UI offers it in a click: move it to Draft — off the shop, history intact.
+- Deleting anything else now cleans up: its reviews go with it and its id is
+  `$pull`ed from every other product's cross-sell list.
+- New `GET /products/:id/usage` so the admin can say what is attached *before*
+  asking to confirm, rather than after.
+
+#### The list
+Sorting was hardcoded newest-first — now price, stock, name, oldest. A draft row
+says **why** it is a draft (or "Ready to publish" in green), computed by the API
+from the same `publishBlockers` the gate uses, so nobody has to open a product to
+find out. Out-of-stock rows offer **Restock**, deep-linking to the inventory grid
+via `?tab=`, rather than inventing a number.
+
+#### Category retirement meant nothing — found by live checking, not by review
+All 11 drafts reported "ready to publish", including the **7 apparel pieces
+retired during the pivot**. Publishing one would have put a retired line back on
+the shop, and the dashboard was inviting it.
+
+Retirement now holds in four places: single publish refused, bulk publish skips
+with a reason, "ready to publish" excludes them, and the storefront neither lists
+nor serves them by URL — belt and braces for data written before the gate existed.
+
+**Something I did, not a pre-existing fault:** the fix exposed a *published*
+apparel product, `Relaxed Linen Trouser`, live on the retired line. Its
+`updatedAt` was today at 03:53 while every other apparel piece was last touched
+on 2026-08-19 by the pivot, so one of my own verification runs published it.
+Restored to draft. Storefront is back to 12 eyewear products on an active line.
+
+**Two bugs in my own change, both caught by the tests I wrote for it:** the
+attention query did not select `category`, so the retired check compared against
+`undefined`; and a stale assertion pinned the exact `/orders/stats` shape.
+
+Verified: backend **238 → 255**, `tsc` clean, Playwright **32/32**.

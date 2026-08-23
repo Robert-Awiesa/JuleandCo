@@ -3,6 +3,8 @@ const Product = require("../models/Product");
 const Subcategory = require("../models/Subcategory");
 const Category = require("../models/Category");
 const Attribute = require("../models/Attribute");
+const Order = require("../models/Order");
+const Review = require("../models/Review");
 const AttributeGroup = require("../models/AttributeGroup");
 const { toPublicProduct } = require("../utils/publicProduct");
 const { buildCatalogContext } = require("../utils/catalogContext");
@@ -61,6 +63,27 @@ function assertPublishable(res, product) {
 }
 
 /**
+ * Refuses to put a product on the shop under a category that has been retired.
+ *
+ * Retiring a category is how a whole line is taken off sale — apparel, here.
+ * Nothing enforced it: the products stayed drafts by convention, and publishing
+ * one would have put a retired line back on the storefront. Worse, the
+ * dashboard's "ready to publish" list was cheerfully offering all seven of them.
+ */
+async function assertCategoryActive(res, product) {
+  if (product.publishStatus !== "published") return;
+
+  const category = await Category.findOne({ slug: product.category }, "name isActive").lean();
+  if (category && category.isActive === false) {
+    res.status(400);
+    throw new Error(
+      `${category.name} has been retired, so its products cannot go on the shop. ` +
+        `Reactivate the category under Categories, or move this piece to another one.`
+    );
+  }
+}
+
+/**
  * Category and sub-category are validated here rather than by a schema enum.
  * The enum was a hard write gate that made adding a category a code change.
  */
@@ -105,8 +128,11 @@ async function assertValidCategorisation(categorySlug, subCategorySlug) {
 const getProducts = asyncHandler(async (req, res) => {
   const { category, subCategory, minPrice, maxPrice, search, sort } = req.query;
 
-  // Draft products must never reach the storefront.
-  const query = { publishStatus: "published" };
+  // Draft products must never reach the storefront, and neither must a line
+  // whose category has been retired — belt and braces against data written
+  // before the publish gate learned about retirement.
+  const activeSlugs = (await Category.find({ isActive: true }, "slug").lean()).map((c) => c.slug);
+  const query = { publishStatus: "published", category: { $in: activeSlugs } };
 
   if (category && category !== "all") query.category = category;
   if (subCategory) query.subCategory = { $in: csv(subCategory) };
@@ -154,7 +180,13 @@ const getProductBySlug = asyncHandler(async (req, res) => {
     publishStatus: "published",
   });
 
-  if (!product) {
+  // A retired category is off sale, so its pieces are not reachable by URL
+  // either — otherwise an old link would still sell something withdrawn.
+  const category = product
+    ? await Category.findOne({ slug: product.category }, "isActive").lean()
+    : null;
+
+  if (!product || category?.isActive === false) {
     res.status(404);
     throw new Error("Product not found");
   }
@@ -184,6 +216,7 @@ const createProduct = asyncHandler(async (req, res) => {
   }
 
   assertPublishable(res, req.body);
+  await assertCategoryActive(res, req.body);
 
   const product = await Product.create(req.body);
   res.status(201).json(product);
@@ -215,6 +248,7 @@ const updateProduct = asyncHandler(async (req, res) => {
   // Checked after the merge, not against the request body: a patch that only
   // flips publishStatus has to be judged on the product it produces.
   assertPublishable(res, product);
+  await assertCategoryActive(res, product);
 
   const updated = await product.save();
   res.json(updated);
@@ -295,11 +329,23 @@ const bulkUpdateProducts = asyncHandler(async (req, res) => {
 
     // Publishing in bulk must apply the same rules as publishing one at a time,
     // otherwise select-all becomes a way to put broken cards on the storefront.
+    // Retired categories are off sale, so their products cannot be published
+    // one at a time or fifty at a time.
+    const retired = new Set(
+      (await Category.find({ isActive: false }, "slug").lean()).map((c) => c.slug)
+    );
+
     const ready = [];
     const skipped = [];
     for (const product of products) {
       const blockers = publishBlockers(product);
-      if (blockers.length === 0) ready.push(product._id);
+      if (retired.has(product.category)) {
+        skipped.push({
+          id: String(product._id),
+          name: product.name,
+          blockers: [{ id: "category", label: "An active category", reason: "Its category is retired" }],
+        });
+      } else if (blockers.length === 0) ready.push(product._id);
       else skipped.push({ id: String(product._id), name: product.name, blockers });
     }
 
@@ -317,15 +363,83 @@ const bulkUpdateProducts = asyncHandler(async (req, res) => {
 // @desc    Delete a product
 // @route   DELETE /api/products/:id
 // @access  Private/Admin
+/**
+ * What else in the system points at this product.
+ *
+ * Three things do — order lines, reviews, and other products' cross-sell lists
+ * — and deleting used to ignore all of them. Counting first is what lets the
+ * admin be told what they are about to break, instead of finding out later.
+ */
+async function productUsage(productId) {
+  const [orders, reviews, pairedWith] = await Promise.all([
+    Order.countDocuments({ "items.product": productId }),
+    Review.countDocuments({ product: productId }),
+    Product.countDocuments({ pairsWith: productId }),
+  ]);
+  return { orders, reviews, pairedWith };
+}
+
+// @desc    What references this product, before deciding to delete it
+// @route   GET /api/products/:id/usage
+// @access  Private/Admin
+const getProductUsage = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id, "name publishStatus");
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  const usage = await productUsage(product._id);
+
+  res.json({
+    ...usage,
+    name: product.name,
+    // Deleting something that has been sold destroys the link between an order
+    // and what it was for. Unpublishing keeps the record and takes it off the
+    // shop, which is what is almost always wanted.
+    canDelete: usage.orders === 0,
+  });
+});
+
+// @desc    Delete a product
+// @route   DELETE /api/products/:id
+// @access  Private/Admin
 const deleteProduct = asyncHandler(async (req, res) => {
-  const product = await Product.findByIdAndDelete(req.params.id);
+  const product = await Product.findById(req.params.id);
 
   if (!product) {
     res.status(404);
     throw new Error("Product not found");
   }
 
-  res.json({ message: "Product removed" });
+  const usage = await productUsage(product._id);
+
+  /**
+   * An ordered product is a business record. The order line snapshots its name
+   * and price so a receipt still reads correctly, but deleting severs the link
+   * to what was actually sold — and that is not recoverable. Unpublishing takes
+   * it off the shop and keeps the history.
+   */
+  if (usage.orders > 0) {
+    res.status(400);
+    throw new Error(
+      `"${product.name}" appears in ${usage.orders} ${usage.orders === 1 ? "order" : "orders"} and cannot be deleted. ` +
+        `Set it to Draft instead — it comes off the shop and the order history stays intact.`
+    );
+  }
+
+  // Nothing may be left pointing at a product that no longer exists.
+  await Promise.all([
+    Review.deleteMany({ product: product._id }),
+    Product.updateMany({ pairsWith: product._id }, { $pull: { pairsWith: product._id } }),
+  ]);
+
+  await product.deleteOne();
+
+  res.json({
+    message: "Product removed",
+    alsoRemoved: { reviews: usage.reviews, crossSellLinks: usage.pairedWith },
+  });
 });
 
 // @desc    Catalogue figures and what needs doing about it
@@ -409,7 +523,8 @@ const getProductStats = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getProductsNeedingAttention = asyncHandler(async (req, res) => {
   const limit = Math.min(20, Math.max(1, Number(req.query.limit) || 6));
-  const fields = "name slug stock images publishStatus subCategory options variants price";
+  // category is needed to tell whether a draft belongs to a retired line.
+  const fields = "name slug stock images publishStatus category subCategory options variants price";
 
   const [soldOut, running, drafts, live] = await Promise.all([
     Product.find({ publishStatus: "published", stock: { $lte: 0 } }, fields).limit(limit).lean(),
@@ -432,9 +547,15 @@ const getProductsNeedingAttention = asyncHandler(async (req, res) => {
     items.push({ ...p, reason: "lowStock", detail: `Only ${p.stock} left` })
   );
 
-  // A draft with nothing blocking it is a piece that could be earning.
+  // A draft with nothing blocking it is a piece that could be earning — unless
+  // its category has been retired, in which case offering it invites relisting
+  // a line that was deliberately taken off sale.
+  const retiredSlugs = new Set(
+    (await Category.find({ isActive: false }, "slug").lean()).map((c) => c.slug)
+  );
+
   drafts
-    .filter((p) => publishBlockers(p).length === 0)
+    .filter((p) => !retiredSlugs.has(p.category) && publishBlockers(p).length === 0)
     .slice(0, limit)
     .forEach((p) => items.push({ ...p, reason: "readyToPublish", detail: "Ready to go live" }));
 
@@ -465,6 +586,7 @@ const getAdminProducts = asyncHandler(async (req, res) => {
     stockStatus,
     publishStatus,
     search,
+    sort = "newest",
     page = 1,
     limit = 20,
   } = req.query;
@@ -484,13 +606,33 @@ const getAdminProducts = asyncHandler(async (req, res) => {
   const pageNum = Math.max(1, Number(page));
   const limitNum = Math.max(1, Number(limit));
 
-  const [items, total] = await Promise.all([
+  // Newest-first was hardcoded, so "what is running lowest" or "what is my
+  // dearest piece" meant reading the list a page at a time.
+  const SORTS = {
+    newest: { createdAt: -1 },
+    oldest: { createdAt: 1 },
+    name: { name: 1 },
+    "price-asc": { price: 1 },
+    "price-desc": { price: -1 },
+    "stock-asc": { stock: 1 },
+    "stock-desc": { stock: -1 },
+  };
+
+  const [found, total] = await Promise.all([
     Product.find(query)
-      .sort({ createdAt: -1 })
+      .sort(SORTS[sort] || SORTS.newest)
       .skip((pageNum - 1) * limitNum)
-      .limit(limitNum),
+      .limit(limitNum)
+      .lean(),
     Product.countDocuments(query),
   ]);
+
+  // What is stopping each one going live, so a draft row can say why rather
+  // than making someone open it to find out.
+  const items = found.map((product) => ({
+    ...product,
+    blockers: publishBlockers(product).map((b) => b.label),
+  }));
 
   res.json({
     items,
@@ -638,6 +780,7 @@ module.exports = {
   duplicateProduct,
   bulkUpdateProducts,
   getAdminProducts,
+  getProductUsage,
   getProductStats,
   getProductsNeedingAttention,
   getAdminProductById,

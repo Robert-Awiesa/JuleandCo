@@ -22,6 +22,7 @@ interface Filters {
   stockStatus: string;
   publishStatus: string;
   search: string;
+  sort: string;
 }
 
 interface BulkResult {
@@ -35,6 +36,7 @@ function useAdminProducts(filters: Filters, page: number) {
   if (filters.stockStatus !== "all") params.set("stockStatus", filters.stockStatus);
   if (filters.publishStatus !== "all") params.set("publishStatus", filters.publishStatus);
   if (filters.search) params.set("search", filters.search);
+  params.set("sort", filters.sort);
   params.set("page", String(page));
   params.set("limit", String(PAGE_SIZE));
 
@@ -50,6 +52,7 @@ export default function ProductsPage() {
     stockStatus: "all",
     publishStatus: "all",
     search: "",
+    sort: "newest",
   });
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string[]>([]);
@@ -78,10 +81,59 @@ export default function ProductsPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  /**
+   * Deleting asks the API what points at the product first.
+   *
+   * Order lines, reviews and other products' cross-sell lists all reference it,
+   * and none of that was mentioned before. An ordered product cannot be deleted
+   * at all — the API refuses — so the offer becomes "move it to draft", which is
+   * what was almost always wanted anyway.
+   */
   const deleteProduct = useMutation({
-    mutationFn: (id: string) => api.del(`/products/${id}`),
-    onSuccess: () => {
-      toast.success("Product deleted");
+    mutationFn: async (product: AdminProduct) => {
+      const usage = await api.get<{
+        orders: number;
+        reviews: number;
+        pairedWith: number;
+        canDelete: boolean;
+      }>(`/products/${product._id}/usage`);
+
+      if (!usage.canDelete) {
+        const draft = confirm(
+          `"${product.name}" appears in ${usage.orders} ${usage.orders === 1 ? "order" : "orders"}, ` +
+            `so it cannot be deleted without breaking that history.
+
+` +
+            `Move it to Draft instead? It comes off the shop straight away and the orders stay intact.`
+        );
+        if (draft) {
+          await api.patch("/products/bulk", { ids: [product._id], action: "unpublish" });
+          return { drafted: true } as const;
+        }
+        return { cancelled: true } as const;
+      }
+
+      const attached: string[] = [];
+      if (usage.reviews > 0) attached.push(`${usage.reviews} review${usage.reviews === 1 ? "" : "s"}`);
+      if (usage.pairedWith > 0)
+        attached.push(`${usage.pairedWith} cross-sell link${usage.pairedWith === 1 ? "" : "s"}`);
+
+      const warning = attached.length
+        ? `
+
+This will also remove ${attached.join(" and ")}.`
+        : "";
+
+      if (!confirm(`Delete "${product.name}" permanently?${warning}`)) {
+        return { cancelled: true } as const;
+      }
+
+      await api.del(`/products/${product._id}`);
+      return { deleted: true } as const;
+    },
+    onSuccess: (result) => {
+      if ("cancelled" in result) return;
+      toast.success("drafted" in result ? "Moved to draft and off the shop" : "Product deleted");
       invalidate.catalogue();
     },
     onError: (err: Error) => toast.error(err.message),
@@ -178,6 +230,19 @@ export default function ProductsPage() {
             <SelectItem value="in">In stock</SelectItem>
             <SelectItem value="low">Low stock</SelectItem>
             <SelectItem value="out">Out of stock</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filters.sort} onValueChange={(v) => setFilter({ sort: v })}>
+          <SelectTrigger className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="newest">Newest first</SelectItem>
+            <SelectItem value="oldest">Oldest first</SelectItem>
+            <SelectItem value="name">Name A–Z</SelectItem>
+            <SelectItem value="price-desc">Price, high to low</SelectItem>
+            <SelectItem value="price-asc">Price, low to high</SelectItem>
+            <SelectItem value="stock-asc">Stock, lowest first</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -285,6 +350,22 @@ export default function ProductsPage() {
                   </TableCell>
                   <TableCell>
                     <Badge tone={isDraft ? "neutral" : "in"}>{isDraft ? "Draft" : "Live"}</Badge>
+                    {/* Why it is a draft, rather than making someone open it
+                        to find out. A draft with nothing blocking it is a piece
+                        that could be earning. */}
+                    {isDraft && (
+                      <p
+                        className={
+                          (product.blockers?.length ?? 0) > 0
+                            ? "mt-1 text-xs text-obsidian/45"
+                            : "mt-1 text-xs text-green-700"
+                        }
+                      >
+                        {(product.blockers?.length ?? 0) > 0
+                          ? `Needs ${product.blockers!.join(", ").toLowerCase()}`
+                          : "Ready to publish"}
+                      </p>
+                    )}
                   </TableCell>
                   <TableCell className="text-obsidian/70">{formatCurrency(product.price)}</TableCell>
                   <TableCell>
@@ -302,18 +383,26 @@ export default function ProductsPage() {
                       >
                         Duplicate
                       </button>
-                      {product.stock > 0 && (
+                      {product.stock > 0 ? (
                         <button
                           onClick={() => markOutOfStock.mutate(product)}
                           className="text-obsidian/70 hover:text-obsidian"
                         >
                           Mark out of stock
                         </button>
+                      ) : (
+                        // The way back. Real numbers are set per variant, so
+                        // this opens the grid rather than inventing a figure.
+                        <Link
+                          href={`/admin/products/${product._id}/edit?tab=inventory`}
+                          className="text-obsidian/70 hover:text-obsidian"
+                        >
+                          Restock
+                        </Link>
                       )}
                       <button
-                        onClick={() => {
-                          if (confirm(`Delete "${product.name}"?`)) deleteProduct.mutate(product._id);
-                        }}
+                        onClick={() => deleteProduct.mutate(product)}
+                        disabled={deleteProduct.isPending}
                         className="text-obsidian/70 hover:text-red-600"
                       >
                         Delete

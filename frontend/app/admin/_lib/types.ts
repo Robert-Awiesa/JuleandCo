@@ -99,6 +99,13 @@ export interface AdminProduct {
 
   createdAt: string;
   updatedAt: string;
+
+  /**
+   * What is stopping this product going live, computed by the API from the same
+   * rules the publish gate enforces. Present on list responses so a draft row
+   * can say why without anyone opening it.
+   */
+  blockers?: string[];
 }
 
 export interface Subcategory {

@@ -9,6 +9,7 @@ const {
   duplicateProduct,
   bulkUpdateProducts,
   getAdminProducts,
+  getProductUsage,
   getProductStats,
   getProductsNeedingAttention,
   getAdminProductById,
@@ -34,6 +35,7 @@ router.patch("/bulk", protect, admin, bulkUpdateProducts);
 router.route("/:id").put(protect, admin, updateProduct).delete(protect, admin, deleteProduct);
 router.patch("/:id/stock", protect, admin, updateProductStock);
 router.post("/:id/duplicate", protect, admin, duplicateProduct);
+router.get("/:id/usage", protect, admin, getProductUsage);
 
 // Public: anyone who bought a piece can say what they think of it.
 router.route("/:id/reviews").get(getProductReviews).post(createReview);
