@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../_lib/api";
 import { SlotEditor, type SlotDescriptor } from "../../_components/content/SlotEditor";
+import { Administrators } from "../../_components/settings/Administrators";
 
 /**
  * How the shop runs, as opposed to what it says — the delivery rule and the
@@ -22,8 +23,10 @@ export default function SettingsPage() {
     select: (all) => all.filter((slot) => slot.group === "settings"),
   });
 
+  const ADMINS = "administrators";
   const [active, setActive] = useState<string | null>(null);
-  const current = slots.find((s) => s.slot === active) ?? slots[0];
+  const current = slots.find((s) => s.slot === active) ?? (active === ADMINS ? null : slots[0]);
+  const showingAdmins = active === ADMINS;
 
   return (
     <div className="space-y-6">
@@ -69,10 +72,37 @@ export default function SettingsPage() {
                   </li>
                 );
               })}
+
+              <li>
+                <button
+                  onClick={() => setActive(ADMINS)}
+                  className={
+                    showingAdmins
+                      ? "w-full rounded bg-obsidian px-3 py-2 text-left text-sm text-alabaster"
+                      : "w-full rounded px-3 py-2 text-left text-sm text-obsidian/70 hover:bg-obsidian/5 hover:text-obsidian"
+                  }
+                >
+                  Administrators
+                </button>
+              </li>
             </ul>
           </nav>
 
-          {current && (
+          {showingAdmins && (
+            <section className="min-w-0 flex-1 rounded-lg border border-obsidian/10 bg-white p-5">
+              <div className="mb-5 border-b border-obsidian/10 pb-4">
+                <h2 className="font-serif text-xl text-obsidian">Administrators</h2>
+                <p className="mt-1.5 text-sm text-obsidian/60">
+                  Who can sign in to this dashboard. The last administrator cannot be removed, and
+                  nobody can remove their own access — either would lock the shop out with no way
+                  back in.
+                </p>
+              </div>
+              <Administrators />
+            </section>
+          )}
+
+          {!showingAdmins && current && (
             <section className="min-w-0 flex-1 rounded-lg border border-obsidian/10 bg-white p-5">
               <div className="mb-5 border-b border-obsidian/10 pb-4">
                 <h2 className="font-serif text-xl text-obsidian">{current.label}</h2>
@@ -85,13 +115,6 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <p className="max-w-2xl text-xs text-obsidian/45">
-        Admin user accounts are still to come. Change the administrator password with{" "}
-        <code className="rounded bg-obsidian/5 px-1.5 py-0.5">
-          npm run set-admin-password -w backend
-        </code>
-        .
-      </p>
     </div>
   );
 }

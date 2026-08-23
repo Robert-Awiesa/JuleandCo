@@ -631,3 +631,88 @@ Verified: backend **182 → 187**, `tsc` clean, Playwright **27/27**. Catalogue 
   is changed with `npm run set-admin-password -w backend`.
 - Real products and photography; the Unsplash imagery and stand-in testimonials
   are placeholders, now editable under `/admin/content`.
+
+### 2026-08-23 — Customers, administrators and reviews (the last three stubs)
+
+Three screens promised "coming in Phase 3" and one pair of fields promised a
+feature that did not exist. All four are real now.
+
+#### Customers, derived rather than stored
+There is no Customer collection because checkout is guest-only: nobody
+registers, so the only record of a person is the orders carrying their email.
+Grouping those cannot drift from what was actually bought, and needs no
+migration if accounts ever arrive — it becomes a join, not a rewrite.
+
+**Email is the identity.** A phone changes and a name is typed differently each
+time ("Adjoa M." / "adjoa m"), but the address a receipt goes to is the one
+field a buyer has to get right. Cancelled orders count in the order history and
+for nothing in spend. The dashboard gained **Customers** and **Returning** —
+the second being what separates a shop with traffic from one with custom.
+
+`/api/customers` rather than `/api/orders/customers`: if accounts arrive the URL
+still fits.
+
+#### Administrators
+One admin existed, made by the seed, and its password could only be changed by a
+script on the server. Fine for one person setting a shop up; wrong the moment
+anyone else needs access or someone leaves.
+
+Two guards matter more than the feature, and are **disabled controls rather than
+refusals on click**: the last administrator cannot be removed, and nobody can
+remove themselves. Either locks the shop out of its own dashboard with no
+recovery from the interface.
+
+- Removing **demotes rather than deletes** — an admin who placed an order would
+  otherwise orphan it.
+- An existing customer with that email is **promoted, not duplicated**, so their
+  history does not split.
+- Changing your own password asks for the current one even though the session
+  proves identity: it is what stops an unattended logged-in screen becoming a
+  permanent takeover.
+
+`npm run set-admin-password -w backend` still exists as the way back in if
+nobody can sign in at all.
+
+#### Reviews, and honest star ratings
+`rating` and `reviewCount` sat on Product from the start, were serialised to the
+storefront, and were rendered nowhere — numbers promising a feature that did not
+exist. The plan called leaving them the worst of the three options.
+
+They are now computed by `refreshProductRating()`, the only place either is ever
+written, called after anything that changes which reviews are approved. Writing
+one straight to a product would let the two drift.
+
+- Reviews arrive **pending and appear nowhere until approved**. An open review
+  box on a small shop is a spam target, and nobody should learn what is on their
+  own product page by reading it.
+- **No reviews means no rating, not a rating of nought** — `rating` is null, not
+  0. A product with nothing yet would otherwise show 0/5, which slanders stock
+  nobody has judged.
+- **Verified purchase** is checked against non-cancelled orders for that email,
+  and recorded when the review is written: an order cancelled later does not
+  retract what was true then.
+- Emails are never published. One review per email per product, enforced by a
+  compound unique index.
+- Submitting deliberately does **not** echo the review back — it is not public
+  yet, and showing it would suggest otherwise.
+
+#### Verified live
+- Two orders from one buyer → one customer row, 2 orders, GHS 180; cancelling
+  one leaves 2 orders and drops spend to 90.
+- Removing yourself and removing the last administrator both refused; a second
+  admin added, demoted and the account cleaned up afterwards.
+- A review submitted → invisible publicly → queued → approved → visible with the
+  product rating 4 from 1 review → deleted → rating back to none.
+
+Verified: backend **187 → 225**, `tsc` clean, Playwright **27 → 32**.
+
+#### What is left
+- **Payment is a label, not a processor** — deferred by the owner for PayPal.
+  The one thing between the site and taking money.
+- Real products, photography, and real testimonials. The stand-in quotes are
+  attributed to named people who did not say them — fine as placeholders,
+  **not fine to launch with**. They are editable under `/admin/content`.
+- `render.yaml` and the deployment docs exist but have never been exercised;
+  `next build` has not been run in production mode.
+- SKUs are distinctive but **not uniquely indexed** — they live inside the
+  variants array.

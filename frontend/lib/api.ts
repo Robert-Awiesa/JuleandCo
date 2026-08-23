@@ -119,3 +119,14 @@ export function fetchCategories(): Promise<StoreCategory[]> {
 // shop filters with nothing behind them.
   return getJson<StoreCategory[]>("/categories?activeOnly=true", []);
 }
+
+/**
+ * Approved reviews for a product. Pending ones are invisible here — the API
+ * only ever returns what an admin has read and published.
+ */
+export async function fetchProductReviews(productId: string) {
+  return getJson<import("@/components/product/ProductReviews").PublicReview[]>(
+    `/products/${productId}/reviews`,
+    []
+  );
+}

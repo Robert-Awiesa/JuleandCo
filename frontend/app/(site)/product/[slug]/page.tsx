@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
-import { fetchProductBySlug } from "@/lib/api";
+import { fetchProductBySlug, fetchProductReviews } from "@/lib/api";
 import { ProductDetailView } from "@/components/product/ProductDetailView";
+import { ProductReviews } from "@/components/product/ProductReviews";
 
 interface ProductPageProps {
   params: { slug: string };
@@ -30,5 +31,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const product = await fetchProductBySlug(params.slug);
   if (!product) notFound();
 
-  return <ProductDetailView product={product} related={product.related ?? []} />;
+  const reviews = await fetchProductReviews(product.id);
+
+  return (
+    <>
+      <ProductDetailView product={product} related={product.related ?? []} />
+      <ProductReviews
+        productId={product.id}
+        reviews={reviews}
+        rating={product.rating}
+        reviewCount={product.reviewCount}
+      />
+    </>
+  );
 }

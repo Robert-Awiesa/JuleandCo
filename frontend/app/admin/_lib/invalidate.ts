@@ -24,6 +24,9 @@ export const QK = {
   product: ["admin-product"] as const,
   orders: ["admin-orders"] as const,
   orderStats: ["order-stats"] as const,
+  customers: ["customers"] as const,
+  customer: ["customer"] as const,
+  customerStats: ["customer-stats"] as const,
   categories: ["categories"] as const,
   subcategories: ["subcategories"] as const,
   attributeGroups: ["attribute-groups"] as const,
@@ -31,6 +34,7 @@ export const QK = {
   content: ["content"] as const,
   contentSlots: ["content-slots"] as const,
   recentUploads: ["recent-uploads"] as const,
+  reviews: ["reviews"] as const,
 };
 
 function invalidateAll(client: QueryClient, keys: readonly (readonly string[])[]) {
@@ -50,7 +54,17 @@ export function useInvalidate() {
        * An order was placed, advanced or cancelled. Cancelling returns stock to
        * the catalogue, so the product figures move too.
        */
-      orders: () => invalidateAll(client, [QK.orders, QK.orderStats, QK.products]),
+      orders: () =>
+        invalidateAll(client, [
+          QK.orders,
+          QK.orderStats,
+          QK.products,
+          // Customers are derived from orders, so cancelling one changes what
+          // a buyer is worth as surely as it changes the order list.
+          QK.customers,
+          QK.customer,
+          QK.customerStats,
+        ]),
 
       /**
        * A category, sub-category, attribute group or attribute changed. The
@@ -70,6 +84,9 @@ export function useInvalidate() {
 
       /** Site content was saved or restored. */
       content: () => invalidateAll(client, [QK.content, QK.contentSlots]),
+
+      /** A review was approved, rejected or deleted — the product's score moves. */
+      reviews: () => invalidateAll(client, [QK.reviews, QK.products, QK.product]),
 
       /** A new image was uploaded, so "Reuse a shot" has one more to offer. */
       uploads: () => invalidateAll(client, [QK.recentUploads]),

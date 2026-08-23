@@ -21,6 +21,12 @@ export default function DashboardPage() {
     queryFn: () => api.get<OrderStats>("/orders/stats"),
   });
 
+  const { data: customers } = useQuery({
+    queryKey: ["customer-stats"],
+    queryFn: () =>
+      api.get<{ customers: number; returning: number; averageSpend: number }>("/customers/stats"),
+  });
+
   const products = data?.items ?? [];
   const outOfStock = products.filter((p) => p.stock === 0);
   const lowStock = products.filter((p) => p.stock > 0 && p.stock <= 5);
@@ -33,6 +39,9 @@ export default function DashboardPage() {
     { label: "Orders", value: String(stats?.orders ?? 0) },
     { label: "Avg. Order", value: formatCurrency(stats?.averageOrderValue ?? 0) },
     { label: "To Fulfil", value: String(stats?.unfulfilled ?? 0) },
+    { label: "Customers", value: String(customers?.customers ?? 0) },
+    // The number that separates a shop with traffic from one with custom.
+    { label: "Returning", value: String(customers?.returning ?? 0) },
     { label: "Total Products", value: String(products.length) },
     { label: "Low Stock", value: String(lowStock.length) },
     { label: "Out of Stock", value: String(outOfStock.length) },

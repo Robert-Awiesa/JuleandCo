@@ -16,6 +16,8 @@ const uploadRoutes = require("./routes/uploadRoutes");
 const attributeRoutes = require("./routes/attributeRoutes");
 const attributeGroupRoutes = require("./routes/attributeGroupRoutes");
 const contentRoutes = require("./routes/contentRoutes");
+const customerRoutes = require("./routes/customerRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 
 const app = express();
 
@@ -81,6 +83,8 @@ app.use("/api/uploads", uploadRoutes);
 app.use("/api/attributes", attributeRoutes);
 app.use("/api/attribute-groups", attributeGroupRoutes);
 app.use("/api/content", contentRoutes);
+app.use("/api/customers", customerRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
