@@ -858,3 +858,63 @@ attention query did not select `category`, so the retired check compared against
 `undefined`; and a stale assertion pinned the exact `/orders/stats` shape.
 
 Verified: backend **238 → 255**, `tsc` clean, Playwright **32/32**.
+
+### 2026-08-24 — Backups, to fill the gap Atlas M0 leaves
+
+The owner is deploying on Atlas M0, which has **no automated backups**. Measured
+the real data first rather than guessing: the whole database is **1.13 MB**, and
+projecting 150 products plus a year of orders at 100 customers/day comes to
+**7.5 MB — 1.5% of the 512 MB allowance**, at 0.023 queries/second average. M0
+fits with two orders of magnitude to spare; backups are the only real gap.
+
+**What is worth protecting is narrower than "the database".** `npm run seed`
+regenerates categories, sub-categories, the 109 vocabulary options and the admin
+user, and `contentSlots.js` holds defaults for every content slot. Only three
+collections cannot be rebuilt by anything: **products** (hand-entered), **orders**
+(the trading record) and **reviews** (customers' own words). The backup summary
+marks those with an arrow so the point stays obvious.
+
+**Product images are not in the dump** — they are Cloudinary assets and the
+database stores only URLs, so a restore returns the catalogue with its
+photographs intact.
+
+#### How it works
+- `utils/backup.js` dumps every collection through the driver rather than
+  `mongodump`, so there is no binary to install and the same code runs on a
+  laptop and on Render. Serialised as **extended JSON**: a plain
+  `JSON.stringify` turns an ObjectId into a string, and every cross-reference —
+  cross-sell links, order lines, reviews — would silently stop matching on
+  restore, long after the restore looked fine. There is a test for exactly that.
+- Gzipped, then **verified twice** — after writing and after upload — by
+  gunzipping and checking document counts against the archive's own header. A
+  truncated dump would otherwise upload happily and look like protection.
+- Uploaded to Cloudinary as `type: "authenticated"`, because the dumps carry
+  customer names, emails, phones and addresses. **Verified live: an unsigned
+  request returns 401, a signed one 200.**
+- Retention is "keep the most recent N", not a daily/weekly/monthly rotation. At
+  11 KB an archive there is no pressure to be clever, and a scheme nobody
+  understands is a scheme nobody checks.
+
+#### Scheduling
+Runs **inside the API process**, daily, guarded by `BACKUP_ENABLED=true` — set on
+Render, off everywhere else so a developer machine cannot back up the live
+database by accident. Not a separate Render Cron Job (another billed service)
+and not a task on a laptop (a backup that only runs when one machine is on is
+not a policy). The API is already paid for and awake.
+
+A failed backup is logged loudly and swallowed: it must never take the shop
+down, but it must never pass silently either — the one thing worse than no
+backup is believing you have one.
+
+#### Restore
+`npm run restore -w backend` **previews by default** and writes nothing without
+`--confirm`. It prints backup-versus-live counts per collection first. The moment
+this is needed the operator will be under pressure, so the safe outcome has to be
+what happens when the command is typed wrong. Collections absent from the backup
+are left alone rather than emptied.
+
+Verified end to end against the live database: backup 11.2 KB, restore preview
+read it back with matching counts, pruning removed the oldest when told to keep
+two.
+
+Backend **266 → 274**.

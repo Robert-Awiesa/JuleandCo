@@ -142,6 +142,49 @@ URLs.
 > Render's free tier limits have changed over time, and this is worth confirming
 > in their current pricing page rather than taking on trust here.
 
+## Backups
+
+MongoDB Atlas M0 has **no automated backups**, so the API takes its own — once a
+day at 03:00, stored in Cloudinary as an authenticated raw file.
+
+Most of this database does not need protecting: `npm run seed -w backend`
+regenerates the categories, sub-categories, attribute vocabularies and admin
+user, and the site content has defaults in `utils/contentSlots.js`. Three
+collections cannot be rebuilt by anything — **products**, entered by hand;
+**orders**, the trading record; and **reviews**, customers' own words. Those are
+what this exists for.
+
+Product photographs are not in the dump. They live in Cloudinary and the
+database only holds their URLs, so a restore brings the catalogue back with its
+images as long as that account is intact.
+
+| Variable | Default | |
+| --- | --- | --- |
+| `BACKUP_ENABLED` | off | `true` on Render. Off elsewhere so a developer machine never backs up the live database by accident. |
+| `BACKUP_HOUR` | `3` | Hour of day, server time. |
+| `BACKUP_KEEP` | `14` | How many to retain; older ones are deleted. |
+
+```bash
+npm run backup -w backend             # take one now
+npm run backup -w backend -- --list   # what is stored
+npm run restore -w backend            # preview restoring the newest
+npm run restore -w backend -- --confirm
+```
+
+**Restore previews by default.** It prints what is in the backup against what is
+live and writes nothing without `--confirm` — the moment you need it you will be
+under pressure, so the safe thing is what happens if you type the command wrong.
+
+The dumps carry customer names, emails, phone numbers and delivery addresses, so
+they are uploaded as `type: "authenticated"`. Verified: an unsigned request for
+the asset returns **401**, a signed one returns 200. Do not change that to
+`upload`, which would make them public to anyone who guesses the filename.
+
+Each archive is verified twice — after writing and after upload — by gunzipping
+it and checking the document counts match its own header. A dump that truncated
+would otherwise upload happily and look like protection until the day it was
+needed.
+
 ## Notes
 
 - **Free-plan services sleep** after inactivity. The first request after a spin-down

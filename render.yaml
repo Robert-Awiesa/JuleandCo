@@ -47,6 +47,15 @@ services:
           type: web
           name: jules-and-co-web
           property: host
+      # Atlas M0 has no automated backups, so the API takes a daily one and
+      # stores it in Cloudinary as an authenticated (non-public) raw file.
+      # The dumps carry customer names, emails, phones and addresses.
+      - key: BACKUP_ENABLED
+        value: "true"
+      - key: BACKUP_HOUR
+        value: "3"
+      - key: BACKUP_KEEP
+        value: "14"
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

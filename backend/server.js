@@ -1,5 +1,6 @@
 const app = require("./src/app");
 const connectDB = require("./src/config/db");
+const { startBackupSchedule } = require("./src/utils/backupSchedule");
 
 const PORT = process.env.PORT || 5000;
 
@@ -8,6 +9,11 @@ connectDB()
     const server = app.listen(PORT, () =>
       console.log(`JULES & CO API running on port ${PORT}`)
     );
+
+    // Atlas M0 has no automated backups, so the API takes its own. Off unless
+    // BACKUP_ENABLED is set, which keeps it from running on a developer machine
+    // against the live database.
+    startBackupSchedule();
 
     // The API port is deliberately fixed: the frontend and the admin client
     // both address it directly, so falling back to another port would break

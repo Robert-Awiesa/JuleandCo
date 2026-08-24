@@ -10,6 +10,8 @@
     "seed:attributes": "node src/scripts/seedAttributes.js",
     "seed:jewellery-examples": "node src/scripts/seedJewelleryExamples.js",
     "pivot": "node src/scripts/pivotToJewelleryAndBags.js",
+    "backup": "node src/scripts/backupDatabase.js",
+    "restore": "node src/scripts/restoreDatabase.js",
     "set-admin-password": "node src/scripts/setAdminPassword.js",
     "migrate:is-new-arrival": "node src/scripts/renameIsNewField.js",
     "migrate:gender-eyewear": "node src/scripts/scopeGenderToEyewear.js",
