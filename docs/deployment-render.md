@@ -11,56 +11,54 @@ variables live here instead.
 
 ## Environment variables
 
-### API service — `jules-and-co-api`
+**One service.** Express serves the API on `/api/*` and hands everything else to
+Next, so the shop and the dashboard come from a single Node process.
 
 | Variable | Required | Value | Notes |
 | --- | --- | --- | --- |
-| `NODE_ENV` | yes | `production` | Turns on secure cookies and locks CORS to `CLIENT_URL`. Set by the blueprint. |
-| `PORT` | — | *(injected)* | Render sets it; `backend/server.js` already reads it. Do not set by hand. |
-| `MONGO_URI` | yes | `mongodb+srv://…/jules-and-co` | Include the database name. See the Atlas note below. |
-| `JWT_SECRET` | yes | long random string | **Must be byte-identical to the web service's.** |
-| `JWT_EXPIRES_IN` | no | `30d` | Defaults sensibly if omitted. |
-| `CLIENT_URL` | yes | web service host | Comma-separated list accepted. The blueprint wires it from the web service automatically. |
-| `CLOUDINARY_CLOUD_NAME` | yes | from Cloudinary | Product image uploads. |
-| `CLOUDINARY_API_KEY` | yes | from Cloudinary | |
-| `CLOUDINARY_API_SECRET` | yes | from Cloudinary | Signs upload requests. Never exposed to the browser. |
-| `ADMIN_EMAIL` | yes | `admin@julesandco.com` | Only read when the admin user is **created**. |
-| `ADMIN_PASSWORD` | yes | strong password | Same — changing it later does nothing on its own. See "First deploy". |
+| `NODE_ENV` | yes | `production` | Also what makes the auth cookie `Secure`. |
+| `NODE_VERSION` | yes | `22.14.0` | Pinned; matches `.node-version` and `engines`. |
+| `SERVE_FRONTEND` | yes | `true` | What makes this one service rather than two. |
+| `NEXT_PUBLIC_API_URL` | yes | `/api` | Relative, and now genuinely same-origin. |
+| `MONGO_URI` | yes | Atlas connection string | Secret. |
+| `JWT_SECRET` | yes | long random string | Secret. Signs the admin cookie; `middleware.ts` verifies it. |
+| `JWT_EXPIRES_IN` | no | `30d` | Defaults to `30d`. |
+| `CLOUDINARY_CLOUD_NAME` | yes | from Cloudinary | Image uploads and backup storage. |
+| `CLOUDINARY_API_KEY` | yes | from Cloudinary | Secret. |
+| `CLOUDINARY_API_SECRET` | yes | from Cloudinary | Secret. Never reaches the browser. |
+| `ADMIN_EMAIL` | yes | your admin login | Secret. Read only when the account is *created*. |
+| `ADMIN_PASSWORD` | yes | your admin password | Secret. Same — changing it later does nothing on its own. |
+| `BACKUP_ENABLED` | yes | `true` | Atlas M0 has no automated backups. |
+| `BACKUP_HOUR` / `BACKUP_KEEP` | no | `3` / `14` | Hour of day, and how many to retain. |
 
-### Web service — `jules-and-co-web`
+**Do not set `PORT`.** Render injects it, `server.js` reads it, and sets
+`API_ORIGIN` to its own loopback address so server components can reach the API.
 
-| Variable | Required | Value | Notes |
-| --- | --- | --- | --- |
-| `NODE_ENV` | yes | `production` | Set by the blueprint. |
-| `NEXT_PUBLIC_API_URL` | yes | `/api` | Relative on purpose — the browser calls this app, which proxies onward. |
-| `API_ORIGIN` | yes | API service host | Proxy target, and what server components call directly. A bare hostname is fine; the scheme is added if missing. |
-| `JWT_SECRET` | yes | **same as the API's** | The API signs the auth cookie, `frontend/middleware.ts` verifies it. |
+**`CLIENT_URL` is no longer needed.** It only ever fed the API's CORS allow-list,
+and with one origin the browser never makes a cross-origin request.
 
-> **The two `JWT_SECRET` values must match exactly.** If they differ, admin login
-> appears to succeed and then every `/admin/*` route bounces back to the login
-> page with no error shown — it is indistinguishable from a wrong password.
+## Why one service
 
----
+The two were split for one reason: the auth cookie has to be same-origin. The
+API sets it and `frontend/middleware.ts` reads it back to guard `/admin`, and
+across two hosts the browser would never send it — `onrender.com` is on the
+Public Suffix List, so a shared parent-domain cookie is not available either.
+The `/api` rewrite existed purely to work around that.
 
-## Why the API is proxied
+Serving both from one process makes it true by construction. The proxy,
+`API_ORIGIN` as a deploy variable, the bare-hostname normalising and CORS all
+stop being things that can be misconfigured. **`JWT_SECRET` is one value rather
+than two that must match** — the single most costly misconfiguration in the old
+shape, which presented as admin login silently bouncing to the login page.
 
-The browser never talks to the API host directly. `frontend/next.config.js`
-rewrites `/api/*` to `API_ORIGIN`.
+What is given up is failure isolation, and here that is mostly illusory: every
+storefront page render calls the API, so if the API is down the shop is broken
+whether or not it is a separate service.
 
-This is not a preference. The API sets the auth cookie, and
-`frontend/middleware.ts` reads that cookie **server-side on the web service** to
-guard `/admin/*`. Deployed as two services those are different hostnames, so the
-browser would never send the cookie to the web service and the admin dashboard
-would be permanently locked out. `onrender.com` is on the Public Suffix List, so
-a shared parent-domain cookie is not an option either.
-
-Routing browser traffic through `/api` makes everything same-origin, which also
-means CORS stops mattering and the API host is never exposed to the client.
-
-If you later move to a custom domain, `jules.com` + `api.jules.com` with a
-`.jules.com` cookie would also work — but the proxy needs no DNS and works today.
-
----
+Server components fetch the API over HTTP on the loopback address rather than
+calling controllers directly. Slightly wasteful, but it keeps `lib/api.ts`
+identical in both shapes, and splitting back apart stays easy — set
+`SERVE_FRONTEND` to false and deploy the frontend separately again.
 
 ## First deploy
 
@@ -123,20 +121,14 @@ described below.
 Do this once both services are deployed and working on their `onrender.com`
 URLs.
 
-1. **Point the domain at the web service, not the API.** Customers only ever talk
-   to the storefront; the API is reached through it via the `/api` rewrite. The
-   API can stay on its `onrender.com` hostname indefinitely.
-2. In Render, open the **web service** → Settings → Custom Domains → add both
-   `julesandco.com` and `www.julesandco.com`.
+1. In Render, open the service → Settings → Custom Domains → add both
+   `julesandco.com` and `www.julesandco.com`. There is only one service, so
+   there is nothing to choose between.
 3. At the registrar, add the records Render shows — typically a `CNAME` for
    `www` and an `ALIAS`/`ANAME` (or Render's IP via `A`) for the apex. Render
    issues the TLS certificate automatically once DNS resolves.
 4. **Nothing in the app needs changing.** `NEXT_PUBLIC_API_URL` stays `/api`
-   because it is relative, and `API_ORIGIN` still points at the API service.
-   The auth cookie stays same-origin, which is the whole reason for the proxy.
-5. Set `CLIENT_URL` on the **API** service to the new domain so its CORS list is
-   correct for any direct call. Not required for the storefront, which is
-   same-origin, but it keeps the header honest.
+   because it is relative, and everything is same-origin by construction.
 
 > Check whether your plan allows custom domains before buying the domain —
 > Render's free tier limits have changed over time, and this is worth confirming

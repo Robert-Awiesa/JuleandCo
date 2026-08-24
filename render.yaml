@@ -1,52 +1,68 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
 #
-# Two web services from one npm-workspaces repo. Both build from the repo root
-# so `npm ci` resolves the shared lockfile; the workspace flag selects which
-# package to build and run.
+# One service. Express serves the API on /api/* and hands everything else to
+# Next, so the shop and the dashboard come from a single Node process.
 #
-# Browser traffic never reaches the API host directly: the frontend rewrites
-# /api/* to API_ORIGIN (see frontend/next.config.js). That keeps the auth cookie
-# same-origin, which is what makes the admin dashboard work at all once the two
-# services sit on different hostnames.
+# It was two services, which cost twice as much and existed for one reason: the
+# auth cookie has to be same-origin. The API sets it and frontend/middleware.ts
+# reads it back to guard /admin, and across two hosts the browser would never
+# send it — hence the /api proxy. One origin makes that true by construction.
 #
-# Secrets are marked `sync: false` so Render prompts for them instead of storing
-# them in this file. Nothing here should ever hold a real value.
+# The failure isolation given up is mostly illusory here: every storefront page
+# render calls the API, so if the API is down the shop is broken either way.
+#
+# Secrets are `sync: false` so Render prompts for them instead of storing them
+# in this file. Nothing here should ever hold a real value.
 
 services:
-  # ---------------------------------------------------------------- API -----
   - type: web
-    name: jules-and-co-api
+    name: jules-and-co
     runtime: node
-    plan: free
+    plan: starter
     region: oregon
     branch: master
-    # No --include=dev here on purpose: the API needs nothing from
-    # devDependencies at runtime, so omitting them keeps the deploy smaller.
-    buildCommand: npm ci
+
+    # --include=dev is not optional. NODE_ENV=production makes npm omit
+    # devDependencies — and typescript, tailwindcss, postcss and autoprefixer
+    # all live there while being needed to *build*. Without the flag the very
+    # first deploy fails on a missing TypeScript compiler.
+    buildCommand: npm ci --include=dev && npm run build -w frontend
     startCommand: npm start -w backend
+
     healthCheckPath: /api/health
+
     envVars:
       - key: NODE_ENV
         value: production
-      # Pinned so a Render default upgrade cannot change the runtime under the
-      # app between deploys. Matches .node-version and the engines field.
+
+      # Pinned so a change to Render's default cannot move the runtime under
+      # the app between deploys. Matches .node-version and the engines field.
       - key: NODE_VERSION
         value: 22.14.0
-      # Render injects PORT; backend/server.js already reads it.
+
+      # What makes this one service rather than two: server.js prepares Next
+      # and mounts it behind the API routes.
+      - key: SERVE_FRONTEND
+        value: "true"
+
+      # Relative, and now literally same-origin rather than proxied.
+      - key: NEXT_PUBLIC_API_URL
+        value: /api
+
+      # Render injects PORT; backend/server.js reads it, and sets API_ORIGIN to
+      # its own loopback address so server components can reach the API.
+
       - key: MONGO_URI
         sync: false
+
+      # Signs the admin cookie, and verified by frontend/middleware.ts. One
+      # service means one value — the two can no longer drift apart, which was
+      # the single most costly misconfiguration in the two-service shape.
       - key: JWT_SECRET
         sync: false
       - key: JWT_EXPIRES_IN
         value: 30d
-      # Comma-separated list of allowed browser origins. With the /api rewrite
-      # in place the storefront is same-origin and does not need CORS, but this
-      # stays correct for any direct call and for local tooling.
-      - key: CLIENT_URL
-        fromService:
-          type: web
-          name: jules-and-co-web
-          property: host
+
       # Atlas M0 has no automated backups, so the API takes a daily one and
       # stores it in Cloudinary as an authenticated (non-public) raw file.
       # The dumps carry customer names, emails, phones and addresses.
@@ -56,48 +72,22 @@ services:
         value: "3"
       - key: BACKUP_KEEP
         value: "14"
+
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-      # Only read when the seed script creates the admin user. Changing it later
-      # does nothing on its own — run `npm run set-admin-password -w backend`.
+
+      # Read only when the admin user is *created*. Changing it later does
+      # nothing on its own — use Settings → Administrators, or
+      # `npm run set-admin-password -w backend`.
       - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
 
-  # ----------------------------------------------------------- Storefront ---
-  - type: web
-    name: jules-and-co-web
-    runtime: node
-    plan: free
-    region: oregon
-    branch: master
-    # --include=dev is not optional. NODE_ENV=production is set on this service,
-    # which makes npm omit devDependencies — and typescript, tailwindcss, postcss
-    # and autoprefixer all live there while being needed to *build*. Without the
-    # flag the very first deploy fails on a missing TypeScript compiler.
-    buildCommand: npm ci --include=dev && npm run build -w frontend
-    startCommand: npm start -w frontend
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: NODE_VERSION
-        value: 22.14.0
-      # Relative on purpose: the browser calls this app, which proxies onward.
-      - key: NEXT_PUBLIC_API_URL
-        value: /api
-      # Where that proxy points, and what server components call directly.
-      - key: API_ORIGIN
-        fromService:
-          type: web
-          name: jules-and-co-api
-          property: host
-      # MUST be byte-identical to the API's JWT_SECRET: the API signs the auth
-      # cookie and frontend/middleware.ts verifies it. A mismatch bounces every
-      # /admin route back to the login page with no error shown.
-      - key: JWT_SECRET
-        sync: false
+      # CLIENT_URL is deliberately absent. It only ever fed the API's CORS
+      # allow-list, and with one origin the browser never makes a cross-origin
+      # request. The default covers local development.

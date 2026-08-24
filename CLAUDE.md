@@ -918,3 +918,70 @@ read it back with matching counts, pruning removed the oldest when told to keep
 two.
 
 Backend **266 → 274**.
+
+### 2026-08-24 — One Render service instead of two
+
+The owner asked whether both halves could be hosted as one bundle and paid for
+once. They can, and the argument for it is stronger than it first looks.
+
+The split existed for exactly one reason: **the auth cookie has to be
+same-origin.** The API sets it and `frontend/middleware.ts` reads it back to
+guard `/admin`; across two hosts the browser never sends it, and `onrender.com`
+is on the Public Suffix List so a shared parent-domain cookie is unavailable
+either. The `/api` rewrite was a workaround for that and nothing else.
+
+**The resilience being given up is mostly illusory here.** Every storefront page
+render calls the API, so if the API is down the shop is broken whether or not it
+is a separate service. The split was buying the appearance of isolation for
+$84/year.
+
+#### How it works
+`backend/server.js` prepares Next and hands its request handler to
+`app.setFrontendHandler()`. `app.js` registers the mount point *before* the 404
+handler so ordering is right at load time, and the 404 is now scoped to `/api`
+so it cannot swallow a storefront route. Opt-in via `SERVE_FRONTEND=true`, so
+local development keeps two processes and splitting back apart is one variable.
+
+`next` is declared in the backend's dependencies rather than relying on
+workspace hoisting.
+
+Server components still fetch the API over HTTP, on the loopback address the
+server sets as `API_ORIGIN`. Slightly wasteful — it is the same process — but it
+keeps `lib/api.ts` identical in both deployment shapes.
+
+**What stops being able to go wrong:** the proxy, `API_ORIGIN` as a deploy
+variable, the bare-hostname normalising, CORS, and above all `JWT_SECRET` as two
+values that must match — the most expensive misconfiguration in the old shape,
+which presented as admin login silently bouncing back to the login page.
+
+#### A production build had been broken and nothing caught it
+`useSearchParams()`, added for the "Restock" deep-link into the inventory tab,
+opts a component out of static rendering — and Next refuses to prerender a page
+containing one without a Suspense boundary. `/admin/products/new` failed to
+build.
+
+It had been broken since the Products pass. `tsc`, ESLint and both test suites
+all passed throughout, because **none of them prerender pages**. The entire
+Render preparation — pinning Node, fixing the `npm ci --include=dev` blocker,
+writing the deploy guide — was done on top of a build that would have failed on
+Render.
+
+**A production build now belongs beside `tsc` and the suites before calling
+anything deployable.** It is the only check that exercises prerendering.
+
+Fixed with a Suspense boundary on both pages that render the form — including
+the dynamic edit route, since the requirement belongs to the component rather
+than to how a route happens to be rendered.
+
+#### Verified
+One process on one port: `/`, `/shop`, `/ethos`, `/checkout`, `/admin/login`
+and `/api/health` all 200; the shop rendered products from the API in the same
+process; `/nonsense` got Next's 404 and `/api/nonsense` the API's JSON one.
+Admin login returned 200 with `HttpOnly, Secure, SameSite=Lax`,
+`/admin/dashboard` stayed signed in, and signed out still `307`s.
+
+Backend **274**, ESLint clean, production build clean, Playwright **32/32** in
+the unchanged split dev mode.
+
+Cost: **$96–$206/year** depending on the Atlas tier, against $290 for two
+services.

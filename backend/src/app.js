@@ -86,7 +86,41 @@ app.use("/api/content", contentRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/reviews", reviewRoutes);
 
-app.use(notFound);
+/**
+ * Where the storefront is served from, when both run as one Render service.
+ *
+ * The two were separate services because the auth cookie has to be same-origin:
+ * the API sets it and frontend/middleware.ts reads it back to guard /admin, and
+ * across two hosts the browser would never send it. Serving both from one
+ * process makes that true by construction rather than by proxy — and the
+ * failure isolation given up is mostly illusory here, because every storefront
+ * page render calls the API anyway. If the API is down the shop is broken
+ * either way.
+ *
+ * Registered here, before the 404 handler, so ordering is correct at load time
+ * even though the handler itself is attached later by server.js once Next has
+ * finished preparing.
+ */
+let serveFrontend = null;
+
+app.use((req, res, next) => {
+  if (serveFrontend && !req.path.startsWith("/api")) {
+    return serveFrontend(req, res);
+  }
+  next();
+});
+
+/**
+ * Scoped to /api so it cannot swallow a storefront route. Running API-only,
+ * this leaves non-API paths to Express's own 404, which is more honest than a
+ * JSON "route not found" for a path the API was never meant to own.
+ */
+app.use("/api", notFound);
 app.use(errorHandler);
+
+/** Called by server.js when SERVE_FRONTEND is on. */
+app.setFrontendHandler = (handler) => {
+  serveFrontend = handler;
+};
 
 module.exports = app;
