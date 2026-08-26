@@ -985,3 +985,57 @@ the unchanged split dev mode.
 
 Cost: **$96–$206/year** depending on the Atlas tier, against $290 for two
 services.
+
+### 2026-08-24 — Paystack: the site can take money
+
+The last thing standing between the shop and trading. Paystack, in GHS, with
+test keys until the owner is ready to go live.
+
+**A correction worth recording:** the owner asked why payment was not going
+through, and the answer was that I had described the design, said "starting
+now", then answered unrelated questions instead of writing any code. Nothing
+existed. The keys were configured and nothing read them.
+
+#### The order comes first, the payment second
+The order is created `pending` with its stock held, *then* handed to Paystack.
+An abandoned checkout leaves an order the admin can see and cancel rather than a
+charge with no record of what it was for. `POST /payments/abandon` returns the
+stock if the customer walks away.
+
+#### Nothing is paid because a browser said so
+The return page can be forged or replayed. Only Paystack's **HMAC-SHA512 signed
+webhook** is evidence, compared with `timingSafeEqual` so it cannot be attacked
+a character at a time. `express.json`'s `verify` hook keeps the raw bytes,
+because the signature is over exactly what Paystack sent — re-serialising the
+parsed body reorders keys and the signature never matches.
+
+Four tests attack it: unsigned, forged, tampered-after-signing, and signed with
+the wrong secret. All refused, order stays pending.
+
+#### The amount is checked, not trusted
+If Paystack reports a figure that differs from the order total, the order is
+marked **failed**. Shipping goods for the wrong money is worse than a failed
+payment.
+
+#### Pesewas in one place
+GHS 90 → 9000. A factor-of-100 error is the classic first Paystack bug and
+should only be possible to make once. Verified against the real API: Paystack
+held exactly 9000 for a 90 order.
+
+#### A design change made while testing
+The webhook originally acknowledged Paystack *then* wrote the order, which is
+what their docs nudge you towards. But a crash between the two loses the payment
+silently — Paystack has been told it succeeded and never retries. It now applies
+first and acknowledges second; `applyTransaction` is idempotent, which is
+required anyway because Paystack retries.
+
+#### Before real money
+Set the webhook URL in the Paystack dashboard:
+`https://<host>/api/payments/webhook`. Without it, payments succeed at Paystack
+and orders sit unpaid until the return page happens to catch them. The webhook
+cannot be tested from localhost — Paystack cannot reach it — but the return page
+verifies against Paystack directly, so a local test still confirms end to end.
+
+Switching test → live is two environment variables; no code knows the difference.
+
+Backend **274 → 294**, `tsc` clean, ESLint clean, production build clean.

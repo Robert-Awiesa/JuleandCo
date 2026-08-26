@@ -190,8 +190,25 @@ function OrderRow({ order }: { order: AdminOrder }) {
                 <div>
                   <p className="mb-1 text-xs uppercase tracking-widest2 text-obsidian/50">Payment</p>
                   <p className="capitalize text-obsidian/70">
-                    {order.paymentMethod.replace("_", " ")} · {order.paymentStatus}
+                    {order.paymentMethod.replace("_", " ")} ·{" "}
+                    <span
+                      className={
+                        order.paymentStatus === "paid"
+                          ? "font-medium text-green-700"
+                          : order.paymentStatus === "failed"
+                            ? "font-medium text-red-600"
+                            : "text-amber-700"
+                      }
+                    >
+                      {order.paymentStatus === "pending" ? "not paid yet" : order.paymentStatus}
+                    </span>
                   </p>
+                  {order.paidAt && (
+                    <p className="mt-1 text-xs text-obsidian/45">
+                      Paid {new Date(order.paidAt).toLocaleString("en-GB")}
+                      {order.paymentReference ? ` · ref ${order.paymentReference}` : ""}
+                    </p>
+                  )}
                 </div>
 
                 <div>

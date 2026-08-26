@@ -56,6 +56,14 @@ const orderSchema = new mongoose.Schema(
     paymentMethod: { type: String, enum: ["mobile_money", "card"], required: true },
     paymentStatus: { type: String, enum: ["pending", "paid", "failed"], default: "pending" },
 
+    /**
+     * Paystack's reference for the transaction that paid for this order — the
+     * order number, so a payment in the Paystack dashboard can always be traced
+     * back to an order here and vice versa.
+     */
+    paymentReference: { type: String },
+    paidAt: { type: Date },
+
     // Always recomputed server-side from live product prices — never taken from
     // the client, which would let a buyer name their own total.
     itemsPrice: { type: Number, required: true },

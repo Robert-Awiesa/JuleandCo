@@ -74,7 +74,7 @@ const SLOTS = {
       },
       {
         id: "slide-3",
-        image: "/images/hero/jules-hero-2.jpeg",
+        image: "/images/hero/jules-hero-3.PNG",
         alt: "A client wearing JULES & CO sunglasses",
         headline: "Pick a Pair",
         emoji: "😎",

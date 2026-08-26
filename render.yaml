@@ -73,6 +73,15 @@ services:
       - key: BACKUP_KEEP
         value: "14"
 
+      # Paystack. The secret key signs webhooks and initialises transactions and
+      # must never reach a browser; the public key is designed to be public.
+      # Use sk_test_/pk_test_ until you are ready to take real money — both keys
+      # must be from the same mode or Paystack rejects the pair.
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

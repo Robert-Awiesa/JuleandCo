@@ -28,6 +28,8 @@ Next, so the shop and the dashboard come from a single Node process.
 | `CLOUDINARY_API_SECRET` | yes | from Cloudinary | Secret. Never reaches the browser. |
 | `ADMIN_EMAIL` | yes | your admin login | Secret. Read only when the account is *created*. |
 | `ADMIN_PASSWORD` | yes | your admin password | Secret. Same — changing it later does nothing on its own. |
+| `PAYSTACK_SECRET_KEY` | yes | from Paystack | Secret. Signs webhooks, initialises transactions. Never reaches a browser. |
+| `PAYSTACK_PUBLIC_KEY` | yes | from Paystack | Designed to be public. Must be the *same mode* as the secret. |
 | `BACKUP_ENABLED` | yes | `true` | Atlas M0 has no automated backups. |
 | `BACKUP_HOUR` / `BACKUP_KEEP` | no | `3` / `14` | Hour of day, and how many to retain. |
 
@@ -133,6 +135,40 @@ URLs.
 > Check whether your plan allows custom domains before buying the domain —
 > Render's free tier limits have changed over time, and this is worth confirming
 > in their current pricing page rather than taking on trust here.
+
+## Payments
+
+Paystack, in GHS. The flow is deliberately ordered:
+
+1. The order is created first, `pending`, with its stock held. An abandoned
+   checkout leaves an order the admin can see and cancel — not a charge with no
+   record of what it was for.
+2. `POST /api/payments/initialise` starts a Paystack transaction using the order
+   number as the reference, so every payment traces back to an order and back
+   again. The customer is sent to Paystack's page.
+3. **Paystack's signed webhook is what marks an order paid** — never the
+   browser. A client can claim success; only an HMAC-SHA512 signature made with
+   your secret key is evidence.
+4. The return page polls `/api/payments/status/:orderNumber`, which re-verifies
+   against Paystack if the webhook has not landed yet. The redirect is never
+   trusted on its own.
+
+**Point Paystack at the webhook** — dashboard → Settings → API Keys & Webhooks →
+Webhook URL:
+
+```
+https://<your-host>/api/payments/webhook
+```
+
+Amounts are converted to pesewas in one place (`utils/paystack.js`), because a
+factor-of-100 error is the classic first bug and it should only be possible to
+make it once. The webhook checks the amount Paystack reports against the order
+total and **refuses to mark it paid if they differ** — a mismatch means
+something is wrong, and shipping goods for the wrong money is worse than a
+failed payment.
+
+Switching from test to live is two environment variables. Nothing in the code
+knows the difference.
 
 ## Backups
 

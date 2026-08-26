@@ -177,6 +177,9 @@ export interface AdminOrder {
   };
   paymentMethod: "mobile_money" | "card";
   paymentStatus: "pending" | "paid" | "failed";
+  /** Paystack's reference — the order number — once payment has gone through. */
+  paymentReference?: string;
+  paidAt?: string;
   itemsPrice: number;
   /**
    * The agreed delivery charge, or null while it is still being discussed.

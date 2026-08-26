@@ -18,6 +18,7 @@ const attributeGroupRoutes = require("./routes/attributeGroupRoutes");
 const contentRoutes = require("./routes/contentRoutes");
 const customerRoutes = require("./routes/customerRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 const app = express();
 
@@ -66,7 +67,20 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+/**
+ * `verify` keeps the raw bytes alongside the parsed body.
+ *
+ * Paystack signs the exact payload it sent, and re-serialising the parsed
+ * object would reorder keys and break the signature — so the webhook could
+ * never be authenticated.
+ */
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(cookieParser());
 if (process.env.NODE_ENV !== "test") {
   app.use(morgan("dev"));
@@ -85,6 +99,7 @@ app.use("/api/attribute-groups", attributeGroupRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/payments", paymentRoutes);
 
 /**
  * Where the storefront is served from, when both run as one Render service.

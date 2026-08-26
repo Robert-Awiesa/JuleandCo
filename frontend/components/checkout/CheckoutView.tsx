@@ -87,9 +87,32 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
         return;
       }
 
-      setOrderNumber(body.orderNumber);
-      clear();
-      setStep("confirmation");
+      /**
+       * The order exists now, with its stock held. Payment is a second step, so
+       * an abandoned checkout leaves a pending order the shop can see and
+       * cancel rather than a customer charged with no record of what for.
+       */
+      const payment = await fetch(`${base}/payments/initialise`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderNumber: body.orderNumber, email }),
+      });
+
+      const paymentBody = await payment.json().catch(() => ({}));
+
+      if (!payment.ok || !paymentBody.authorizationUrl) {
+        // The order is real and the stock is held, so the customer is told the
+        // order number — support can find it, and it can be paid or cancelled.
+        setOrderError(
+          `Your order ${body.orderNumber} was saved, but we could not open the payment page. ` +
+            (paymentBody.message || "Please try again, or contact us with that order number.")
+        );
+        return;
+      }
+
+      // The cart is deliberately NOT cleared yet. If they abandon payment they
+      // come back to a full basket rather than an empty shop and a lost sale.
+      window.location.href = paymentBody.authorizationUrl;
     } catch {
       setOrderError("We could not reach the store. Check your connection and try again.");
     } finally {
