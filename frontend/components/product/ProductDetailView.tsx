@@ -13,6 +13,7 @@ import { useVariantSelection } from "./useVariantSelection";
 import { CompleteTheLook } from "./CompleteTheLook";
 import { useCartStore } from "@/store/useCartStore";
 import { useWishlistStore } from "@/store/useWishlistStore";
+import { useHydrated } from "@/lib/useHydrated";
 import { cn, discountPercent, stockLabel } from "@/lib/utils";
 
 interface ProductDetailViewProps {
@@ -34,7 +35,11 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
     isAvailable,
   } = useVariantSelection(product);
   const addLine = useCartStore((s) => s.addLine);
-  const wishlisted = useWishlistStore((s) => s.has(product.id));
+  // Same as the product card: the server cannot know what is saved, so the
+  // first client render must agree with it.
+  const hydrated = useHydrated();
+  const saved = useWishlistStore((s) => s.has(product.id));
+  const wishlisted = hydrated && saved;
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const stock = stockLabel(product.stock);
 

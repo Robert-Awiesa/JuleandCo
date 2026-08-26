@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/lib/types";
 import { useWishlistStore } from "@/store/useWishlistStore";
+import { useHydrated } from "@/lib/useHydrated";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 
 export function WishlistView({ products }: { products: Product[] }) {
@@ -11,8 +11,7 @@ export function WishlistView({ products }: { products: Product[] }) {
 
   // The store hydrates from localStorage after mount, so rendering its contents
   // on the first pass would mismatch the server-rendered empty state.
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
+  const hydrated = useHydrated();
 
   const saved = products.filter((p) => productIds.includes(p.id));
 

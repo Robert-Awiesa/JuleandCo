@@ -82,6 +82,11 @@ services:
       - key: PAYSTACK_PUBLIC_KEY
         sync: false
 
+      # An unpaid order holds its stock, so checkouts nobody finishes are swept
+      # up and their stock returned. On by default; these only change the timing.
+      # - key: ORDER_EXPIRY_MINUTES
+      #   value: "60"
+
       # Transactional order email, via Resend. Without RESEND_API_KEY the shop
       # works exactly as it does now and simply tells nobody anything — every
       # send reports the missing key rather than failing an order.
@@ -119,5 +124,9 @@ services:
       # RENDER_EXTERNAL_URL, so the .onrender.com deployment works untouched.
       # Point it at the real domain once you have one, or paying customers are
       # returned to the onrender.com address instead of your shop.
+      #
+      # It also drives metadataBase, robots.txt and the sitemap — so until it is
+      # set, a shared link previews against the onrender.com address. Read at
+      # runtime, not baked into the build, so setting it needs no rebuild.
       # - key: CLIENT_URL
       #   value: https://your-domain.com

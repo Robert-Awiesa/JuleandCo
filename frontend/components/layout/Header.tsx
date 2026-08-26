@@ -10,6 +10,7 @@ import { MegaMenu } from "./MegaMenu";
 import { SearchModal } from "./SearchModal";
 import { useCartStore } from "@/store/useCartStore";
 import { useWishlistStore } from "@/store/useWishlistStore";
+import { useHydrated } from "@/lib/useHydrated";
 import { cn } from "@/lib/utils";
 
 export function Header({
@@ -45,8 +46,19 @@ export function Header({
   const [searchOpen, setSearchOpen] = useState(false);
 
   const cartOpen = useCartStore((s) => s.open);
-  const itemCount = useCartStore((s) => s.itemCount());
-  const wishlistCount = useWishlistStore((s) => s.productIds.length);
+  const storedItemCount = useCartStore((s) => s.itemCount());
+  const storedWishlistCount = useWishlistStore((s) => s.productIds.length);
+
+  /**
+   * Both counts live in localStorage, which the server cannot read — so the
+   * server renders no badge and the browser's first render wants one. React
+   * treats that as a hydration mismatch and throws the whole page away to
+   * re-render it on the client. Showing nothing for one render fixes it; the
+   * badge appears a frame later.
+   */
+  const hydrated = useHydrated();
+  const itemCount = hydrated ? storedItemCount : 0;
+  const wishlistCount = hydrated ? storedWishlistCount : 0;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);

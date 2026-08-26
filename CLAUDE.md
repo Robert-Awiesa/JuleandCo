@@ -1149,3 +1149,121 @@ Verified: backend **315/315**, Playwright **32/32**, `tsc --noEmit` clean,
 production build clean with zero warnings. Live: an order placed against the
 running stack returned a real Paystack URL, then was cancelled and deleted with
 its stock returned. Catalogue 13 published, the owner's own orders untouched.
+
+### 2026-08-26 — Pre-launch audit: the things that only break in public
+
+Asked to find and fix what needed fixing before going live on a real domain.
+Everything below was found by auditing rather than reported.
+
+#### Nothing had a rate limit
+Anyone could try the admin password forever. There is one administrator and one
+password, and nothing else between a guess and the whole shop. `helmet` and
+`express-rate-limit` are now in: 10 sign-in attempts a quarter-hour, 20 orders,
+10 reviews an hour, 600 requests generally.
+
+**Paystack's webhook is exempt on purpose** — they retry anything that is not a
+2xx, so a 429 would turn a burst into a payment that never gets recorded. It
+authenticates by signature, so it is not an open endpoint.
+
+**Limits apply in production only.** An end-to-end run signs in a couple of
+dozen times in minutes, which is indistinguishable from a brute-force attempt;
+throttling it turns a working limiter into a test failure that looks like a
+broken login. `RATE_LIMIT_FORCE=true` switches them on anywhere, and
+`rateLimit.test.js` sets exactly that — otherwise the limiter could quietly stop
+working and nothing would notice until the shop was public.
+
+CSP is deliberately off in helmet: Next emits its own inline bootstrap, and a
+policy written here would either break the storefront or be permissive enough to
+protect nothing. Cross-Origin-Embedder-Policy is off too — it blocks Cloudinary,
+which is the entire catalogue.
+
+#### Abandoned checkouts held stock forever
+Placing an order reserves its stock *before* payment, and that reservation was
+only ever released by somebody explicitly cancelling. Nobody does that. The
+ordinary case is a shopper who closes the tab, and on a catalogue where most
+pieces are one-of-a-kind, a handful of those quietly empties the shop while the
+admin sees nothing wrong. An unbounded slow leak.
+
+`utils/expireOrders.js` sweeps every ten minutes and returns stock from unpaid
+orders older than `ORDER_EXPIRY_MINUTES` (60). It only ever touches orders that
+are both unpaid *and* still pending *and* still holding stock — a paid or
+confirmed order is left alone whatever its age.
+
+**The race it creates is handled.** A payment landing for an order the sweep
+just cancelled now tries to take the stock back off the shelf and restore the
+order; if the piece has since sold, the payment is recorded, the order stays
+cancelled, and it logs loudly that a refund is owed. Money must not be silently
+wrong in either direction.
+
+#### The homepage was going to launch with invented customer quotes
+Four testimonials attributed to named people — "Adjoa M.", "Kwame B." — who
+never said them. Fine as development placeholders, not fine on a live shop:
+those are fabricated endorsements presented as real. Only `layout.footer` had
+ever been customised, so the defaults *were* what would ship.
+
+The slot now defaults to empty and the homepage section hides itself when there
+is nothing in it, so the site claims nothing until there is something true to
+claim. **This is content the owner has to supply** — real quotes go under
+Content → What our clients say.
+
+#### A hydration mismatch was throwing away every page
+Reported from the browser console mid-audit. The cart and wishlist live in
+localStorage, which the server cannot read — so the server rendered no cart
+badge and the client's first render wanted one. React calls that a mismatch and,
+outside a Suspense boundary, discards the **entire page** and re-renders it on
+the client: server rendering wasted, visible flicker.
+
+It was a class of bug, not one instance: the header badges, both wishlist
+hearts, and worst of all `CheckoutView`, which server-rendered "Your bag is
+empty" on every load and swapped it out — on the page where someone is trying to
+pay. `lib/useHydrated.ts` gates all of them. `WishlistView` had already solved it
+inline; that pattern is now the shared one.
+
+**The cart drawer's open state was being persisted**, so reloading reopened the
+cart over whatever you had navigated to *and* mismatched the server. `partialize`
+now stores only the basket.
+
+`e2e/hydration.spec.ts` guards it with a **populated** basket — an empty one
+matches the server by accident and proves nothing. Verified by breaking the
+header gate deliberately and confirming the spec fails.
+
+#### Nothing told search engines or WhatsApp anything
+No `metadataBase`, so the share image stayed a relative path — and WhatsApp,
+Facebook and X all require an absolute og:image. Every shared link previewed
+with no picture, which for a shop that will be passed around on WhatsApp is most
+of the point of sharing it. `lib/siteUrl.ts` resolves the public address the same
+way the Paystack return URL does, and never from a request header.
+
+Added `robots.ts` and `sitemap.ts` (products from the API, so publishing a piece
+puts it in the sitemap with nothing to remember), plus `error.tsx` and
+`not-found.tsx` — the storefront had neither, so an API blip or a mistyped
+address showed Next's stock white error page with no way onward.
+
+**A root `not-found.tsx` does not work in this app and the dev server will not
+tell you.** The root layout lives inside the `(site)` group because the admin has
+its own, so Next has no root layout to render a top-level not-found with — it
+refuses the file at *build* time while dev serves it happily. The fix is a
+catch-all `(site)/[...notFound]/page.tsx` calling `notFound()`, which has a
+layout and so renders the real 404 with header and footer.
+
+Also removed `app/cart` — an empty directory nothing linked to. The basket is a
+drawer, not a page.
+
+#### Checked and found already correct
+- Stack traces are hidden in production; `err.stack` is dev-only.
+- The auth cookie is `httpOnly` + `secure` in production + `sameSite: lax`.
+- `POST /auth/register` never reads `role` from the body — no privilege
+  escalation, though the endpoint has no consumer while checkout is guest-only.
+- `jules-hero-3.PNG`'s uppercase extension matches its reference exactly, so it
+  survives a case-sensitive filesystem. Fragile, not broken.
+
+#### Next.js advisories — flagged, not actioned
+`npm audit` reports high-severity CVEs against `next`, fixable only by a major
+bump to 16. **14.2.35 is the latest 14.x**, so the critical middleware-auth
+bypass (fixed in 14.2.25) is already patched and `/admin` is not exposed. The
+residual items are a migration, not a pre-launch fix — the owner's call.
+
+Verified: backend **327/327** (23 suites), `tsc` clean, Playwright **34/34**,
+production build clean with zero warnings. Live: security headers present, the
+login limiter refuses the eleventh attempt, robots and sitemap serve, and an
+unmatched URL renders the branded 404.

@@ -17,6 +17,7 @@ const {
 } = require("../controllers/productController");
 const { getProductReviews, createReview } = require("../controllers/reviewController");
 const { protect, admin } = require("../middleware/authMiddleware");
+const limits = require("../middleware/rateLimit");
 
 const router = express.Router();
 
@@ -38,6 +39,6 @@ router.post("/:id/duplicate", protect, admin, duplicateProduct);
 router.get("/:id/usage", protect, admin, getProductUsage);
 
 // Public: anyone who bought a piece can say what they think of it.
-router.route("/:id/reviews").get(getProductReviews).post(createReview);
+router.route("/:id/reviews").get(getProductReviews).post(limits.review, createReview);
 
 module.exports = router;

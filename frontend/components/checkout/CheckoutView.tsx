@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Check, CreditCard, Lock, Smartphone } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
+import { useHydrated } from "@/lib/useHydrated";
 import { Button } from "@/components/ui/Button";
 import { cartLineKey, cn, describeCartLine, formatCurrency } from "@/lib/utils";
 import type { DeliverySettings } from "@/lib/content";
@@ -20,6 +21,7 @@ const steps: { id: Step; label: string }[] = [
 
 export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
   const { lines, subtotal, clear } = useCartStore();
+  const hydrated = useHydrated();
   const [step, setStep] = useState<Step>("shipping");
   const [orderNumber, setOrderNumber] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mobile_money");
@@ -119,6 +121,20 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
       setPlacing(false);
     }
   };
+
+  /**
+   * The basket lives in localStorage, so the server renders this page with an
+   * empty one every time. Deciding "your bag is empty" before that has loaded
+   * both flashes the wrong screen at someone who is trying to pay and mismatches
+   * hydration, which throws away the server render of the checkout page.
+   */
+  if (!hydrated && step !== "confirmation") {
+    return (
+      <div className="container-elevated flex flex-col items-center justify-center py-32 text-center">
+        <p className="text-sm text-ink-subtle">Loading your bag…</p>
+      </div>
+    );
+  }
 
   if (lines.length === 0 && step !== "confirmation") {
     return (

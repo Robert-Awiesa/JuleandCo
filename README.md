@@ -96,6 +96,7 @@ Create it with:
 | --- | --- |
 | `PORT` | API port (5000) |
 | `MONGO_URI` | MongoDB connection string |
+| `ORDER_EXPIRY_MINUTES` | Optional. How long an unpaid order holds stock (default 60) |
 | `RESEND_API_KEY` | Optional. Order emails via Resend; unset, none are sent |
 | `MAIL_FROM` | Optional. Sender address; defaults to `onboarding@resend.dev` |
 | `JWT_SECRET` | Signs the auth cookie |

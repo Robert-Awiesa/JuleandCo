@@ -50,8 +50,10 @@ describe("reading content", () => {
 
     const res = await request(app).get("/api/content");
     expect(res.body["site.seo"].title).toBe("Edited");
-    // Untouched slots still come back.
-    expect(res.body["home.testimonials"]).toHaveLength(4);
+    // Untouched slots still come back. Asserted against the hero rather than
+    // the testimonials, which ship empty on purpose — nobody's words go on the
+    // homepage until someone has actually said them.
+    expect(res.body["hero.slides"]).toHaveLength(3);
   });
 
   test("a single slot can be read on its own", async () => {

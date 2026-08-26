@@ -20,9 +20,6 @@
 const unsplash = (id, w = 1200) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
 
-const portrait = (id) =>
-  `https://images.unsplash.com/${id}?auto=format&fit=facearea&facepad=2.8&w=320&h=320&q=80`;
-
 const linkFields = [
   { key: "label", label: "Label", type: "text", required: true },
   { key: "href", label: "Link", type: "url", required: true },
@@ -153,7 +150,7 @@ const SLOTS = {
   "home.testimonials": {
     label: "What our clients say",
     description:
-      "Client quotes on the homepage. A portrait is optional — without one the card falls back to a monogram, which is a designed state rather than a hole.",
+      "Real client quotes, shown on the homepage. The section is hidden entirely while this is empty — never add a quote nobody said. A portrait is optional; without one the card falls back to a monogram, which is a designed state rather than a hole.",
     kind: "list",
     itemLabel: "Testimonial",
     itemTitle: "author",
@@ -168,40 +165,19 @@ const SLOTS = {
         help: "Optional. Only publish a photograph you have permission to use.",
       },
     ],
-    defaults: [
-      {
-        id: "t1",
-        quote:
-          "The craftsmanship is on another level — my Aviators still look brand new two years in.",
-        author: "Adjoa M.",
-        role: "Accra",
-        image: portrait("photo-1531123897727-8f129e1688ce"),
-      },
-      {
-        id: "t2",
-        quote:
-          "The anklet has not left my ankle since it arrived — still bright, still perfect.",
-        author: "Kwame B.",
-        role: "Kumasi",
-        image: portrait("photo-1562715517-ce49b9617d26"),
-      },
-      {
-        id: "t3",
-        quote:
-          "JULES & CO feels like shopping an editorial spread, not a catalog. The pairing suggestions are spot on.",
-        author: "Naana O.",
-        role: "London",
-        image: portrait("photo-1624667773099-1b80ae774080"),
-      },
-      {
-        id: "t4",
-        quote:
-          "Checkout with Mobile Money took under a minute. Tracking notifications kept me updated the whole way.",
-        author: "Yaw D.",
-        role: "Takoradi",
-        image: portrait("photo-1562173650-f61426fbe683"),
-      },
-    ],
+    /**
+     * Deliberately empty.
+     *
+     * This shipped with four quotes attributed to named people — "Adjoa M.",
+     * "Kwame B." — who never said them. As development placeholders that was
+     * fine; on a live shop they are invented customer endorsements presented as
+     * real, which is a thing a shop must not publish whatever the intent.
+     *
+     * The homepage section hides itself when this is empty, so the site simply
+     * does not claim anything until there is something true to claim. Add real
+     * quotes under Content → What our clients say.
+     */
+    defaults: [],
   },
 
   "nav.megaMenu": {

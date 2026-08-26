@@ -2,6 +2,7 @@ const path = require("path");
 const app = require("./src/app");
 const connectDB = require("./src/config/db");
 const { startBackupSchedule } = require("./src/utils/backupSchedule");
+const { scheduleOrderExpiry } = require("./src/utils/expireOrders");
 
 const PORT = process.env.PORT || 5000;
 
@@ -55,6 +56,7 @@ connectDB()
     // BACKUP_ENABLED is set, which keeps it from running on a developer machine
     // against the live database.
     startBackupSchedule();
+    scheduleOrderExpiry();
 
     // The API port is deliberately fixed: the frontend and the admin client
     // both address it directly, so falling back to another port would break

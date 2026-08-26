@@ -3,9 +3,11 @@ require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
+const limits = require("./middleware/rateLimit");
 
 const productRoutes = require("./routes/productRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
@@ -26,6 +28,22 @@ const app = express();
 // sees an insecure request and refuses to set `secure` cookies, so login would
 // silently never persist in production.
 app.set("trust proxy", 1);
+
+/**
+ * Security headers.
+ *
+ * Content-Security-Policy is off: Next emits its own inline bootstrap and
+ * styles, and a CSP written here would either break the storefront or be so
+ * permissive it protected nothing. Cross-Origin-Embedder-Policy is off too —
+ * it blocks Cloudinary product photography, which is the whole catalogue.
+ * The rest (HSTS, nosniff, frame denial, referrer policy) all apply.
+ */
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
 /**
  * CORS.
@@ -87,6 +105,22 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+
+/**
+ * Rate limits, applied before the routes.
+ *
+ * Paystack's webhook is deliberately exempt: they retry on anything that is not
+ * a 2xx, so throttling it would turn a burst into a payment that never gets
+ * recorded. It authenticates by signature, so it is not an open endpoint.
+ */
+app.use("/api", (req, res, next) =>
+  req.path === "/payments/webhook" ? next() : limits.general(req, res, next)
+);
+app.use("/api/auth/login", limits.login);
+app.use("/api/orders", (req, res, next) =>
+  req.method === "POST" ? limits.checkout(req, res, next) : next()
+);
+app.use("/api/payments/initialise", limits.checkout);
 
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);

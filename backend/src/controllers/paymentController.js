@@ -6,7 +6,7 @@ const {
   signatureIsValid,
   toCedis,
 } = require("../utils/paystack");
-const { releaseStock } = require("../utils/orderPricing");
+const { releaseStock, reserveStock } = require("../utils/orderPricing");
 const { notifyCustomer } = require("../utils/orderEmails");
 
 /**
@@ -62,6 +62,30 @@ async function applyTransaction(transaction) {
       order,
       reason: `paid ${paid} but the order is ${order.totalPrice}`,
     };
+  }
+
+  /**
+   * Payment for an order the expiry sweep already cancelled.
+   *
+   * Rare — the window is an hour — but the money is real, so it cannot be
+   * quietly wrong either way. Try to take the stock back off the shelf and
+   * restore the order. If the piece has since sold to someone else, the payment
+   * is still recorded, the order stays cancelled, and it is logged loudly: that
+   * is a refund conversation, and the shop needs to know it is owed.
+   */
+  if (order.status === "cancelled" && order.stockReleased) {
+    const restored = await reserveStock(order.items);
+
+    if (restored.ok) {
+      order.status = "pending";
+      order.stockReleased = false;
+      console.log(`[paystack] ${order.orderNumber} paid after expiring — order restored`);
+    } else {
+      console.error(
+        `[paystack] ${order.orderNumber} PAID BUT CANNOT BE FULFILLED — ` +
+          `${restored.error}. A refund is owed.`
+      );
+    }
   }
 
   order.paymentStatus = "paid";

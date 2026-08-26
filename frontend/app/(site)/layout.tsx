@@ -6,6 +6,7 @@ import { Footer } from "@/components/layout/Footer";
 import { CartDrawer } from "@/components/layout/CartDrawer";
 import { fetchFacets } from "@/lib/api";
 import { fetchSiteContent } from "@/lib/content";
+import { siteUrlObject } from "@/lib/siteUrl";
 
 // Roboto carries everything functional: body copy, navigation, buttons,
 // prices and any other number. It is engineered for screen legibility, which
@@ -37,6 +38,14 @@ export async function generateMetadata(): Promise<Metadata> {
   const seo = content["site.seo"];
 
   return {
+    /**
+     * Makes every relative URL in this metadata absolute.
+     *
+     * Without it the share image stays a relative path, and WhatsApp, Facebook
+     * and X all require an absolute og:image — so a shared link previewed with
+     * no picture at all.
+     */
+    metadataBase: siteUrlObject(),
     title: seo.title,
     description: seo.description,
     icons: {
@@ -47,6 +56,14 @@ export async function generateMetadata(): Promise<Metadata> {
       apple: "/images/brand/apple-icon.png",
     },
     openGraph: {
+      type: "website",
+      siteName: "JULES & CO",
+      title: seo.title,
+      description: seo.description,
+      images: seo.ogImage ? [seo.ogImage] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
       title: seo.title,
       description: seo.description,
       images: seo.ogImage ? [seo.ogImage] : undefined,

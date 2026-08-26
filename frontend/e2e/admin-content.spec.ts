@@ -57,11 +57,19 @@ test.describe("editing site content", () => {
     await page.goto("/admin/content");
     await page.getByRole("button", { name: /What our clients say/ }).click();
 
-    // Testimonial fields, drawn from the API's field specs rather than coded
-    // into a bespoke form.
+    /**
+     * The slot ships empty — no shop should launch with quotes nobody said —
+     * so a row has to be added before there are any fields to look at. That is
+     * the stronger assertion anyway: the row is generated from the API's field
+     * specs, not coded into a bespoke form.
+     */
+    const add = page.getByRole("button", { name: /Add testimonial/i });
+    await expect(add).toBeVisible();
+    await add.click();
+
     await expect(page.getByText("Client name").first()).toBeVisible();
     await expect(page.getByText("Location or role").first()).toBeVisible();
-    await expect(page.getByRole("button", { name: /Add testimonial/i })).toBeVisible();
+    await expect(page.getByText("Quote").first()).toBeVisible();
   });
 
   test("a hero headline edited in the admin appears on the homepage", async ({ page }) => {

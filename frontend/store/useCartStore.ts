@@ -81,6 +81,15 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "jules-and-co-cart",
+      /**
+       * Only the basket is remembered, not whether the drawer was open.
+       *
+       * Persisting `isOpen` meant reloading the page re-opened the cart over
+       * whatever the shopper had navigated to — and since the server always
+       * renders it closed, it was also a hydration mismatch that threw away the
+       * whole page's server rendering.
+       */
+      partialize: (state) => ({ lines: state.lines }) as never,
       // The line shape changed (colour/size → variant + options). Old persisted
       // carts cannot be keyed correctly, and silently mispricing or mislabelling
       // someone's basket is worse than asking them to re-add.

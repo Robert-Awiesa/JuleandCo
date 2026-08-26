@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { PriceTag } from "@/components/ui/PriceTag";
 import { discountPercent, stockLabel } from "@/lib/utils";
 import { useWishlistStore } from "@/store/useWishlistStore";
+import { useHydrated } from "@/lib/useHydrated";
 import { QuickViewModal } from "./QuickViewModal";
 
 interface ProductCardProps {
@@ -17,7 +18,12 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const [quickViewOpen, setQuickViewOpen] = useState(false);
-  const wishlisted = useWishlistStore((s) => s.has(product.id));
+  // The wishlist is in localStorage, so the server always renders an unfilled
+  // heart. Rendering a filled one on the first client pass is a hydration
+  // mismatch, and one product card is enough to re-render the whole shop.
+  const hydrated = useHydrated();
+  const saved = useWishlistStore((s) => s.has(product.id));
+  const wishlisted = hydrated && saved;
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const stock = stockLabel(product.stock);
   const discount = discountPercent(product.price, product.compareAtPrice);

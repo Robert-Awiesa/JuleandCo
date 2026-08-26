@@ -30,6 +30,7 @@ Next, so the shop and the dashboard come from a single Node process.
 | `ADMIN_PASSWORD` | yes | your admin password | Secret. Same — changing it later does nothing on its own. |
 | `PAYSTACK_SECRET_KEY` | yes | from Paystack | Secret. Signs webhooks, initialises transactions. Never reaches a browser. |
 | `PAYSTACK_PUBLIC_KEY` | yes | from Paystack | Designed to be public. Must be the *same mode* as the secret. |
+| `ORDER_EXPIRY_MINUTES` | no | `60` | How long an unpaid order may hold its stock before the sweep returns it. |
 | `RESEND_API_KEY` | no | from Resend | Secret. Order emails. Unset, the shop works and simply tells nobody anything. |
 | `MAIL_FROM` | no | `JULES & CO <orders@your-domain>` | Must be a domain verified in Resend. Unset, mail goes out as `onboarding@resend.dev`. |
 | `BACKUP_ENABLED` | yes | `true` | Atlas M0 has no automated backups. |
