@@ -16,6 +16,17 @@ const nextConfig = {
   reactStrictMode: true,
 
   /**
+   * Where the build output goes. `.next` unless told otherwise.
+   *
+   * A production build is the only check that exercises prerendering — it has
+   * caught a broken page that tsc, ESLint and both test suites all passed — but
+   * it writes to the same directory a running dev server is serving from, so
+   * verifying the build meant breaking whoever was using the site. Setting
+   * NEXT_DIST_DIR sends a verification build somewhere harmless instead.
+   */
+  distDir: process.env.NEXT_DIST_DIR || ".next",
+
+  /**
    * Proxy the API through this app so the browser only ever talks to one origin.
    *
    * The auth cookie is set by the API and read back by frontend/middleware.ts to

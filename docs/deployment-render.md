@@ -30,14 +30,39 @@ Next, so the shop and the dashboard come from a single Node process.
 | `ADMIN_PASSWORD` | yes | your admin password | Secret. Same — changing it later does nothing on its own. |
 | `PAYSTACK_SECRET_KEY` | yes | from Paystack | Secret. Signs webhooks, initialises transactions. Never reaches a browser. |
 | `PAYSTACK_PUBLIC_KEY` | yes | from Paystack | Designed to be public. Must be the *same mode* as the secret. |
+| `RESEND_API_KEY` | no | from Resend | Secret. Order emails. Unset, the shop works and simply tells nobody anything. |
+| `MAIL_FROM` | no | `JULES & CO <orders@your-domain>` | Must be a domain verified in Resend. Unset, mail goes out as `onboarding@resend.dev`. |
 | `BACKUP_ENABLED` | yes | `true` | Atlas M0 has no automated backups. |
 | `BACKUP_HOUR` / `BACKUP_KEEP` | no | `3` / `14` | Hour of day, and how many to retain. |
 
 **Do not set `PORT`.** Render injects it, `server.js` reads it, and sets
 `API_ORIGIN` to its own loopback address so server components can reach the API.
 
-**`CLIENT_URL` is no longer needed.** It only ever fed the API's CORS allow-list,
-and with one origin the browser never makes a cross-origin request.
+**Set `CLIENT_URL` once you have a custom domain.** It used to feed only the
+API's CORS allow-list, which one origin makes moot — but it is now also where
+Paystack returns a customer after they pay. Unset, that falls back to Render's
+own `RENDER_EXTERNAL_URL`, so the `.onrender.com` deployment works untouched.
+Point a custom domain at the service and leave this unset, and paying customers
+land back on the `onrender.com` address instead of your shop.
+
+## Order email
+
+Optional, and off until you add a key — the shop takes money either way, it just
+tells nobody about it.
+
+1. Create a [Resend](https://resend.com) account. The free tier is 3,000 emails
+   a month, which is far more than this shop will send.
+2. Copy the API key into `RESEND_API_KEY` on Render.
+3. Leave `MAIL_FROM` unset to begin with. Mail then comes from
+   `onboarding@resend.dev`, which works immediately with no DNS at all — good
+   enough to prove the flow, not good enough for a customer to see.
+4. When you have a domain, verify it in Resend (three DNS records) and set
+   `MAIL_FROM` to something like `JULES & CO <orders@julesandco.com>`.
+
+Five emails are sent, each once per order: payment received, order confirmed,
+on its way, delivered, and cancelled. What has been sent is recorded on the
+order and shown in the admin under each order's Emails sent, so you never have
+to go to Resend to answer "have they heard from us?".
 
 ## Why one service
 

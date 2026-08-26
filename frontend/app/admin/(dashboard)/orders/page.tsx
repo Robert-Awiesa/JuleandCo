@@ -18,6 +18,15 @@ import { formatCurrency } from "../../_lib/format";
 import { useInvalidate } from "../../_lib/invalidate";
 import type { AdminOrder, OrderStatus, PaginatedResult } from "../../_lib/types";
 
+/** The stored event names, said the way the admin would say them. */
+const EMAIL_LABELS: Record<string, string> = {
+  paid: "Payment received",
+  processing: "Order confirmed",
+  shipped: "On its way",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+
 const STATUSES: OrderStatus[] = ["pending", "processing", "shipped", "delivered", "cancelled"];
 
 /** Reuses the stock badge tones rather than introducing a fourth colour scheme. */
@@ -268,6 +277,36 @@ function OrderRow({ order }: { order: AdminOrder }) {
                       Save
                     </button>
                   </div>
+                </div>
+
+                {/* What the customer has actually been told. Without this the
+                    admin has to ask the mail provider, and "have they heard
+                    from us?" is the question every status call starts with. */}
+                <div className="border-t border-obsidian/10 pt-4">
+                  <p className="mb-1 text-xs uppercase tracking-widest2 text-obsidian/50">
+                    Emails sent
+                  </p>
+                  {order.notifications?.length ? (
+                    <ul className="space-y-1">
+                      {order.notifications.map((note) => (
+                        <li key={note.event} className="text-xs text-obsidian/70">
+                          {EMAIL_LABELS[note.event] ?? note.event}
+                          <span className="text-obsidian/45">
+                            {" — "}
+                            {new Date(note.sentAt).toLocaleString("en-GB", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-obsidian/45">
+                      Nothing sent yet. The customer is emailed when payment goes through
+                      and each time you move the order on.
+                    </p>
+                  )}
                 </div>
 
                 {/* Only offered once cancelled: cancelling is what returns the

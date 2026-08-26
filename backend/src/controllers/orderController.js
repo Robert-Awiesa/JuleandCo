@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const Order = require("../models/Order");
 const { buildOrderLines, reserveStock, releaseStock, orderTotal } = require("../utils/orderPricing");
 const { searchRegex } = require("../utils/searchRegex");
+const { notifyCustomer } = require("../utils/orderEmails");
 
 /** JC for JULES & CO. Was AO-, left over from the Aura & Optic name. */
 function generateOrderNumber() {
@@ -191,6 +192,11 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     throw new Error("Order not found");
   }
 
+  // Captured before anything changes, so the customer is only told about a
+  // status that actually moved. Re-saving an order to set a delivery charge
+  // must not re-announce a status it already had.
+  const previousStatus = order.status;
+
   // Cancelling puts the stock back, once. Without the guard, cancelling an
   // already-cancelled order would inflate the catalogue.
   if (status === "cancelled" && order.status !== "cancelled" && !order.stockReleased) {
@@ -219,6 +225,17 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   }
 
   const updated = await order.save();
+
+  /**
+   * The customer hears about it, once, and only when the status really changed.
+   *
+   * After the save on purpose: the admin's action must succeed whether or not a
+   * mail provider is having a good minute, and notifyCustomer never throws.
+   */
+  if (status && status !== previousStatus) {
+    await notifyCustomer(updated, status);
+  }
+
   res.json(updated);
 });
 

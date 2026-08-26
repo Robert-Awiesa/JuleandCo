@@ -85,6 +85,22 @@ const orderSchema = new mongoose.Schema(
 
     // Set when stock was decremented, so cancelling can return it exactly once.
     stockReleased: { type: Boolean, default: false },
+
+    /**
+     * Which emails this customer has already had. A double-click, a corrected
+     * status, or a webhook retry must not tell someone twice that their order
+     * has shipped — that reads as a shop that has lost track of itself.
+     */
+    notifications: {
+      type: [
+        {
+          _id: false,
+          event: { type: String, required: true },
+          sentAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true }
 );

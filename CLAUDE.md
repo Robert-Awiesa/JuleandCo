@@ -1039,3 +1039,113 @@ verifies against Paystack directly, so a local test still confirms end to end.
 Switching test → live is two environment variables; no code knows the difference.
 
 Backend **274 → 294**, `tsc` clean, ESLint clean, production build clean.
+
+### 2026-08-26 — Order email, and a checkout that was lying about who takes the money
+
+#### The emails
+Five moments, each answering a question the customer would otherwise have to
+ask: payment received, order confirmed, on its way, delivered, cancelled.
+Cancellation was not asked for — cancelling an order someone paid for and saying
+nothing is the worst thing this shop could do by email, and it is where a refund
+conversation starts.
+
+- **Resend, over its HTTP API, no SDK** — it is one POST, and a dependency that
+  wraps one POST is a dependency that can break a deploy for nothing. Same
+  reasoning as `utils/paystack.js`.
+- **Inert until configured.** No `RESEND_API_KEY` and every send reports the
+  missing key rather than failing. The shop takes money either way; it just
+  tells nobody. `MAIL_FROM` falls back to `onboarding@resend.dev`, which works
+  with no DNS at all — enough to prove the flow before a domain exists.
+- **Every email carries plain text as well as HTML.** HTML-only mail renders as
+  nothing in some clients and reads as spam to some filters, and an unreadable
+  order confirmation is worse than a plain one.
+- **`notifications[]` on the Order is what stops a customer being told twice.**
+  A webhook retry, a double-click, a corrected status — each would otherwise
+  re-announce. Shown in the admin under each order as *Emails sent*, so "have
+  they heard from us?" is answerable without opening Resend.
+- **Status emails fire only on a real transition.** `previousStatus` is captured
+  before the save, so agreeing a delivery charge does not re-announce a status
+  the order already had.
+- **Sending never blocks an order.** `notifyCustomer` catches everything and is
+  called after the save, so a mail provider having a bad minute cannot fail a
+  payment or stop the admin marking something shipped. Failures log loudly.
+- Delivery is described honestly in the email: null is "will be arranged with
+  you", 0 is "no charge", a number is the number. The distinction the delivery
+  work introduced has to survive into the customer's inbox.
+
+**Two traps worth keeping.** `orderEmails.js` requires the mailer *as a module*
+rather than destructuring `sendEmail` — a destructured reference is captured at
+import and cannot be replaced, so a test that believed it had stubbed the mailer
+would post real email. And `app.js` loads `backend/.env` into every test process,
+so the moment a real key sits there the suite would mail its fixtures on every
+run: `mailer.sendEmail` now refuses outright when `NODE_ENV === "test"`, checked
+*after* the configuration check so an unconfigured environment still names the
+missing key.
+
+#### A production bug in the payment flow, found by auditing env vars
+`render.yaml` deliberately omitted `CLIENT_URL`, with a comment saying it only
+ever fed CORS. That was true when written — Paystack arrived afterwards and uses
+it to build the return URL. Deployed, it would have fallen back to
+`http://localhost:3000`: **a customer who paid would be redirected to a dead tab
+on their own machine.** The webhook would still mark the order paid, so this
+would have looked like a broken shop rather than a lost payment.
+
+`siteOrigin(req)` now tries `CLIENT_URL`, then Render's own
+`RENDER_EXTERNAL_URL`, then the request's origin. **The request comes last on
+purpose** — the Host header is set by the caller, so trusting it first would let
+someone hand a customer a payment link that returns them to an attacker's page
+*after* they have paid, which is a convincing place to be asked for card details
+a second time.
+
+The first version of that audit reported "none missing" against an **empty
+input** — `grep -P` is unsupported here and produced nothing. The audit now
+throws if it finds no variables at all. A verification that cannot fail is not a
+verification.
+
+#### The checkout was pretending to take the payment
+Asked why payment "still isn't passing through Paystack". The backend was fine —
+traced live, it returned a real `checkout.paystack.com` URL. The problem was on
+the page: `CheckoutView` still rendered a **Card Number / MM-YY / CVC form and a
+Mobile Money Number box**, left over from before Paystack. None had state, a
+handler or a name. They went nowhere.
+
+That is worse than cosmetic. A customer cannot tell an unwired card form from a
+real one, and inviting someone to type a live PAN into a page that does not
+handle cards is exactly what must not happen. It also made the shop look as
+though it were taking the payment itself, which is precisely how it read.
+
+Replaced with an honest panel saying payment completes on Paystack. Kept the
+method choice — it sets what Paystack opens with, and `applyTransaction` already
+adopts whichever channel was actually used. Fixed a dead ternary while there:
+both branches of the selected-state class were identical, so **the chosen method
+never highlighted**. Selection is gold now, per the accent rule.
+
+#### The buy-a-product journey had to stop at the boundary
+`buy-a-product.spec.ts` predated Paystack: it filled the mobile money box that no
+longer exists and expected an order number on a confirmation page. Placing the
+order is this shop's job; taking the money is Paystack's. The spec now blocks the
+handoff and asserts the app produced a real `checkout.paystack.com` session for
+the right order — following it would depend on Paystack being up, be flaky for
+reasons nothing here controls, and leave real test-mode transactions on the
+account.
+
+**Worth keeping:** the first version read the initialise response with
+`waitForResponse`, which failed — the page navigates to Paystack the instant that
+call returns, and a response navigated away from has no readable body. Capture it
+inside a `page.route` handler, which runs before the page ever sees it.
+
+#### Verifying the production build no longer breaks whoever is using the site
+`next build` writes to the same `.next` a dev server serves from, so the one check
+that exercises prerendering was routinely skipped — which is how the
+`useSearchParams`/Suspense failure once shipped past `tsc`, ESLint and both
+suites. `next.config.js` now reads `NEXT_DIST_DIR`, so
+`NEXT_DIST_DIR=.next-verify next build` verifies without touching a running
+server. `.next-verify/` is gitignored.
+
+**One nuisance:** that build rewrites `frontend/tsconfig.json`, reformatting it
+and adding its own types path. Revert it before committing.
+
+Verified: backend **315/315**, Playwright **32/32**, `tsc --noEmit` clean,
+production build clean with zero warnings. Live: an order placed against the
+running stack returned a real Paystack URL, then was cancelled and deleted with
+its stock returned. Catalogue 13 published, the owner's own orders untouched.

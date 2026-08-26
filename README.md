@@ -96,9 +96,11 @@ Create it with:
 | --- | --- |
 | `PORT` | API port (5000) |
 | `MONGO_URI` | MongoDB connection string |
+| `RESEND_API_KEY` | Optional. Order emails via Resend; unset, none are sent |
+| `MAIL_FROM` | Optional. Sender address; defaults to `onboarding@resend.dev` |
 | `JWT_SECRET` | Signs the auth cookie |
 | `JWT_EXPIRES_IN` | Token lifetime (e.g. `30d`) |
-| `CLIENT_URL` | Storefront origin, for CORS (`http://localhost:3000`) |
+| `CLIENT_URL` | Storefront origin — CORS, and where Paystack returns a customer after paying (`http://localhost:3000`) |
 | `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Product image uploads |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Seeded admin account |
 

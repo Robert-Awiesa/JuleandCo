@@ -7,6 +7,7 @@ const {
   toCedis,
 } = require("../utils/paystack");
 const { releaseStock } = require("../utils/orderPricing");
+const { notifyCustomer } = require("../utils/orderEmails");
 
 /**
  * Taking money, via Paystack.
@@ -72,7 +73,37 @@ async function applyTransaction(transaction) {
   if (transaction.channel === "mobile_money") order.paymentMethod = "mobile_money";
 
   await order.save();
+
+  // The receipt. Sent after the save, so a mail failure cannot leave an order
+  // unpaid in the database while the customer holds a confirmation.
+  await notifyCustomer(order, "paid");
+
   return { ok: true, order };
+}
+
+/**
+ * Where Paystack sends the customer back to.
+ *
+ * Tried in order of how much it can be trusted:
+ *
+ *   CLIENT_URL           — set deliberately by an operator. Wins, and is what
+ *                          you set once a custom domain is in front of Render.
+ *   RENDER_EXTERNAL_URL  — injected by Render itself. Means the single-service
+ *                          deployment needs no configuration to work at all.
+ *   the request's own origin — development, where the two above are absent.
+ *
+ * The request comes last on purpose: the Host header is set by the caller, so
+ * trusting it first would let someone hand a customer a payment link that
+ * returns them to a site of the attacker's choosing *after* they have paid.
+ * That is a convincing place to ask for card details again.
+ */
+function siteOrigin(req) {
+  const configured = process.env.CLIENT_URL || process.env.RENDER_EXTERNAL_URL;
+  const base = configured
+    ? configured.split(",")[0].trim()
+    : `${req.protocol}://${req.get("host")}`;
+
+  return base.replace(/\/+$/, "");
 }
 
 // @desc    Start paying for an order
@@ -104,10 +135,9 @@ const initialisePayment = asyncHandler(async (req, res) => {
     throw new Error("This order was cancelled and cannot be paid for");
   }
 
-  const base = (process.env.CLIENT_URL || "http://localhost:3000").split(",")[0].trim();
   const transaction = await initialiseTransaction({
     order,
-    callbackUrl: `${base.replace(/\/+$/, "")}/checkout/complete`,
+    callbackUrl: `${siteOrigin(req)}/checkout/complete`,
   });
 
   res.json({
@@ -233,6 +263,7 @@ const abandonPayment = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  siteOrigin,
   applyTransaction,
   initialisePayment,
   paystackWebhook,

@@ -190,6 +190,11 @@ export interface AdminOrder {
   totalPrice: number;
   status: OrderStatus;
   trackingNumber?: string;
+  /**
+   * Which emails this customer has already had. Shown in the admin so "did they
+   * get told?" is answerable without digging through a mail provider's logs.
+   */
+  notifications?: { event: string; sentAt: string }[];
   createdAt: string;
   updatedAt: string;
 }

@@ -82,6 +82,19 @@ services:
       - key: PAYSTACK_PUBLIC_KEY
         sync: false
 
+      # Transactional order email, via Resend. Without RESEND_API_KEY the shop
+      # works exactly as it does now and simply tells nobody anything — every
+      # send reports the missing key rather than failing an order.
+      #
+      # MAIL_FROM must be an address at a domain verified in Resend. Leave it
+      # unset and mail goes out as onboarding@resend.dev, which works
+      # immediately and is fine for testing, but is not what a customer should
+      # see a receipt come from.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
@@ -97,6 +110,14 @@ services:
       - key: ADMIN_PASSWORD
         sync: false
 
-      # CLIENT_URL is deliberately absent. It only ever fed the API's CORS
-      # allow-list, and with one origin the browser never makes a cross-origin
-      # request. The default covers local development.
+      # CLIENT_URL is optional here, and only needed once a custom domain is in
+      # front of this service.
+      #
+      # It no longer feeds only CORS — CORS is moot with one origin. It is now
+      # also where Paystack sends a customer back to after paying. Unset,
+      # backend/src/controllers/paymentController.js falls back to Render's own
+      # RENDER_EXTERNAL_URL, so the .onrender.com deployment works untouched.
+      # Point it at the real domain once you have one, or paying customers are
+      # returned to the onrender.com address instead of your shop.
+      # - key: CLIENT_URL
+      #   value: https://your-domain.com

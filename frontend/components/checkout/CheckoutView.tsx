@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Check, CreditCard, Smartphone } from "lucide-react";
+import { Check, CreditCard, Lock, Smartphone } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 import { Button } from "@/components/ui/Button";
 import { cartLineKey, cn, describeCartLine, formatCurrency } from "@/lib/utils";
@@ -250,7 +250,9 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
                   onClick={() => setPaymentMethod("mobile_money")}
                   className={cn(
                     "flex items-center gap-3 border p-4 text-left transition-colors",
-                    paymentMethod === "mobile_money" ? "border-line-strong" : "border-line-strong"
+                    paymentMethod === "mobile_money"
+                      ? "border-gold text-gold"
+                      : "border-line-strong hover:border-line"
                   )}
                 >
                   <Smartphone size={20} />
@@ -263,7 +265,9 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
                   onClick={() => setPaymentMethod("card")}
                   className={cn(
                     "flex items-center gap-3 border p-4 text-left transition-colors",
-                    paymentMethod === "card" ? "border-line-strong" : "border-line-strong"
+                    paymentMethod === "card"
+                      ? "border-gold text-gold"
+                      : "border-line-strong hover:border-line"
                   )}
                 >
                   <CreditCard size={20} />
@@ -274,29 +278,30 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
                 </button>
               </div>
 
-              {paymentMethod === "mobile_money" ? (
-                <input
-                  placeholder="Mobile Money Number"
-                  className="w-full border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
-                />
-              ) : (
-                <div className="space-y-4">
-                  <input
-                    placeholder="Card Number"
-                    className="w-full border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      placeholder="MM / YY"
-                      className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
-                    />
-                    <input
-                      placeholder="CVC"
-                      className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
-                    />
-                  </div>
-                </div>
-              )}
+              {/**
+                * No card or mobile-money fields here, deliberately.
+                *
+                * This page used to render a Card Number / expiry / CVC form and
+                * a mobile money box. None of them were wired to anything — they
+                * were left over from before Paystack — but a customer cannot
+                * tell an unwired card form from a real one. Typing a live card
+                * number into a page that does not handle cards is exactly what
+                * must not be invited, and it made the shop look as though it
+                * were taking the payment itself.
+                *
+                * Paystack collects the details, on Paystack's own page. All
+                * this step does is choose which method it should open with.
+                */}
+              <div className="flex gap-3 border border-line p-4 text-sm">
+                <Lock size={16} className="mt-0.5 shrink-0 text-gold" />
+                <p className="text-ink-muted">
+                  You will be taken to <span className="text-ink">Paystack</span> to complete
+                  payment securely.{" "}
+                  {paymentMethod === "mobile_money"
+                    ? "You will approve the charge on your phone."
+                    : "Your card details are entered on Paystack and never touch this site."}
+                </p>
+              </div>
 
               <div className="flex gap-3 pt-2">
                 <Button variant="secondary" onClick={() => setStep("shipping")}>
@@ -339,7 +344,7 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
                   Back
                 </Button>
                 <Button onClick={handlePlaceOrder} disabled={placing}>
-                  {placing ? "Placing order…" : "Place Order"}
+                  {placing ? "Taking you to Paystack…" : "Place Order & Pay"}
                 </Button>
               </div>
             </div>

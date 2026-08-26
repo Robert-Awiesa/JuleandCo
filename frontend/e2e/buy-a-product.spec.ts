@@ -118,16 +118,42 @@ test.describe("buying a product", () => {
     await page.getByPlaceholder("Region").fill(BUYER.region);
     await page.getByRole("button", { name: "Continue to Payment" }).click();
 
-    await page.getByPlaceholder("Mobile Money Number").fill(BUYER.phone);
+    // Mobile money is the default; there is nothing to type here any more.
+    // Paystack collects the number on its own page, which is the whole point.
     await page.getByRole("button", { name: "Review Order" }).click();
 
-    await page.getByRole("button", { name: "Place Order" }).click();
+    /**
+     * The handoff is blocked rather than followed.
+     *
+     * Placing the order is this shop's job; taking the money is Paystack's. A
+     * test that drove Paystack's live checkout would depend on their site being
+     * up, would be flaky for reasons nothing here controls, and would leave real
+     * test-mode transactions on the account. Asserting the app hands over the
+     * right URL tests everything this codebase is responsible for.
+     */
+    await page.route("https://checkout.paystack.com/**", (route) => route.abort());
 
-    // The number now comes from the API. Nothing was recorded before, so this
-    // is the assertion that the loop is actually closed.
-    const number = page.getByText(/JC-[A-Z0-9]+/);
-    await expect(number).toBeVisible({ timeout: 30000 });
-    orderNumber = ((await number.textContent()) || "").match(/JC-[A-Z0-9]+/)![0];
+    /**
+     * The body is read inside the route handler, not from a waitForResponse.
+     *
+     * The page navigates to Paystack the instant this call returns, and a
+     * response that has been navigated away from no longer has a readable body.
+     * Reading it here happens before the page ever sees it.
+     */
+    let payment: { authorizationUrl?: string; reference?: string } | undefined;
+    await page.route("**/payments/initialise", async (route) => {
+      const response = await route.fetch();
+      payment = await response.json();
+      await route.fulfill({ response });
+    });
+
+    await page.getByRole("button", { name: "Place Order & Pay" }).click();
+    await expect.poll(() => payment, { timeout: 30000 }).toBeTruthy();
+
+    // A real Paystack session, for a real order, with the order number as its
+    // reference — which is what lets the webhook find the order again.
+    expect(payment!.authorizationUrl).toContain("checkout.paystack.com");
+    orderNumber = payment!.reference!;
     expect(orderNumber).toMatch(/^JC-/);
   });
 

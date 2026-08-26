@@ -7,6 +7,7 @@ const Product = require("../models/Product");
 const { connectTestDB, clearTestDB, closeTestDB } = require("../test/setupTestDb");
 const { seedCatalogConfig, productFixture } = require("../test/catalogFixtures");
 const { toPesewas, toCedis, signatureIsValid } = require("../utils/paystack");
+const { siteOrigin } = require("./paymentController");
 
 const SECRET = "sk_test_pretend_key_for_tests";
 
@@ -223,6 +224,52 @@ describe("the webhook endpoint", () => {
       .send(raw);
 
     expect((await Order.findById(order._id)).paymentStatus).toBe("pending");
+  });
+});
+
+describe("where Paystack sends the customer back to", () => {
+  const request_ = (host) => ({ protocol: "https", get: () => host });
+
+  afterEach(() => {
+    delete process.env.CLIENT_URL;
+    delete process.env.RENDER_EXTERNAL_URL;
+  });
+
+  test("an operator's own domain wins", () => {
+    process.env.CLIENT_URL = "https://julesandco.com";
+    process.env.RENDER_EXTERNAL_URL = "https://jules.onrender.com";
+
+    expect(siteOrigin(request_("jules.onrender.com"))).toBe("https://julesandco.com");
+  });
+
+  test("Render's own address is used when nothing is configured", () => {
+    process.env.RENDER_EXTERNAL_URL = "https://jules.onrender.com";
+
+    // Without this the deployed shop would return paying customers to
+    // localhost, which is a dead tab on their own machine.
+    expect(siteOrigin(request_("jules.onrender.com"))).toBe("https://jules.onrender.com");
+  });
+
+  test("a trailing slash does not become a double slash in the URL", () => {
+    process.env.CLIENT_URL = "https://julesandco.com/";
+    expect(siteOrigin(request_("x"))).toBe("https://julesandco.com");
+  });
+
+  test("a comma-separated list takes the first entry", () => {
+    process.env.CLIENT_URL = "https://julesandco.com,https://www.julesandco.com";
+    expect(siteOrigin(request_("x"))).toBe("https://julesandco.com");
+  });
+
+  test("the request's own host is the last resort, not the first", () => {
+    // The Host header is set by whoever made the request. Trusting it ahead of
+    // configuration would let someone send a customer a payment link that
+    // returns them to an attacker's page immediately after they have paid —
+    // a convincing place to be asked for card details a second time.
+    process.env.CLIENT_URL = "https://julesandco.com";
+    expect(siteOrigin(request_("evil.example.com"))).toBe("https://julesandco.com");
+
+    delete process.env.CLIENT_URL;
+    expect(siteOrigin(request_("localhost:3000"))).toBe("https://localhost:3000");
   });
 });
 

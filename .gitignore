@@ -8,6 +8,9 @@ coverage/
 
 # next.js
 frontend/.next/
+# Scratch output for a verification build (NEXT_DIST_DIR), so checking that the
+# production build still works cannot clobber a running dev server.
+frontend/.next-verify/
 frontend/out/
 frontend/build/
 
