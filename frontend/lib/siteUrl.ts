@@ -10,9 +10,9 @@
  *   - robots.txt and the sitemap, which name absolute URLs by specification.
  *
  * Resolved the same way the Paystack return URL is, and for the same reason:
- * an operator's own domain wins, Render's address covers the deployment before
- * a domain exists, and localhost is the development fallback. Nothing here
- * trusts a request header.
+ * an operator's own domain wins, Vercel's own deployment hostname covers things
+ * before a domain exists, and localhost is the development fallback. Nothing
+ * here trusts a request header.
  */
 const FALLBACK = "http://localhost:3000";
 
@@ -27,7 +27,7 @@ export function siteUrl(): string {
   return (
     normalise(process.env.NEXT_PUBLIC_SITE_URL) ||
     normalise(process.env.CLIENT_URL) ||
-    normalise(process.env.RENDER_EXTERNAL_URL) ||
+    normalise(process.env.VERCEL_URL) ||
     FALLBACK
   );
 }

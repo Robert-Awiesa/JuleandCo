@@ -3,20 +3,18 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Check, CreditCard, Lock, Smartphone } from "lucide-react";
+import { Check, Lock } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 import { useHydrated } from "@/lib/useHydrated";
 import { Button } from "@/components/ui/Button";
 import { cartLineKey, cn, describeCartLine, formatCurrency } from "@/lib/utils";
 import type { DeliverySettings } from "@/lib/content";
 
-type Step = "shipping" | "payment" | "review" | "confirmation";
-type PaymentMethod = "mobile_money" | "card";
+type Step = "shipping" | "review" | "confirmation";
 
 const steps: { id: Step; label: string }[] = [
   { id: "shipping", label: "Shipping" },
-  { id: "payment", label: "Payment" },
-  { id: "review", label: "Review" },
+  { id: "review", label: "Review & Pay" },
 ];
 
 export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
@@ -24,7 +22,6 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
   const hydrated = useHydrated();
   const [step, setStep] = useState<Step>("shipping");
   const [orderNumber, setOrderNumber] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mobile_money");
 
   const [shipping, setShipping] = useState({
     fullName: "",
@@ -69,7 +66,7 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
         body: JSON.stringify({
           customer: { name: shipping.fullName, email, phone: shipping.phone },
           shippingAddress: shipping,
-          paymentMethod,
+          paymentMethod: "paystack",
           items: lines.map((line) => ({
             productId: line.productId,
             variantId: line.variantId,
@@ -199,7 +196,7 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                setStep("payment");
+                setStep("review");
               }}
               className="space-y-5"
             >
@@ -253,79 +250,9 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
                 />
               </div>
               <Button type="submit" className="mt-2">
-                Continue to Payment
+                Continue to Review
               </Button>
             </form>
-          )}
-
-          {step === "payment" && (
-            <div className="space-y-5">
-              <h2 className="font-serif text-2xl">Payment Method</h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <button
-                  onClick={() => setPaymentMethod("mobile_money")}
-                  className={cn(
-                    "flex items-center gap-3 border p-4 text-left transition-colors",
-                    paymentMethod === "mobile_money"
-                      ? "border-gold text-gold"
-                      : "border-line-strong hover:border-line"
-                  )}
-                >
-                  <Smartphone size={20} />
-                  <div>
-                    <p className="text-sm font-medium">Mobile Money</p>
-                    <p className="text-xs text-ink-subtle">MTN, Vodafone, AirtelTigo</p>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setPaymentMethod("card")}
-                  className={cn(
-                    "flex items-center gap-3 border p-4 text-left transition-colors",
-                    paymentMethod === "card"
-                      ? "border-gold text-gold"
-                      : "border-line-strong hover:border-line"
-                  )}
-                >
-                  <CreditCard size={20} />
-                  <div>
-                    <p className="text-sm font-medium">Card</p>
-                    <p className="text-xs text-ink-subtle">Visa, Mastercard</p>
-                  </div>
-                </button>
-              </div>
-
-              {/**
-                * No card or mobile-money fields here, deliberately.
-                *
-                * This page used to render a Card Number / expiry / CVC form and
-                * a mobile money box. None of them were wired to anything — they
-                * were left over from before Paystack — but a customer cannot
-                * tell an unwired card form from a real one. Typing a live card
-                * number into a page that does not handle cards is exactly what
-                * must not be invited, and it made the shop look as though it
-                * were taking the payment itself.
-                *
-                * Paystack collects the details, on Paystack's own page. All
-                * this step does is choose which method it should open with.
-                */}
-              <div className="flex gap-3 border border-line p-4 text-sm">
-                <Lock size={16} className="mt-0.5 shrink-0 text-gold" />
-                <p className="text-ink-muted">
-                  You will be taken to <span className="text-ink">Paystack</span> to complete
-                  payment securely.{" "}
-                  {paymentMethod === "mobile_money"
-                    ? "You will approve the charge on your phone."
-                    : "Your card details are entered on Paystack and never touch this site."}
-                </p>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button variant="secondary" onClick={() => setStep("shipping")}>
-                  Back
-                </Button>
-                <Button onClick={() => setStep("review")}>Review Order</Button>
-              </div>
-            </div>
           )}
 
           {step === "review" && (
@@ -334,16 +261,27 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
 
               <div className="border border-line p-5 text-sm">
                 <p className="mb-1 text-xs uppercase tracking-widest2 text-ink-subtle">Ship To</p>
-                <p>{shipping.fullName}</p>
+                <p className="font-medium">{shipping.fullName}</p>
                 <p className="text-ink-muted">
                   {shipping.address}, {shipping.city}, {shipping.region}
                 </p>
-                <p className="text-ink-muted">{shipping.phone}</p>
+                <p className="text-ink-muted">{shipping.phone} · {email}</p>
               </div>
 
               <div className="border border-line p-5 text-sm">
                 <p className="mb-1 text-xs uppercase tracking-widest2 text-ink-subtle">Payment</p>
-                <p className="capitalize">{paymentMethod.replace("_", " ")}</p>
+                <p className="font-medium text-ink">Paystack Secure Checkout</p>
+                <p className="mt-1 text-xs text-ink-muted">
+                  You can choose Mobile Money (MTN, Telecel, AT) or Card directly on Paystack.
+                </p>
+              </div>
+
+              <div className="flex gap-3 border border-line p-4 text-sm">
+                <Lock size={16} className="mt-0.5 shrink-0 text-gold" />
+                <p className="text-ink-muted">
+                  You will be taken to <span className="text-ink font-medium">Paystack</span> to complete
+                  payment securely.
+                </p>
               </div>
 
               {orderError && (
@@ -356,11 +294,11 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
               )}
 
               <div className="flex gap-3 pt-2">
-                <Button variant="secondary" onClick={() => setStep("payment")}>
+                <Button variant="secondary" onClick={() => setStep("shipping")}>
                   Back
                 </Button>
                 <Button onClick={handlePlaceOrder} disabled={placing}>
-                  {placing ? "Taking you to Paystack…" : "Place Order & Pay"}
+                  {placing ? "Taking you to Paystack…" : "Place Order & Pay with Paystack"}
                 </Button>
               </div>
             </div>

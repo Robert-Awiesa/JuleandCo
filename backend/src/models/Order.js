@@ -53,7 +53,7 @@ const orderSchema = new mongoose.Schema(
     orderNumber: { type: String, required: true, unique: true },
     items: { type: [orderItemSchema], required: true, validate: (v) => v.length > 0 },
     shippingAddress: { type: shippingAddressSchema, required: true },
-    paymentMethod: { type: String, enum: ["mobile_money", "card"], required: true },
+    paymentMethod: { type: String, enum: ["mobile_money", "card", "paystack"], default: "paystack" },
     paymentStatus: { type: String, enum: ["pending", "paid", "failed"], default: "pending" },
 
     /**

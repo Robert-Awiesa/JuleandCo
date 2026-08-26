@@ -20,11 +20,20 @@ function normaliseOrigin(value?: string) {
   if (!value) return "";
   const trimmed = value.trim().replace(/\/+$/, "");
   if (!trimmed) return "";
-  // Render hands over a bare hostname; accept it with or without a scheme.
+  // Vercel's VERCEL_URL is a bare hostname; accept it with or without a scheme.
   return /^https?:\/\//.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-const API_ORIGIN = normaliseOrigin(process.env.API_ORIGIN);
+/**
+ * Server components fetch over HTTP, so they need an absolute origin — a bare
+ * `/api` works in a browser and fails on the server, where there is no page to
+ * be relative to.
+ *
+ * VERCEL_URL is the running deployment's own hostname, which is exactly what a
+ * server render should call: it reaches the same code it is part of, including
+ * on preview deployments, without anything to configure.
+ */
+const API_ORIGIN = normaliseOrigin(process.env.API_ORIGIN || process.env.VERCEL_URL);
 const API_URL = API_ORIGIN
   ? `${API_ORIGIN}/api`
   : process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";

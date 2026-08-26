@@ -175,7 +175,7 @@ export interface AdminOrder {
     city: string;
     region: string;
   };
-  paymentMethod: "mobile_money" | "card";
+  paymentMethod: "mobile_money" | "card" | "paystack" | string;
   paymentStatus: "pending" | "paid" | "failed";
   /** Paystack's reference — the order number — once payment has gone through. */
   paymentReference?: string;

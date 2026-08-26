@@ -1,0 +1,32 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+
+  "installCommand": "npm ci --include=dev",
+  "buildCommand": "npm run build -w frontend",
+  "outputDirectory": "frontend/.next",
+
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60
+    }
+  },
+
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index"
+    }
+  ],
+
+  "crons": [
+    {
+      "path": "/api/cron/expire-orders",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/backup",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

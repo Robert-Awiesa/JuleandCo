@@ -210,6 +210,42 @@ describe("the webhook endpoint", () => {
     expect((await Order.findById(order._id)).paymentMethod).toBe("card");
   });
 
+  test("a body nothing captured is reported as a deployment fault, not a forgery", async () => {
+    const { order } = await placeOrder();
+
+    /**
+     * Reproduces the condition rather than approximating it: `req.rawBody` is
+     * only ever set by express.json's verify hook, which does not run when the
+     * body was not JSON it recognised — the same end state as a platform body
+     * parser having consumed the stream first, which is what Vercel's Node
+     * runtime does unless told not to.
+     *
+     * Refusing this as "invalid signature" would send whoever debugs it hunting
+     * Paystack for a problem that is entirely ours.
+     */
+    const res = await request(app)
+      .post("/api/payments/webhook")
+      .set("Content-Type", "text/plain")
+      .set("x-paystack-signature", "whatever")
+      .send("anything at all");
+
+    expect(res.status).toBe(500);
+    expect(res.body.message).toMatch(/cannot be verified/i);
+    expect((await Order.findById(order._id)).paymentStatus).toBe("pending");
+  });
+
+  test("an empty body is still just a refusal, not a deployment fault", async () => {
+    // Present but empty is something a prober sends. It is not evidence that
+    // the deployment is broken, so it stays a plain 401.
+    const res = await request(app)
+      .post("/api/payments/webhook")
+      .set("Content-Type", "application/json")
+      .set("x-paystack-signature", "whatever")
+      .send("");
+
+    expect(res.status).toBe(401);
+  });
+
   test("an event other than charge.success changes nothing", async () => {
     const { order } = await placeOrder();
     const { raw, signature } = webhook({
@@ -232,18 +268,18 @@ describe("where Paystack sends the customer back to", () => {
 
   afterEach(() => {
     delete process.env.CLIENT_URL;
-    delete process.env.RENDER_EXTERNAL_URL;
+    delete process.env.VERCEL_URL;
   });
 
   test("an operator's own domain wins", () => {
     process.env.CLIENT_URL = "https://julesandco.com";
-    process.env.RENDER_EXTERNAL_URL = "https://jules.onrender.com";
+    process.env.VERCEL_URL = "https://jules.onrender.com";
 
     expect(siteOrigin(request_("jules.onrender.com"))).toBe("https://julesandco.com");
   });
 
-  test("Render's own address is used when nothing is configured", () => {
-    process.env.RENDER_EXTERNAL_URL = "https://jules.onrender.com";
+  test("the deployment's own address is used when nothing is configured", () => {
+    process.env.VERCEL_URL = "https://jules.onrender.com";
 
     // Without this the deployed shop would return paying customers to
     // localhost, which is a dead tab on their own machine.

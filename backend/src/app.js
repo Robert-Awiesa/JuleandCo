@@ -21,6 +21,7 @@ const contentRoutes = require("./routes/contentRoutes");
 const customerRoutes = require("./routes/customerRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const cronRoutes = require("./routes/cronRoutes");
 
 const app = express();
 
@@ -122,6 +123,7 @@ app.use("/api/orders", (req, res, next) =>
 );
 app.use("/api/payments/initialise", limits.checkout);
 
+app.use("/api/cron", cronRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/orders", orderRoutes);

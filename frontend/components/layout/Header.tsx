@@ -124,7 +124,7 @@ export function Header({
             <Link
               href="/account/wishlist"
               aria-label="Wishlist"
-              className="hidden h-11 w-11 items-center justify-center text-ink transition-colors hover:text-gold sm:flex"
+              className="flex h-11 w-11 items-center justify-center text-ink transition-colors hover:text-gold"
             >
               <span className="relative">
                 <Heart size={19} />
@@ -182,31 +182,51 @@ export function Header({
               onClick={() => setMobileOpen(false)}
             />
             <motion.div
-              className="fixed right-0 top-0 z-[91] h-full w-[85%] max-w-sm bg-surface-raised p-6"
+              className="fixed right-0 top-0 z-[91] flex h-full w-[85%] max-w-sm flex-col justify-between bg-surface-raised p-6"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
             >
-              <div className="mb-8 flex items-center justify-between">
-                <span className="font-serif text-xl">Menu</span>
-                <button onClick={() => setMobileOpen(false)} aria-label="Close menu">
-                  <X size={20} />
-                </button>
+              <div>
+                <div className="mb-8 flex items-center justify-between">
+                  <span className="font-serif text-xl">Menu</span>
+                  <button onClick={() => setMobileOpen(false)} aria-label="Close menu">
+                    <X size={20} />
+                  </button>
+                </div>
+                <ul className="space-y-5">
+                  {primaryNav.map((item) => (
+                    <li key={item.label}>
+                      <Link
+                        href={item.href}
+                        onClick={() => setMobileOpen(false)}
+                        className="text-lg font-serif"
+                      >
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="space-y-5">
-                {primaryNav.map((item) => (
-                  <li key={item.label}>
-                    <Link
-                      href={item.href}
-                      onClick={() => setMobileOpen(false)}
-                      className="text-lg font-serif"
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+
+              <div className="border-t border-line pt-6">
+                <Link
+                  href="/account/wishlist"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-between py-2 text-ink transition-colors hover:text-gold"
+                >
+                  <span className="flex items-center gap-3 text-base">
+                    <Heart size={18} />
+                    Wishlist
+                  </span>
+                  {wishlistCount > 0 && (
+                    <span className="numeric flex h-5 min-w-5 items-center justify-center bg-gold px-1.5 text-xs text-surface">
+                      {wishlistCount}
+                    </span>
+                  )}
+                </Link>
+              </div>
             </motion.div>
           </>
         )}

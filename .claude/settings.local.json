@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl -sL -o jules-hero.jpg \"https://catlog-s3.s3.eu-west-2.amazonaws.com/rw1y7p7pig.jpeg\")"
+      "Bash(curl -sL -o jules-hero.jpg \"https://catlog-s3.s3.eu-west-2.amazonaws.com/rw1y7p7pig.jpeg\")",
+      "Bash(rm -f src/utils/labelMap.js)",
+      "Bash(node -e ' *)"
     ]
   }
 }

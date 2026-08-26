@@ -49,7 +49,7 @@ const createOrder = asyncHandler(async (req, res) => {
       orderNumber: generateOrderNumber(),
       items: priced.lines,
       shippingAddress,
-      paymentMethod,
+      paymentMethod: paymentMethod || "paystack",
       itemsPrice: priced.itemsPrice,
       shippingPrice: priced.shippingPrice,
       totalPrice: priced.totalPrice,

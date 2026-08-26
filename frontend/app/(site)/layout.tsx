@@ -4,6 +4,7 @@ import "../globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CartDrawer } from "@/components/layout/CartDrawer";
+import { WhatsAppButton } from "@/components/layout/WhatsAppButton";
 import { fetchFacets } from "@/lib/api";
 import { fetchSiteContent } from "@/lib/content";
 import { siteUrlObject } from "@/lib/siteUrl";
@@ -94,6 +95,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main className="pt-20">{children}</main>
         <Footer content={content["layout.footer"]} contact={content["store.contact"]} />
         <CartDrawer />
+        <WhatsAppButton contact={content["store.contact"]} />
       </body>
     </html>
   );

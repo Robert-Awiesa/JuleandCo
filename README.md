@@ -113,13 +113,16 @@ Create it with:
 > back to `/admin/login`. Restart `next dev` after changing either file; env changes are not hot-reloaded
 > into middleware.
 
-The frontend ships with a local mock data layer (`frontend/lib/mockData.ts`) so the UI is fully browsable **before** the backend/database is wired up — see Phase 2 vs. Phase 3 in the roadmap below.
-
 ## Deployment
 
-Render blueprint: [`render.yaml`](render.yaml). Every environment variable, the
-first-deploy steps, and why the API is proxied through the frontend are in
-[docs/deployment-render.md](docs/deployment-render.md).
+One Vercel project serves the whole shop: Next renders the storefront and the
+admin, and the Express API runs beside it as a Serverless Function at `/api/*`,
+so everything is same-origin and the admin auth cookie simply works.
+
+Configured in [`vercel.json`](vercel.json), with the entry point in
+[`api/index.js`](api/index.js). Every environment variable, the cron jobs that
+replace the in-process schedules, and the first-deploy steps are in
+[docs/deployment-vercel.md](docs/deployment-vercel.md).
 
 ## 6. Key User Flows & Page Modules
 

@@ -110,10 +110,10 @@ async function applyTransaction(transaction) {
  *
  * Tried in order of how much it can be trusted:
  *
- *   CLIENT_URL           — set deliberately by an operator. Wins, and is what
- *                          you set once a custom domain is in front of Render.
- *   RENDER_EXTERNAL_URL  — injected by Render itself. Means the single-service
- *                          deployment needs no configuration to work at all.
+ *   CLIENT_URL   — set deliberately by an operator. Wins, and is what you set
+ *                  once a custom domain is in front of the deployment.
+ *   VERCEL_URL   — the running deployment's own hostname, injected by Vercel.
+ *                  Means a fresh deployment works with nothing configured.
  *   the request's own origin — development, where the two above are absent.
  *
  * The request comes last on purpose: the Host header is set by the caller, so
@@ -122,7 +122,7 @@ async function applyTransaction(transaction) {
  * That is a convincing place to ask for card details again.
  */
 function siteOrigin(req) {
-  const configured = process.env.CLIENT_URL || process.env.RENDER_EXTERNAL_URL;
+  const configured = process.env.CLIENT_URL || process.env.VERCEL_URL;
   const base = configured
     ? configured.split(",")[0].trim()
     : `${req.protocol}://${req.get("host")}`;
@@ -179,6 +179,22 @@ const paystackWebhook = asyncHandler(async (req, res) => {
    * the exact bytes Paystack sent. Re-serialising the parsed object would
    * reorder keys and the signature would never match.
    */
+  /**
+   * A missing raw body is a deployment fault, not a forged request, and the two
+   * must not report the same way. It means something upstream parsed the body
+   * before Express did — the classic case being a platform's own body parser —
+   * and every genuine webhook would then be refused as forged while the logs
+   * blamed Paystack.
+   */
+  if (!req.rawBody) {
+    console.error(
+      "[paystack] webhook arrived with no raw body — something parsed it before " +
+        "Express. The signature cannot be checked. See api/index.js."
+    );
+    res.status(500);
+    throw new Error("Webhook cannot be verified on this deployment");
+  }
+
   if (!signatureIsValid(req.rawBody, req.headers["x-paystack-signature"])) {
     // Anyone can POST here; only Paystack can sign. Refusing quietly is right —
     // this is not a user-facing error.

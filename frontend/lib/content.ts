@@ -95,8 +95,7 @@ export interface ContactSettings {
   whatsapp?: string;
   address?: string;
   instagram?: string;
-  facebook?: string;
-  twitter?: string;
+  tiktok?: string;
 }
 
 export interface SeoContent {
@@ -145,7 +144,10 @@ const OFFLINE_FALLBACK: SiteContent = {
   "store.delivery": {
     checkoutNote: "Delivery is arranged with you once your order is confirmed.",
   },
-  "store.contact": {},
+  "store.contact": {
+    instagram: "https://instagram.com",
+    tiktok: "https://tiktok.com",
+  },
 };
 
 /** Every slot in one request. Layouts need several, so this beats N calls. */
