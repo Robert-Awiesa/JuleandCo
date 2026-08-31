@@ -1267,3 +1267,141 @@ Verified: backend **327/327** (23 suites), `tsc` clean, Playwright **34/34**,
 production build clean with zero warnings. Live: security headers present, the
 login limiter refuses the eleventh attempt, robots and sitemap serve, and an
 unmatched URL renders the branded 404.
+
+### 2026-08-31 — Vercel instead of Render
+
+Hosting moved. `render.yaml` and its guide are gone; [`vercel.json`](vercel.json)
+and [`docs/deployment-vercel.md`](docs/deployment-vercel.md) replace them.
+
+Express did **not** get rewritten. It runs as a Vercel Serverless Function via
+`api/index.js`, with `/api/*` rewritten onto it — so all 300-odd backend tests
+and every controller are untouched, and the storefront and API stay same-origin,
+which is the only reason the admin cookie works at all.
+
+**Three things break on serverless and had to be handled:**
+
+- **Nothing runs on a timer.** A function is frozen the moment it responds, so
+  the in-process backup and order-expiry schedules never fire again. Both are
+  Vercel Cron jobs now, behind `/api/cron/*`, authenticated with `CRON_SECRET` —
+  which **refuses outright when unset**, because the safe reading of a missing
+  password is "no", not "let everybody in". Miss this and there are no backups
+  at all and abandoned checkouts hold stock forever.
+- **`connectDB` opened a new Atlas connection per cold start.** Cached on
+  `globalThis` rather than in module scope, because a platform may re-evaluate
+  the module while reusing the process and quietly reset a module-level variable.
+- **Vercel's Node runtime parses request bodies**, consuming the stream before
+  Express sees it — which would leave `req.rawBody` unset and make *every*
+  Paystack webhook fail its signature check while the logs blamed Paystack.
+  Disabled via `config.api.bodyParser`, and the webhook now reports a missing
+  raw body as a deployment fault (500) rather than a forgery (401).
+
+`RENDER_EXTERNAL_URL` became `VERCEL_URL` in `siteUrl.ts` and `paymentController`.
+
+### 2026-08-31 — Order email that reads like a receipt
+
+The emails were printing raw Mongoose documents at the customer:
+`{ product: new ObjectId('…'), image: '…' } / options / [object Object]`.
+
+`options` and `selections` are **Map paths**. A document read back from Mongo
+holds a real Map, and `Object.values()` on one returns the document's own
+internals. A freshly created document still holds a plain object — which is
+exactly why every existing test passed: they all used the in-memory order.
+**The new tests read the order back from the database first**, and three of them
+fail against the old code.
+
+Options are labelled now — "Frame Colour: Sage · Lens: Sage Tint" rather than
+"Sage · Sage Tint", which never said which was which. The whole email was
+rebuilt table-based and inline-styled so Outlook renders it, with the shipping
+address included so the customer can check it, and every value HTML-escaped.
+
+### 2026-08-31 — Attributes: finishing the tab, and a real orphaning bug
+
+`PUT` and `DELETE /attribute-groups/:id` existed from the start and **nothing in
+the admin ever called them**, so a group created with the wrong role or category
+was permanent from the interface.
+
+**The bug underneath was worse.** An attribute value lives in one of two places:
+`attributes.<key>` for specs, and `options[].values[].value` for variant axes.
+The delete guard only looked at the first. A variant axis does not appear in
+`attributes` at all — verified live: deleting "Yellow Gold" reported **nought**
+products using it while two necklaces were actively sold in it. Same silent
+orphaning the group-key refactor was meant to end; fixed for specs, never
+extended to axes. `utils/attributeUsage.js` now covers both, for options and
+groups alike.
+
+Also: usage counts beside every option (one aggregation, not 109 queries);
+retired lines hidden behind a toggle and badged, since Apparel's four groups
+kept rendering as live; a warning naming active categories with no attributes of
+their own — **Laptops has none**; search and filters; one request for all options
+instead of one per panel; option reordering; and `unit`/`placeholder`, in the
+schema since the pivot with no way to reach them.
+
+Attribute groups had **no tests at all** before this.
+
+### 2026-08-31 — Launch readiness, phases 1 and 2
+
+Assessment published as an artifact. Security, payments, data safety and test
+coverage were already strong; what was missing was **lawful, findable and
+measurable**.
+
+#### Phase 1 — what blocks trading
+
+Privacy notice, returns policy and terms of sale, as content slots so they are
+editable in the admin. They share one field shape, so all three got a working
+editor without one being written. **The defaults describe how this shop actually
+works** — delivery agreed after confirmation, Paystack holding the card details,
+which services see customer data and for how long — with `[YOUR …]` and
+`[CONFIRM: …]` markers wherever the owner's own details are needed. A starting
+point for review, not legal advice.
+
+**Two things found while doing it, both worse than the gap they sat in:**
+
+- **The footer advertised five pages that did not exist.** `/contact`,
+  `/shipping`, `/size-guide`, `/careers`, `/account/orders` — all 404, from the
+  footer of every page, including the two links a worried customer reaches for
+  first. Fixing the defaults was not enough: `layout.footer` is the one slot that
+  had been edited, and the saved document is what renders — hence
+  `scripts/fixFooterLinks.js`, idempotent. An e2e now walks every footer link and
+  fails on any status past 400.
+- **The newsletter signup was not wired to anything.** It took an address,
+  answered "Thanks!", and threw it away, so everyone who joined believed they
+  were on a list that did not exist. Same class as the card fields removed from
+  checkout. Now stored, with real states; signing up twice is not an error, and
+  unsubscribing **marks rather than deletes** — a deleted address is re-added by
+  the next form submission and starts the mail again.
+
+#### Phase 2 — findable, and measured
+
+- **Structured data.** Product/Offer/BreadcrumbList per product,
+  Organization/WebSite site-wide. Two rules that matter more than the markup:
+  every URL absolute (a relative one is silently ignored), and **an aggregate
+  rating only when reviews exist** — `rating` is deliberately null until a
+  product has one, and claiming a rating with nothing behind it is what Google's
+  policies treat as spam.
+- **The crawl surface.** `/shop` forwards any unrecognised parameter to the API,
+  so a filter added in the admin needs no frontend edit — at the cost of an
+  effectively unbounded URL space, 26 groups × 109 options in any combination.
+  A category is now its own indexable page; anything filtered canonicalises to
+  it and asks not to be indexed, keeping `follow`.
+- **Analytics**, inert without `NEXT_PUBLIC_GA_ID`, same pattern as the mailer.
+  The purchase event fires **inside the cart-clear guard**, because the
+  confirmation page polls and anything outside it would fire on every attempt.
+- `updatedAt` on the public product payload, so the sitemap has a `lastmod`.
+
+**Two faults in my own tests worth keeping:** Playwright's `request` fixture uses
+the page's baseURL, so `/api` calls hit :3000 where there is no rewrite in
+development and every product test **silently skipped**; and `getAttribute` on a
+locator matching nothing waits the full timeout, when "there is no robots meta"
+is the expected answer on an indexable page.
+
+Verified: backend **376/376** (26 suites), `tsc` clean, Playwright **55/55**,
+production build clean.
+
+#### Still outstanding before launch
+- The bracketed details in all three policies, and a review of the wording.
+- Paystack webhook URL, then test → live keys.
+- Real photography and testimonials; the homepage tiles are still Unsplash.
+- `jules-hero.jpg` is **5.1 MB**, `jules-hero-3.png` 1.8 MB.
+- Error tracking and uptime monitoring; a restore has never been rehearsed.
+- Next.js 14 → 16 for the residual advisories. 14.2.35 is the latest 14.x, so
+  the middleware auth bypass is already patched.
