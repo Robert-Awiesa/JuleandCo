@@ -1,7 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const AttributeGroup = require("../models/AttributeGroup");
 const Attribute = require("../models/Attribute");
-const Product = require("../models/Product");
+const { countProductsUsingGroup } = require("../utils/attributeUsage");
 
 // @desc    List attribute groups, optionally for one category
 // @route   GET /api/attribute-groups
@@ -42,14 +42,38 @@ const updateAttributeGroup = asyncHandler(async (req, res) => {
   // orphan every product using the group.
   const { key, ...safe } = req.body;
 
+  const existing = await AttributeGroup.findById(req.params.id);
+  if (!existing) {
+    res.status(404);
+    throw new Error("Attribute group not found");
+  }
+
+  /**
+   * A list-backed group cannot become a free field while it still has options.
+   *
+   * "select"/"multiselect" draw from the vocabulary; "text"/"number" do not. So
+   * switching away hides every option from the form while products keep
+   * referencing them — the values stay in the database, unreachable and
+   * un-editable, which is worse than being refused.
+   */
+  const wasList = ["select", "multiselect"].includes(existing.inputType);
+  const willBeList = ["select", "multiselect"].includes(safe.inputType ?? existing.inputType);
+
+  if (wasList && !willBeList) {
+    const optionCount = await Attribute.countDocuments({ group: existing.key });
+    if (optionCount > 0) {
+      res.status(409);
+      throw new Error(
+        `"${existing.label}" still has ${optionCount} option(s). Remove them before ` +
+          `changing how it is entered, or those options become unreachable.`
+      );
+    }
+  }
+
   const group = await AttributeGroup.findByIdAndUpdate(req.params.id, safe, {
     new: true,
     runValidators: true,
   });
-  if (!group) {
-    res.status(404);
-    throw new Error("Attribute group not found");
-  }
   res.json(group);
 });
 
@@ -71,9 +95,9 @@ const deleteAttributeGroup = asyncHandler(async (req, res) => {
     );
   }
 
-  const productCount = await Product.countDocuments({
-    [`attributes.${group.key}`]: { $exists: true },
-  });
+  // Counts variant-axis use as well as specs — a group used only as an axis
+  // does not appear in `attributes` at all.
+  const productCount = await countProductsUsingGroup(group.key);
   if (productCount > 0) {
     res.status(409);
     throw new Error(`Cannot delete "${group.label}" — ${productCount} product(s) still use it`);

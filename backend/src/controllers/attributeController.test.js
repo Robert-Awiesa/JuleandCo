@@ -237,3 +237,127 @@ test("returns 404 deleting an attribute that does not exist", async () => {
     .set("Cookie", [`token=${token}`]);
   expect(res.status).toBe(404);
 });
+
+/**
+ * A variant axis stores its values in `options[].values[].value`, and does not
+ * appear in `attributes` at all. The guard only ever looked at `attributes`, so
+ * deleting "Yellow Gold" reported nought products using it while two necklaces
+ * were actively sold in it.
+ */
+function axisProduct(groupKey, values, overrides = {}) {
+  return productPayload({
+    category: "jewellery",
+    subCategory: "necklaces",
+    options: [
+      {
+        name: "Metal",
+        groupKey,
+        values: values.map((v) => ({ value: v, label: v })),
+      },
+    ],
+    variants: values.map((v) => ({
+      id: v,
+      optionValues: [{ name: "Metal", value: v }],
+      stock: 1,
+    })),
+    ...overrides,
+  });
+}
+
+test("refuses to delete an option a product sells as a variant axis", async () => {
+  const token = await adminToken();
+  await seedGroups();
+  const attr = await Attribute.create({
+    group: "metal",
+    value: "yellow-gold",
+    label: "Yellow Gold",
+  });
+  await Product.create(axisProduct("metal", ["yellow-gold", "sterling-silver"]));
+
+  const res = await request(app)
+    .delete(`/api/attributes/${attr._id}`)
+    .set("Cookie", [`token=${token}`]);
+
+  // Deleting this would leave the product selling a metal that no longer exists.
+  expect(res.status).toBe(409);
+  expect(res.body.message).toMatch(/still use it/);
+  expect(await Attribute.countDocuments()).toBe(1);
+});
+
+test("an option used by neither specs nor axes is still deletable", async () => {
+  const token = await adminToken();
+  await seedGroups();
+  const attr = await Attribute.create({ group: "metal", value: "platinum", label: "Platinum" });
+  await Product.create(axisProduct("metal", ["yellow-gold"]));
+
+  const res = await request(app)
+    .delete(`/api/attributes/${attr._id}`)
+    .set("Cookie", [`token=${token}`]);
+
+  // The guard must not become "refuse everything" — tidying unused vocabulary
+  // is the point of having a delete at all.
+  expect(res.status).toBe(200);
+});
+
+describe("usage counts", () => {
+  test("count both spec values and variant axis values", async () => {
+    const token = await adminToken();
+    await seedGroups();
+    await Product.create(axisProduct("metal", ["yellow-gold", "sterling-silver"]));
+    await Product.create(
+      axisProduct("metal", ["yellow-gold"], { slug: "second", name: "Second" })
+    );
+    await Product.create(
+      productPayload({ slug: "third", name: "Third", attributes: { frameShape: "aviator" } })
+    );
+
+    const res = await request(app)
+      .get("/api/attributes/usage")
+      .set("Cookie", [`token=${token}`]);
+
+    expect(res.status).toBe(200);
+    expect(res.body["metal:yellow-gold"]).toBe(2);
+    expect(res.body["metal:sterling-silver"]).toBe(1);
+    expect(res.body["frameShape:aviator"]).toBe(1);
+  });
+
+  test("count each value inside a multiselect", async () => {
+    const token = await adminToken();
+    await AttributeGroup.create({ key: "lensType", label: "Lens", inputType: "multiselect" });
+    await Product.create(productPayload({ attributes: { lensType: ["polarised", "clear"] } }));
+
+    const res = await request(app)
+      .get("/api/attributes/usage")
+      .set("Cookie", [`token=${token}`]);
+
+    expect(res.body["lensType:polarised"]).toBe(1);
+    expect(res.body["lensType:clear"]).toBe(1);
+  });
+
+  test("omit a value nothing uses, so unused vocabulary is visible as absent", async () => {
+    const token = await adminToken();
+    await seedGroups();
+    await Attribute.create({ group: "metal", value: "platinum", label: "Platinum" });
+
+    const res = await request(app)
+      .get("/api/attributes/usage")
+      .set("Cookie", [`token=${token}`]);
+
+    expect(res.body["metal:platinum"]).toBeUndefined();
+  });
+
+  test("are admin-only", async () => {
+    const res = await request(app).get("/api/attributes/usage");
+    expect(res.status).toBe(401);
+  });
+
+  test("do not mistake the literal id \"usage\" for an attribute", async () => {
+    const token = await adminToken();
+    const res = await request(app)
+      .get("/api/attributes/usage")
+      .set("Cookie", [`token=${token}`]);
+
+    // Registered above /:id; otherwise this would be a CastError 404.
+    expect(res.status).toBe(200);
+  });
+});

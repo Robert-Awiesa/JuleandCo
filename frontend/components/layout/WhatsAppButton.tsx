@@ -33,16 +33,8 @@ export function WhatsAppButton({ contact }: { contact?: ContactSettings }) {
     : `https://wa.me/?text=${defaultMessage}`;
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3">
-      {/* Tooltip on hover / subtle luxury badge */}
-      <span
-        className={`pointer-events-none hidden select-none rounded-full bg-surface-raised/95 px-3.5 py-1.5 text-xs font-medium tracking-wide text-ink shadow-card border border-line-strong backdrop-blur-sm transition-all duration-300 sm:inline-block ${
-          hovered ? "translate-x-0 opacity-100" : "translate-x-2 opacity-0"
-        }`}
-      >
-        Chat with us
-      </span>
-
+    // Bottom-LEFT so it never overlaps the footer's social icons (bottom-right)
+    <div className="fixed bottom-6 left-6 z-40 flex items-center gap-3">
       <a
         href={href}
         target="_blank"
@@ -50,14 +42,22 @@ export function WhatsAppButton({ contact }: { contact?: ContactSettings }) {
         aria-label="Chat with JULES & CO on WhatsApp"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className="group relative flex h-13 w-13 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-[#25D366]/25 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-[#25D366]/35 active:scale-95"
+        className="group relative flex items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-[#25D366]/25 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-[#25D366]/35 active:scale-95"
         style={{ width: "3.25rem", height: "3.25rem" }}
       >
         {/* Subtle ping pulse ring behind the button */}
         <span className="absolute -inset-0.5 animate-ping rounded-full bg-[#25D366]/30 opacity-75 duration-1000" />
-        
         <WhatsAppIcon size={26} className="relative z-10 transition-transform duration-300 group-hover:scale-105" />
       </a>
+
+      {/* Tooltip — slides in to the right of the button on hover */}
+      <span
+        className={`pointer-events-none hidden select-none rounded-full bg-surface-raised/95 px-3.5 py-1.5 text-xs font-medium tracking-wide text-ink shadow-card border border-line-strong backdrop-blur-sm transition-all duration-300 sm:inline-block ${
+          hovered ? "translate-x-0 opacity-100" : "-translate-x-2 opacity-0"
+        }`}
+      >
+        Chat with us
+      </span>
     </div>
   );
 }

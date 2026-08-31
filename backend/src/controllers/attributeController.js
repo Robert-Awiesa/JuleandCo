@@ -1,20 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const Attribute = require("../models/Attribute");
 const AttributeGroup = require("../models/AttributeGroup");
-const Product = require("../models/Product");
-
-/**
- * Counts products still referencing an option.
- *
- * This used to need a hardcoded group -> product-field map, and any group
- * missing from it silently skipped the check, so its options could be deleted
- * while products still used them. Now that every attribute lives under
- * `attributes.<groupKey>`, one query covers every group, including ones that
- * do not exist yet.
- */
-function countProductsUsing(group, value) {
-  return Product.countDocuments({ [`attributes.${group}`]: value });
-}
+const { countProductsUsing, usageByValue } = require("../utils/attributeUsage");
 
 // @desc    List vocabulary options, optionally narrowed to one group or category
 // @route   GET /api/attributes
@@ -97,4 +84,21 @@ const deleteAttribute = asyncHandler(async (req, res) => {
   res.json({ message: "Attribute removed" });
 });
 
-module.exports = { getAttributes, createAttribute, updateAttribute, deleteAttribute };
+// @desc    How many products use each vocabulary value
+// @route   GET /api/attributes/usage
+// @access  Private/Admin
+//
+// So the admin can show what an option costs to remove *before* asking, rather
+// than only refusing afterwards — and so unused options are visible as
+// candidates for tidying.
+const getAttributeUsage = asyncHandler(async (req, res) => {
+  res.json(await usageByValue());
+});
+
+module.exports = {
+  getAttributes,
+  getAttributeUsage,
+  createAttribute,
+  updateAttribute,
+  deleteAttribute,
+};
