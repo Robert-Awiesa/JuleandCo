@@ -28,7 +28,42 @@ export function Footer({
   contact?: ContactSettings;
 }) {
   const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+
+  /**
+   * The signup used to set a flag and say "Thanks!" while throwing the address
+   * away. Nobody who joined was ever going to hear anything, which is worse
+   * than not offering it: they believe they are on a list that does not exist.
+   */
+  const [status, setStatus] = useState<"idle" | "sending" | "joined" | "error">("idle");
+  const [error, setError] = useState("");
+
+  const join = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("sending");
+    setError("");
+
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      const res = await fetch(`${base}/subscribers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, source: "footer" }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.message || "We could not sign you up. Please try again.");
+        setStatus("error");
+        return;
+      }
+
+      setStatus("joined");
+      setEmail("");
+    } catch {
+      setError("We could not reach the store. Check your connection and try again.");
+      setStatus("error");
+    }
+  };
 
   const social = [
     {
@@ -58,28 +93,41 @@ export function Footer({
             className="h-14 w-auto"
           />
           <p className="mt-4 max-w-xs text-sm text-ink-muted">{content.blurb}</p>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              setSubmitted(true);
-            }}
-            className="mt-6 flex max-w-xs border border-line-strong"
-          >
-            <input
-              required
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Your email"
-              className="w-full bg-transparent px-4 py-3 text-sm placeholder:text-ink-subtle focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="shrink-0 bg-gold px-4 text-xs font-medium uppercase tracking-wide text-surface transition-colors hover:bg-gold-light"
-            >
-              {submitted ? "Thanks!" : "Join"}
-            </button>
-          </form>
+          <div className="mt-6 max-w-xs">
+            {status === "joined" ? (
+              <p role="status" className="border border-gold/40 px-4 py-3 text-sm text-ink-muted">
+                You are on the list. We will be in touch when something new arrives.
+              </p>
+            ) : (
+              <form onSubmit={join} className="flex border border-line-strong">
+                <label htmlFor="footer-email" className="sr-only">
+                  Email address
+                </label>
+                <input
+                  id="footer-email"
+                  required
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Your email"
+                  className="w-full bg-transparent px-4 py-3 text-sm placeholder:text-ink-subtle focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={status === "sending"}
+                  className="shrink-0 bg-gold px-4 text-xs font-medium uppercase tracking-wide text-surface transition-colors hover:bg-gold-light disabled:opacity-60"
+                >
+                  {status === "sending" ? "…" : "Join"}
+                </button>
+              </form>
+            )}
+
+            {status === "error" && (
+              <p role="alert" className="mt-2 text-xs text-ink-subtle">
+                {error}
+              </p>
+            )}
+          </div>
         </div>
 
         {content.columns.map((col) => (

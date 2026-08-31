@@ -104,6 +104,24 @@ export interface SeoContent {
   ogImage?: string;
 }
 
+/**
+ * A policy page — privacy, returns, terms. One shape for all three, because
+ * the operations on them are identical and the admin editor is generated from
+ * the API's field specs.
+ */
+export interface PolicySection {
+  id: string;
+  heading: string;
+  body: string;
+}
+
+export interface PolicyContent {
+  headline: string;
+  intro: string;
+  updated?: string;
+  sections: PolicySection[];
+}
+
 export interface SiteContent {
   "hero.slides": HeroSlide[];
   "home.collections": CollectionTile[];
@@ -111,6 +129,9 @@ export interface SiteContent {
   "nav.megaMenu": MegaMenuSection[];
   "layout.footer": FooterContent;
   "page.ethos": EthosContent;
+  "page.privacy": PolicyContent;
+  "page.returns": PolicyContent;
+  "page.terms": PolicyContent;
   "site.seo": SeoContent;
   "store.delivery": DeliverySettings;
   "store.contact": ContactSettings;
@@ -136,6 +157,9 @@ const OFFLINE_FALLBACK: SiteContent = {
     beliefs: [],
     promise: "",
   },
+  "page.privacy": { headline: "Privacy Notice", intro: "", sections: [] },
+  "page.returns": { headline: "Returns & Refunds", intro: "", sections: [] },
+  "page.terms": { headline: "Terms of Sale", intro: "", sections: [] },
   "site.seo": {
     title: "JULES & CO — Wear the Difference",
     description:

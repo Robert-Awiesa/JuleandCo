@@ -15,7 +15,8 @@
     "set-admin-password": "node src/scripts/setAdminPassword.js",
     "migrate:is-new-arrival": "node src/scripts/renameIsNewField.js",
     "migrate:gender-eyewear": "node src/scripts/scopeGenderToEyewear.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "fix:footer-links": "node src/scripts/fixFooterLinks.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

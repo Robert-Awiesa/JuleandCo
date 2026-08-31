@@ -20,6 +20,36 @@
 const unsplash = (id, w = 1200) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
 
+/**
+ * The shape every policy page shares: a heading, a short opening, the date it
+ * was last reviewed, and a list of sections.
+ *
+ * One shape rather than three bespoke ones, because the operations on them are
+ * identical and the admin editor is generated from these specs — so all three
+ * pages get a working editor without one being written.
+ */
+const policyFields = [
+  { key: "headline", label: "Page title", type: "text", required: true },
+  { key: "intro", label: "Opening paragraph", type: "textarea", required: true },
+  {
+    key: "updated",
+    label: "Last reviewed",
+    type: "text",
+    help: "Shown to customers. Update it whenever you change the wording.",
+  },
+  {
+    key: "sections",
+    label: "Sections",
+    type: "list",
+    itemLabel: "Section",
+    itemTitle: "heading",
+    fields: [
+      { key: "heading", label: "Heading", type: "text", required: true },
+      { key: "body", label: "Text", type: "textarea", required: true },
+    ],
+  },
+];
+
 const linkFields = [
   { key: "label", label: "Label", type: "text", required: true },
   { key: "href", label: "Link", type: "url", required: true },
@@ -385,10 +415,13 @@ const SLOTS = {
           id: "support",
           title: "Support",
           links: [
-            { id: "contact", label: "Contact Us", href: "/contact" },
-            { id: "shipping", label: "Shipping & Returns", href: "/shipping" },
-            { id: "sizes", label: "Size Guide", href: "/size-guide" },
-            { id: "track", label: "Track Order", href: "/account/orders" },
+            // These four used to be /contact, /shipping, /size-guide and
+            // /account/orders — none of which existed, so every one returned a
+            // 404 from the footer of every page. They now point at pages that
+            // are real, and that a worried customer is actually looking for.
+            { id: "returns", label: "Returns & Refunds", href: "/returns" },
+            { id: "terms", label: "Terms of Sale", href: "/terms" },
+            { id: "privacy", label: "Privacy Notice", href: "/privacy" },
           ],
         },
         {
@@ -397,7 +430,6 @@ const SLOTS = {
           links: [
             { id: "ethos", label: "Our Ethos", href: "/ethos" },
             { id: "stand-for", label: "What We Stand For", href: "/ethos" },
-            { id: "careers", label: "Careers", href: "/careers" },
           ],
         },
       ],
@@ -490,6 +522,167 @@ const SLOTS = {
         "To create pieces that make you feel seen, confident and beautifully yourself.",
       promiseBody:
         "Because Jules & Co. isn’t simply about what you wear. It is about who you become when you wear it.",
+    },
+  },
+
+  "page.privacy": {
+    label: "Privacy notice",
+    description:
+      "What you collect, why, and who else sees it. Ghana's Data Protection Act, 2012 (Act 843) requires you to tell people this. **Have this checked before you trade on it.** The wording describes how this shop actually works and is a starting point, not legal advice — and anywhere it says [YOUR ...] or [CONFIRM ...] you must supply your own details.",
+    kind: "group",
+    fields: policyFields,
+    defaults: {
+      headline: "Privacy Notice",
+      intro:
+        "This notice explains what personal information JULES & CO collects when you shop with us, why we need it, and who else handles it. It is short and specific on purpose: a privacy notice nobody can read protects nobody.",
+      updated: "Last reviewed: [DATE]",
+      sections: [
+        {
+          id: "who-we-are",
+          heading: "Who we are",
+          body:
+            "JULES & CO is operated by [YOUR REGISTERED BUSINESS NAME], registered in Ghana at [YOUR REGISTERED ADDRESS]. We are the data controller for the information described here, and you can reach us using the contact details at the bottom of every page.",
+        },
+        {
+          id: "what-we-collect",
+          heading: "What we collect",
+          body:
+            "When you place an order we collect your name, email address, phone number and delivery address. That is all we ask for, and all of it is needed to send you what you bought and to tell you where it is.\n\nIf you write a product review we store the name you give and your email address. Your email is never published — it is only used to check whether you actually bought the piece you are reviewing.\n\nWe do not require an account, so unless you order or review, we hold nothing about you at all.",
+        },
+        {
+          id: "payment",
+          heading: "We never hold your payment details",
+          body:
+            "Payments are taken by Paystack, not by this website. Your card number or mobile money details are entered on Paystack's own secure page and never reach our systems. We receive only a confirmation that a payment succeeded, the amount, and which method was used.",
+        },
+        {
+          id: "who-else",
+          heading: "Who else handles your information",
+          body:
+            "A small number of services run the shop, and each sees only what it needs.\n\nPaystack processes your payment. Resend sends your order emails. MongoDB Atlas stores orders and reviews. Cloudinary stores product photographs and our encrypted database backups.\n\nWe do not sell your information to anyone, and we do not share it for advertising.",
+        },
+        {
+          id: "how-long",
+          heading: "How long we keep it",
+          body:
+            "Orders are kept as our record of trading, which we are required to maintain. Reviews are kept while they are published. Encrypted backups are kept on a rolling basis and older ones are deleted automatically.\n\nIf you want your details removed, write to us and we will do it — except where we must keep an order as a financial record.",
+        },
+        {
+          id: "your-rights",
+          heading: "Your rights",
+          body:
+            "Under the Data Protection Act, 2012 (Act 843) you may ask what we hold about you, ask us to correct it if it is wrong, and ask us to delete it. Write to us using the contact details below and we will respond.\n\nYou may also complain to the Data Protection Commission of Ghana.",
+        },
+        {
+          id: "cookies",
+          heading: "Cookies and your browser",
+          body:
+            "This site keeps your shopping bag and saved pieces in your own browser, so they are still there when you come back. That stays on your device and is never sent to us.\n\nIf you sign in to the shop's dashboard a secure cookie keeps you signed in, but that is for us, not for customers.",
+        },
+      ],
+    },
+  },
+
+  "page.returns": {
+    label: "Returns & refunds",
+    description:
+      "What happens when something arrives damaged or is not what the customer expected. Paystack and the card networks both expect this published, and its absence is a common reason a chargeback is decided against a merchant. **Have this checked before you trade on it.** The wording describes how this shop actually works and is a starting point, not legal advice — and anywhere it says [YOUR ...] or [CONFIRM ...] you must supply your own details.",
+    kind: "group",
+    fields: policyFields,
+    defaults: {
+      headline: "Returns & Refunds",
+      intro:
+        "We want you to love what you bought. If something is not right, tell us — we would far rather hear from you than not.",
+      updated: "Last reviewed: [DATE]",
+      sections: [
+        {
+          id: "damaged",
+          heading: "If it arrives damaged, or is not what you ordered",
+          body:
+            "Contact us within [CONFIRM: 7] days of delivery with your order number and a photograph. We will replace the piece or refund you in full, including any delivery you paid. This is always our cost, never yours.",
+        },
+        {
+          id: "changed-mind",
+          heading: "If you change your mind",
+          body:
+            "Write to us within [CONFIRM: 7] days of delivery. The piece must be unworn, undamaged and in its original packaging. Once we have it back and have checked it, we will refund the price of the piece.\n\n[CONFIRM: who pays return delivery in this case — you or the customer.]",
+        },
+        {
+          id: "exceptions",
+          heading: "What we cannot take back",
+          body:
+            "For hygiene reasons we cannot accept pierced earrings back once the packaging has been opened, unless they are faulty.\n\n[CONFIRM: add anything else you will not accept back — pieces made or engraved to order, for example.]",
+        },
+        {
+          id: "how-to",
+          heading: "How to start a return",
+          body:
+            "Reply to your order email, or use the contact details at the bottom of any page, and give us your order number. We will tell you where to send the piece and what happens next.\n\nPlease speak to us before sending anything back.",
+        },
+        {
+          id: "refunds",
+          heading: "How refunds are paid",
+          body:
+            "Refunds go back to the same card or mobile money account that paid, through Paystack. Once approved, a refund usually reaches you within [CONFIRM: 5–10] working days depending on your bank or network.\n\nIf we cancel an order you have already paid for, we will contact you about the refund without you having to ask.",
+        },
+      ],
+    },
+  },
+
+  "page.terms": {
+    label: "Terms of sale",
+    description:
+      "The agreement between you and the customer. It matters more here than in most shops, because delivery is agreed after the order rather than priced at checkout. **Have this checked before you trade on it.** The wording describes how this shop actually works and is a starting point, not legal advice — and anywhere it says [YOUR ...] or [CONFIRM ...] you must supply your own details.",
+    kind: "group",
+    fields: policyFields,
+    defaults: {
+      headline: "Terms of Sale",
+      intro:
+        "These terms apply when you buy from JULES & CO. They are written plainly on purpose — you should be able to read them.",
+      updated: "Last reviewed: [DATE]",
+      sections: [
+        {
+          id: "who",
+          heading: "Who you are buying from",
+          body:
+            "JULES & CO is operated by [YOUR REGISTERED BUSINESS NAME], registered in Ghana at [YOUR REGISTERED ADDRESS]. [YOUR REGISTRATION NUMBER, if you have one.]",
+        },
+        {
+          id: "order",
+          heading: "How an order is made",
+          body:
+            "Placing an order is an offer to buy. We hold the pieces for you while you pay, but the sale is agreed only once we confirm your order — you will get an email when we do.\n\nIf a piece turns out to be unavailable after you have paid, we will tell you and refund you in full.",
+        },
+        {
+          id: "prices",
+          heading: "Prices",
+          body:
+            "All prices are in Ghana Cedis and include any tax that applies. The price you see at checkout is the price of the pieces themselves.",
+        },
+        {
+          id: "delivery",
+          heading: "Delivery is agreed with you, not charged automatically",
+          body:
+            "What delivery costs depends on where your order is going, so we do not add a charge at checkout. After we confirm your order we agree the cost with you, and nothing is dispatched before you have agreed it.\n\nThis means the total shown at checkout is for the pieces alone.",
+        },
+        {
+          id: "payment",
+          heading: "Payment",
+          body:
+            "Payment is taken by Paystack, which accepts mobile money and cards. Your payment details are entered on Paystack's own page and are never held by us.\n\nAn order that is not paid for is cancelled automatically after a time, and the pieces go back on sale.",
+        },
+        {
+          id: "cancelling",
+          heading: "Cancelling",
+          body:
+            "You may cancel before your order has been dispatched — write to us and we will refund you in full. After dispatch, our Returns & Refunds policy applies.\n\nWe may cancel an order if a piece is unavailable, if we cannot agree delivery with you, or if we believe the order is fraudulent. If we do, we will tell you and refund anything you have paid.",
+        },
+        {
+          id: "law",
+          heading: "Governing law",
+          body: "These terms are governed by the laws of Ghana.",
+        },
+      ],
     },
   },
 
