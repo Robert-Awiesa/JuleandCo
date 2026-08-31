@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { fetchProductBySlug, fetchProductReviews } from "@/lib/api";
 import { ProductDetailView } from "@/components/product/ProductDetailView";
 import { ProductReviews } from "@/components/product/ProductReviews";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbSchema, productSchema } from "@/lib/structuredData";
 
 interface ProductPageProps {
   params: { slug: string };
@@ -19,7 +21,11 @@ export async function generateMetadata({ params }: ProductPageProps) {
   return {
     title: `${product.name} — JULES & CO`,
     description: product.description,
+    // One address per product. Without this, the same piece reached through a
+    // filter, a search or a shared link looks like several pages to a crawler.
+    alternates: { canonical: `/product/${product.slug}` },
     openGraph: {
+      type: "website",
       title: `${product.name} — JULES & CO`,
       description: product.description,
       images: product.images?.[0] ? [product.images[0]] : undefined,
@@ -35,6 +41,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   return (
     <>
+      {/* What puts the price, the stock status and any rating into a Google
+          result rather than a plain blue link. */}
+      <JsonLd schema={productSchema(product)} />
+      <JsonLd
+        schema={breadcrumbSchema([
+          { name: "Shop", path: "/shop" },
+          { name: product.category, path: `/shop?category=${product.category}` },
+          { name: product.name, path: `/product/${product.slug}` },
+        ])}
+      />
+
       <ProductDetailView product={product} related={product.related ?? []} />
       <ProductReviews
         productId={product.id}

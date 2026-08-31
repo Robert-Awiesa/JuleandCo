@@ -195,6 +195,15 @@ function toPublicProduct(doc, context = {}) {
 
     specs: buildSpecs(attributes, context),
     selections: buildSelections(attributes, context),
+
+    /**
+     * When the piece last changed, for the sitemap's `lastmod`.
+     *
+     * A crawler uses it to decide what is worth re-fetching, so a catalogue
+     * without it gets re-crawled on the crawler's own guess. It is a timestamp
+     * on a public listing, which gives nothing away that the listing does not.
+     */
+    updatedAt: p.updatedAt,
   };
 }
 

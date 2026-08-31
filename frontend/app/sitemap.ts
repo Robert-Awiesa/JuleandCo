@@ -7,8 +7,6 @@ import { siteUrl } from "@/lib/siteUrl";
  *
  * Products come from the API rather than a hardcoded list, so a piece published
  * in the admin is in the sitemap on the next crawl with nothing to remember.
- * No `lastModified`: the public product payload deliberately does not carry
- * `updatedAt`, and widening it for a crawler hint is not worth it.
  * Only published products are returned by that endpoint, so a draft cannot leak
  * into search results through here.
  */
@@ -19,6 +17,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: base, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/shop`, changeFrequency: "daily", priority: 0.9 },
     { url: `${base}/ethos`, changeFrequency: "monthly", priority: 0.5 },
+    // Low priority but worth indexing: people search for a shop's returns
+    // policy by name, and finding it is part of deciding to buy.
+    { url: `${base}/returns`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${base}/terms`, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${base}/privacy`, changeFrequency: "yearly", priority: 0.2 },
   ];
 
   // An unreachable API must not fail the whole sitemap — fetchProducts already
@@ -29,6 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...fixed,
     ...products.map((product) => ({
       url: `${base}/product/${product.slug}`,
+      lastModified: product.updatedAt ? new Date(product.updatedAt) : undefined,
       changeFrequency: "weekly" as const,
       priority: 0.8,
     })),

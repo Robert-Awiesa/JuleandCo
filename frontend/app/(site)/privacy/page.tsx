@@ -2,6 +2,7 @@ import { fetchContentSlot } from "@/lib/content";
 import { PolicyPage } from "@/components/layout/PolicyPage";
 
 export const metadata = {
+  alternates: { canonical: "/privacy" },
   title: "Privacy Notice — JULES & CO",
   description:
     "What JULES & CO collects when you shop with us, why we need it, and who else handles it.",

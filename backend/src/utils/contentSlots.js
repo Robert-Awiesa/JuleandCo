@@ -577,7 +577,7 @@ const SLOTS = {
           id: "cookies",
           heading: "Cookies and your browser",
           body:
-            "This site keeps your shopping bag and saved pieces in your own browser, so they are still there when you come back. That stays on your device and is never sent to us.\n\nIf you sign in to the shop's dashboard a secure cookie keeps you signed in, but that is for us, not for customers.",
+            "This site keeps your shopping bag and saved pieces in your own browser, so they are still there when you come back. That stays on your device and is never sent to us.\n\nIf you sign in to the shop's dashboard a secure cookie keeps you signed in, but that is for us, not for customers.\n\n[Keep this paragraph only if you have switched Google Analytics on, and delete it otherwise.] We use Google Analytics to count visits and see which pieces people look at, so we know what to stock. It sets its own cookies and reports on visits in aggregate, not on you by name.",
         },
       ],
     },

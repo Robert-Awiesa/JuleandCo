@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Check, X, Loader2 } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 import { formatCurrency } from "@/lib/utils";
+import { trackPurchase } from "@/lib/track";
 
 type Status = "checking" | "paid" | "failed" | "unknown";
 
@@ -67,6 +68,10 @@ export function PaymentResult() {
           if (!cleared.current) {
             cleared.current = true;
             clearCart();
+            // Recorded once, beside the clear, because both must happen exactly
+            // once per confirmed payment — the page polls, so anything outside
+            // this guard would fire on every attempt.
+            trackPurchase(body);
           }
           return;
         }

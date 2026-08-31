@@ -121,6 +121,8 @@ export interface Product {
   reviewCount?: number;
   pairsWith?: string[];
   tags?: string[];
+  /** Last change, for the sitemap's lastmod. */
+  updatedAt?: string;
 }
 
 // Collection and Testimonial lived here while the homepage rendered them from

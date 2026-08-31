@@ -3,6 +3,7 @@ import Link from "next/link";
 import { fetchContentSlot } from "@/lib/content";
 
 export const metadata = {
+  alternates: { canonical: "/ethos" },
   title: "Our Ethos — JULES & CO",
   description:
     "Jules & Co. was born from loss, but created from love. Style is personal, confidence is powerful, and elegance should never require compromise.",

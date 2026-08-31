@@ -68,6 +68,7 @@ Preview.
 | `PAYSTACK_PUBLIC_KEY` | yes | from Paystack | Designed to be public. Must be the *same mode* as the secret. |
 | `RESEND_API_KEY` | no | from Resend | Secret. Order emails. Unset, the shop works and simply tells nobody anything. |
 | `MAIL_FROM` | no | `JULES & CO <orders@your-domain>` | Must be a domain verified in Resend. Unset, mail goes out as `onboarding@resend.dev`. |
+| `NEXT_PUBLIC_GA_ID` | no | `G-XXXXXXXXXX` | Google Analytics 4. Unset, nothing is loaded and nothing is measured. **Read at build time** — setting it needs a redeploy. |
 | `ORDER_EXPIRY_MINUTES` | no | `60` | How long an unpaid order may hold its stock. |
 | `BACKUP_KEEP` | no | `14` | How many backups to retain. |
 | `CLIENT_URL` | no | `https://your-domain.com` | Set once you have a custom domain. See below. |

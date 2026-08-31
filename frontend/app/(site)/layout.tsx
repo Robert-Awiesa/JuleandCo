@@ -8,6 +8,9 @@ import { WhatsAppButton } from "@/components/layout/WhatsAppButton";
 import { fetchFacets } from "@/lib/api";
 import { fetchSiteContent } from "@/lib/content";
 import { siteUrlObject } from "@/lib/siteUrl";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { organizationSchema, websiteSchema } from "@/lib/structuredData";
+import { Analytics } from "@/components/seo/Analytics";
 
 // Roboto carries everything functional: body copy, navigation, buttons,
 // prices and any other number. It is engineered for screen legibility, which
@@ -47,6 +50,7 @@ export async function generateMetadata(): Promise<Metadata> {
      * no picture at all.
      */
     metadataBase: siteUrlObject(),
+    alternates: { canonical: "/" },
     title: seo.title,
     description: seo.description,
     icons: {
@@ -87,6 +91,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         hydration bugs inside the tree still surface.
       */}
       <body className="font-sans" suppressHydrationWarning>
+        {/* Who the shop is, and that it has a search — so Google can offer one
+            in the result rather than only linking the homepage. */}
+        <JsonLd schema={organizationSchema(content["site.seo"])} />
+        <JsonLd schema={websiteSchema()} />
+        <Analytics />
+
         <Header
           counts={facets.counts}
           countsByCategory={facets.countsByCategory}
