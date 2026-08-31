@@ -13,13 +13,24 @@ interface SignResponse {
   cloudName: string;
 }
 
+/** Product shots and site imagery are separate libraries. */
+export type UploadFolder = "products" | "content";
+
 interface RecentUpload {
   url: string;
   publicId: string;
 }
 
-async function uploadToCloudinary(file: File): Promise<string> {
-  const sign = await api.post<SignResponse>("/uploads/sign", {});
+/**
+ * The file goes straight from the browser to Cloudinary — the API only signs
+ * the request and never sees the image itself.
+ *
+ * That matters on a serverless deployment: an upload routed through the
+ * function would hit the platform's request-body limit, which is well below the
+ * size of an ordinary photograph off a camera.
+ */
+async function uploadToCloudinary(file: File, folder: UploadFolder): Promise<string> {
+  const sign = await api.post<SignResponse>("/uploads/sign", { folder });
 
   const formData = new FormData();
   formData.append("file", file);
@@ -34,7 +45,23 @@ async function uploadToCloudinary(file: File): Promise<string> {
   });
 
   if (!res.ok) {
-    throw new Error("Image upload failed");
+    /**
+     * Cloudinary says exactly what was wrong; this used to throw away the
+     * reason and report "Image upload failed", which is no help at all to
+     * someone uploading a real catalogue for the first time.
+     *
+     * By far the most common rejection is the file being over the account's
+     * size limit, so that one is named in plain terms.
+     */
+    const body = await res.json().catch(() => ({}));
+    const reason: string = body?.error?.message || `Cloudinary refused it (${res.status})`;
+
+    const tooBig = /file size|maximum.*bytes|too large/i.test(reason);
+    throw new Error(
+      tooBig
+        ? `"${file.name}" is too large for your Cloudinary plan. Export it around 2400px wide and try again.`
+        : `"${file.name}" was not accepted — ${reason}`
+    );
   }
 
   const data = await res.json();
@@ -48,16 +75,18 @@ async function uploadToCloudinary(file: File): Promise<string> {
  */
 function RecentPicker({
   chosen,
+  folder,
   onPick,
   onClose,
 }: {
   chosen: string[];
+  folder: UploadFolder;
   onPick: (url: string) => void;
   onClose: () => void;
 }) {
   const { data: recent = [], isLoading } = useQuery({
-    queryKey: ["recent-uploads"],
-    queryFn: () => api.get<RecentUpload[]>("/uploads/recent"),
+    queryKey: ["recent-uploads", folder],
+    queryFn: () => api.get<RecentUpload[]>(`/uploads/recent?folder=${folder}`),
     staleTime: 60_000,
   });
 
@@ -105,10 +134,13 @@ export function ImageUploader({
   images,
   onChange,
   multiple = true,
+  folder = "products",
 }: {
   images: string[];
   onChange: (images: string[]) => void;
   multiple?: boolean;
+  /** Which Cloudinary library this belongs to. Site imagery is not a product. */
+  folder?: UploadFolder;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -123,13 +155,24 @@ export function ImageUploader({
     setUploading(true);
     setError(null);
     try {
-      const urls = await Promise.all(Array.from(files).map(uploadToCloudinary));
+      // Wrapped rather than passed by reference: `map` supplies the index as a
+      // second argument, which would arrive here as the folder.
+      const urls = await Promise.all(
+        Array.from(files).map((file) => uploadToCloudinary(file, folder))
+      );
       onChange(multiple ? [...images, ...urls] : urls);
       // The picker lists what Cloudinary holds; a shot just uploaded belongs in
       // it immediately, not after its cache window expires.
-      queryClient.invalidateQueries({ queryKey: ["recent-uploads"] });
-    } catch {
-      setError("Upload failed — check your connection and try again.");
+      queryClient.invalidateQueries({ queryKey: ["recent-uploads", folder] });
+    } catch (err) {
+      // Show what actually went wrong. This used to replace every failure with
+      // "check your connection", including "that file is too large", which sent
+      // people looking at their wifi instead of their photograph.
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Upload failed — check your connection and try again."
+      );
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -232,6 +275,7 @@ export function ImageUploader({
       {showRecent && (
         <RecentPicker
           chosen={images}
+          folder={folder}
           onPick={(url) => onChange(multiple ? [...images, url] : [url])}
           onClose={() => setShowRecent(false)}
         />

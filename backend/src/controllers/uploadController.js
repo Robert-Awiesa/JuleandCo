@@ -3,9 +3,26 @@ const cloudinary = require("../config/cloudinary");
 
 const DEFAULT_FOLDER = "jules-and-co/products";
 
+/**
+ * Where an upload may go.
+ *
+ * An allow-list rather than accepting whatever the client sends: product shots
+ * and site imagery are different libraries, and mixing them means the product
+ * form's "Reuse a shot" picker fills up with hero banners. A typo would also
+ * scatter stray folders through Cloudinary that nothing ever cleans up.
+ */
+const FOLDERS = {
+  products: "jules-and-co/products",
+  content: "jules-and-co/content",
+};
+
+function resolveFolder(requested) {
+  return FOLDERS[requested] || DEFAULT_FOLDER;
+}
+
 const signUpload = asyncHandler(async (req, res) => {
   const timestamp = Math.round(Date.now() / 1000);
-  const folder = req.body.folder || DEFAULT_FOLDER;
+  const folder = resolveFolder(req.body.folder);
 
   const signature = cloudinary.utils.api_sign_request(
     { timestamp, folder },
@@ -30,7 +47,7 @@ const getRecentUploads = asyncHandler(async (req, res) => {
 
   const { resources } = await cloudinary.api.resources({
     type: "upload",
-    prefix: req.query.folder || DEFAULT_FOLDER,
+    prefix: resolveFolder(req.query.folder),
     max_results: limit,
     // Newest first — the shot you want is almost always one you just made.
     direction: "desc",

@@ -175,9 +175,12 @@ export function FieldEditor({
         </p>
         <Help text={spec.help} />
         <div className="mt-2 mb-2">
+          {/* Site imagery is its own library. Sharing the products folder put
+              hero banners in the product form's "Reuse a shot" picker. */}
           <ImageUploader
             images={src ? [src] : []}
             multiple={false}
+            folder="content"
             onChange={(images) => onChange(images[0] ?? "")}
           />
         </div>
