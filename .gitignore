@@ -64,3 +64,9 @@ playwright/.cache/
 backend/backups/
 
 # port chosen by frontend/scripts/dev.js at runtime
+
+# Machine-specific npm settings. A committed `script-shell` pointing at a
+# Windows path made every Linux build fail: npm tried to spawn
+# a Windows bash.exe path to run a postinstall script and got
+# ENOENT. Per-machine npm config belongs in ~/.npmrc, never in the repo.
+.npmrc
