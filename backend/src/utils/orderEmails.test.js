@@ -5,7 +5,7 @@ const app = require("../app");
 const Order = require("../models/Order");
 const User = require("../models/User");
 const { connectTestDB, clearTestDB, closeTestDB } = require("../test/setupTestDb");
-const { EMAILS, sendOrderEmail, deliveryLine } = require("./orderEmails");
+const { EMAILS, sendOrderEmail, deliveryLine, optionText } = require("./orderEmails");
 const mailer = require("./mailer");
 
 beforeAll(async () => {
@@ -131,6 +131,84 @@ describe("what the customer is told", () => {
 
     await sendOrderEmail(order, "cancelled");
     expect(sent[0].text.toLowerCase()).toContain("nothing has been charged");
+  });
+});
+
+describe("nothing internal reaches the customer", () => {
+  /**
+   * The order is **read back from the database**, which is the whole point.
+   *
+   * `options` and `selections` are Mongoose Map paths. A freshly created
+   * document still holds a plain object; one loaded from Mongo holds a real Map,
+   * and `Object.values()` on that returns the document's own internals. That is
+   * how a customer's receipt came to print
+   * `{ product: new ObjectId(...), image: '...' } / options / [object Object]`.
+   *
+   * Every earlier test here used the in-memory document and so could not see it.
+   */
+  test("a receipt built from a stored order names the option, not the document", async () => {
+    const sent = captureSends();
+    const created = await makeOrder();
+    const order = await Order.findById(created._id);
+
+    await sendOrderEmail(order, "paid");
+
+    const { html, text } = sent[0];
+
+    expect(html).toContain("Frame Colour: Tortoise");
+    expect(text).toContain("Frame Colour: Tortoise");
+
+    for (const leak of ["ObjectId", "[object Object]", "cloudinary", "picsum", "variantId", "_id"]) {
+      expect(html).not.toContain(leak);
+      expect(text).not.toContain(leak);
+    }
+  });
+
+  test("options are labelled, so two values cannot be confused", async () => {
+    const created = await makeOrder({
+      items: [
+        {
+          product: new mongoose.Types.ObjectId(),
+          name: "The Coastal",
+          price: 760,
+          quantity: 1,
+          options: { "Frame Colour": "Sage" },
+          selections: { Lens: "Sage Tint" },
+        },
+      ],
+    });
+    const order = await Order.findById(created._id);
+
+    // "Sage · Sage Tint" would not tell anyone which is the frame and which is
+    // the lens.
+    expect(optionText(order.items[0])).toBe("Frame Colour: Sage · Lens: Sage Tint");
+  });
+
+  test("a line with no options renders no empty detail row", async () => {
+    const created = await makeOrder({
+      items: [
+        {
+          product: new mongoose.Types.ObjectId(),
+          name: "Plain Piece",
+          price: 100,
+          quantity: 1,
+        },
+      ],
+    });
+    const order = await Order.findById(created._id);
+
+    expect(optionText(order.items[0])).toBe("");
+  });
+
+  test("the address is shown so the customer can check it", async () => {
+    const sent = captureSends();
+    const created = await makeOrder();
+    const order = await Order.findById(created._id);
+
+    await sendOrderEmail(order, "paid");
+
+    expect(sent[0].html).toContain("12 Oxford Street");
+    expect(sent[0].text).toContain("Accra");
   });
 });
 

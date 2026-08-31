@@ -23,6 +23,9 @@ const mailer = require("./mailer");
  *
  * **Sending never blocks an order.** A payment must not fail because a mail
  * provider is slow, so every send is caught and logged rather than thrown.
+ *
+ * **Nothing internal ever appears in one of these.** A customer's receipt is
+ * not a place for database ids, image URLs or variant keys — see `optionText`.
  */
 
 const money = (n) =>
@@ -30,26 +33,59 @@ const money = (n) =>
     .format(Number(n) || 0)
     .replace("GHS", "GH₵");
 
+const escape = (value) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
 /** Contact details the customer can reply to, as set under Settings. */
 async function storeContact() {
   const stored = await SiteContent.findOne({ slot: "store.contact" }).lean();
   return stored?.data ?? defaultsFor("store.contact");
 }
 
-function itemLines(order) {
-  return order.items.map((item) => {
-    const chosen = [
-      ...Object.values(item.options || {}),
-      ...Object.values(item.selections || {}),
-    ].filter(Boolean);
+/**
+ * Reads an order line's chosen options, whatever shape they arrive in.
+ *
+ * `options` and `selections` are Mongoose `Map` paths. On a document read back
+ * from the database they are real Maps, and `Object.values()` on one returns
+ * the *document's own internals* — which is how a customer's receipt ended up
+ * printing `{ product: new ObjectId(...), image: '...' } / options / [object
+ * Object]` instead of "White Gold".
+ *
+ * A freshly created document still holds a plain object, which is why a test
+ * that never re-read the order could not see the fault. Both shapes, and a
+ * subdocument exposing `toObject`, are handled here.
+ */
+function entriesOf(value) {
+  if (!value) return [];
+  if (value instanceof Map) return Array.from(value.entries());
+  if (typeof value.toObject === "function") return Object.entries(value.toObject());
+  return Object.entries(value);
+}
 
-    return {
-      name: item.name,
-      detail: chosen.length ? chosen.join(" / ") : "",
-      quantity: item.quantity,
-      total: money(item.price * item.quantity),
-    };
-  });
+/**
+ * "Metal: White Gold · Lens: Sage Tint".
+ *
+ * Labelled rather than a bare list of values, because "Sage · Sage Tint" does
+ * not tell anyone which is the frame and which is the lens.
+ */
+function optionText(item) {
+  return [...entriesOf(item.options), ...entriesOf(item.selections)]
+    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .map(([label, value]) => `${label}: ${value}`)
+    .join(" · ");
+}
+
+function itemLines(order) {
+  return order.items.map((item) => ({
+    name: item.name,
+    detail: optionText(item),
+    quantity: item.quantity,
+    total: money(item.price * item.quantity),
+  }));
 }
 
 /**
@@ -64,86 +100,191 @@ function deliveryLine(order) {
   return `Delivery: ${money(order.shippingPrice)}.`;
 }
 
-function layout({ heading, intro, order, closing, contact }) {
-  const rows = itemLines(order)
+/** "12 Oxford Street, Accra, Greater Accra" — the parts that exist, in order. */
+function addressText(order) {
+  const a = order.shippingAddress || {};
+  return [a.address, a.city, a.region].filter(Boolean).join(", ");
+}
+
+const orderDate = (order) =>
+  new Date(order.createdAt || Date.now()).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+/**
+ * The shell every email shares.
+ *
+ * Tables rather than flexbox, and inline styles rather than a stylesheet:
+ * Outlook ignores most modern CSS, and a receipt that collapses into an
+ * unreadable column is worse than a plain one.
+ */
+function layout({ heading, intro, order, closing, contact, highlight }) {
+  const lines = itemLines(order);
+
+  const rows = lines
     .map(
       (line) => `
         <tr>
-          <td style="padding:8px 0;border-bottom:1px solid #eceae6;">
-            ${line.quantity} × ${line.name}
-            ${line.detail ? `<div style="color:#8a8479;font-size:13px;">${line.detail}</div>` : ""}
+          <td style="padding:14px 0;border-bottom:1px solid #eceae6;vertical-align:top;">
+            <div style="font-size:15px;color:#1c1917;">
+              ${escape(line.quantity)} &times; ${escape(line.name)}
+            </div>
+            ${
+              line.detail
+                ? `<div style="margin-top:4px;font-size:13px;color:#8a8479;">${escape(line.detail)}</div>`
+                : ""
+            }
           </td>
-          <td style="padding:8px 0;border-bottom:1px solid #eceae6;text-align:right;white-space:nowrap;">
-            ${line.total}
+          <td style="padding:14px 0;border-bottom:1px solid #eceae6;text-align:right;white-space:nowrap;vertical-align:top;font-size:15px;color:#1c1917;">
+            ${escape(line.total)}
           </td>
         </tr>`
     )
     .join("");
 
-  const reply = [
-    contact.email ? `Email: ${contact.email}` : "",
-    contact.phone ? `Phone: ${contact.phone}` : "",
-    contact.whatsapp ? `WhatsApp: ${contact.whatsapp}` : "",
-  ]
-    .filter(Boolean)
-    .join(" &nbsp;·&nbsp; ");
+  const contactBits = [
+    contact.email ? `<a href="mailto:${escape(contact.email)}" style="color:#a08a45;text-decoration:none;">${escape(contact.email)}</a>` : "",
+    contact.phone ? escape(contact.phone) : "",
+    contact.whatsapp ? `WhatsApp ${escape(contact.whatsapp)}` : "",
+  ].filter(Boolean);
+
+  const address = addressText(order);
 
   const html = `
-  <div style="background:#f6f4f1;padding:28px 12px;font-family:Helvetica,Arial,sans-serif;color:#1c1917;">
-    <div style="max-width:560px;margin:0 auto;background:#ffffff;padding:32px;">
-      <p style="margin:0 0 24px;letter-spacing:3px;font-size:12px;color:#a08a45;text-transform:uppercase;">
-        Jules &amp; Co
-      </p>
+<div style="margin:0;padding:32px 12px;background:#f6f4f1;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1c1917;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;">
+    <tr>
+      <td style="padding:32px 36px 0;text-align:center;">
+        <div style="font-size:13px;letter-spacing:4px;color:#a08a45;text-transform:uppercase;">Jules &amp; Co</div>
+      </td>
+    </tr>
 
-      <h1 style="margin:0 0 12px;font-size:22px;font-weight:600;">${heading}</h1>
-      <p style="margin:0 0 24px;line-height:1.6;color:#44403c;">${intro}</p>
+    <tr>
+      <td style="padding:28px 36px 0;">
+        <h1 style="margin:0 0 10px;font-size:23px;font-weight:600;line-height:1.3;">${escape(heading)}</h1>
+        <p style="margin:0;font-size:15px;line-height:1.65;color:#44403c;">${intro}</p>
+      </td>
+    </tr>
 
-      <p style="margin:0 0 8px;font-size:13px;color:#8a8479;">Order ${order.orderNumber}</p>
+    ${
+      highlight
+        ? `<tr>
+      <td style="padding:22px 36px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#faf8f5;border-left:3px solid #a08a45;">
+          <tr><td style="padding:14px 18px;font-size:14px;color:#44403c;">${highlight}</td></tr>
+        </table>
+      </td>
+    </tr>`
+        : ""
+    }
 
-      <table style="width:100%;border-collapse:collapse;font-size:14px;">${rows}</table>
+    <tr>
+      <td style="padding:28px 36px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+          <tr>
+            <td style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#8a8479;">Order</td>
+            <td style="text-align:right;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#8a8479;">Placed</td>
+          </tr>
+          <tr>
+            <td style="padding-top:3px;font-size:15px;font-weight:600;">${escape(order.orderNumber)}</td>
+            <td style="padding-top:3px;text-align:right;font-size:15px;">${escape(orderDate(order))}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
 
-      <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:12px;">
-        <tr>
-          <td style="padding:6px 0;color:#44403c;">Items</td>
-          <td style="padding:6px 0;text-align:right;">${money(order.itemsPrice)}</td>
-        </tr>
-        <tr>
-          <td style="padding:6px 0;font-weight:600;">Total</td>
-          <td style="padding:6px 0;text-align:right;font-weight:600;">${money(order.totalPrice)}</td>
-        </tr>
-      </table>
+    <tr>
+      <td style="padding:18px 36px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+          <tr>
+            <td colspan="2" style="padding-bottom:6px;border-bottom:1px solid #1c1917;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#8a8479;">
+              Your order
+            </td>
+          </tr>
+          ${rows}
+        </table>
 
-      <p style="margin:16px 0 0;font-size:13px;color:#8a8479;line-height:1.6;">${deliveryLine(order)}</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:14px;">
+          <tr>
+            <td style="padding:4px 0;font-size:14px;color:#44403c;">Items</td>
+            <td style="padding:4px 0;text-align:right;font-size:14px;color:#44403c;">${escape(money(order.itemsPrice))}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0 0;border-top:1px solid #eceae6;font-size:16px;font-weight:600;">Total</td>
+            <td style="padding:8px 0 0;border-top:1px solid #eceae6;text-align:right;font-size:16px;font-weight:600;">${escape(money(order.totalPrice))}</td>
+          </tr>
+        </table>
 
-      <p style="margin:24px 0 0;line-height:1.6;color:#44403c;">${closing}</p>
+        <p style="margin:12px 0 0;font-size:13px;line-height:1.6;color:#8a8479;">${escape(deliveryLine(order))}</p>
+      </td>
+    </tr>
 
-      ${reply ? `<p style="margin:24px 0 0;font-size:13px;color:#8a8479;">${reply}</p>` : ""}
+    ${
+      address
+        ? `<tr>
+      <td style="padding:26px 36px 0;">
+        <div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#8a8479;">Delivering to</div>
+        <div style="margin-top:5px;font-size:14px;line-height:1.6;color:#44403c;">
+          ${escape(order.shippingAddress?.fullName || "")}<br />${escape(address)}
+        </div>
+      </td>
+    </tr>`
+        : ""
+    }
 
-      <p style="margin:28px 0 0;padding-top:16px;border-top:1px solid #eceae6;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#a08a45;">
-        Wear the Difference
-      </p>
-    </div>
-  </div>`;
+    <tr>
+      <td style="padding:26px 36px 0;">
+        <p style="margin:0;font-size:15px;line-height:1.65;color:#44403c;">${closing}</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:28px 36px 32px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #eceae6;">
+          <tr>
+            <td style="padding-top:16px;text-align:center;font-size:13px;line-height:1.7;color:#8a8479;">
+              ${contactBits.length ? `${contactBits.join(" &nbsp;·&nbsp; ")}<br />` : ""}
+              <span style="display:inline-block;margin-top:10px;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:#a08a45;">
+                Wear the Difference
+              </span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>`;
+
+  const strip = (s) => String(s).replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 
   const text = [
     "JULES & CO",
     "",
-    heading,
+    heading.toUpperCase(),
     "",
-    intro.replace(/<[^>]+>/g, ""),
+    strip(intro),
+    ...(highlight ? ["", strip(highlight)] : []),
     "",
-    `Order ${order.orderNumber}`,
-    ...itemLines(order).map(
-      (l) => `  ${l.quantity} x ${l.name}${l.detail ? ` (${l.detail})` : ""} — ${l.total}`
+    `Order ${order.orderNumber}   Placed ${orderDate(order)}`,
+    "",
+    "YOUR ORDER",
+    ...lines.map(
+      (l) => `  ${l.quantity} x ${l.name}${l.detail ? `\n      ${l.detail}` : ""}\n      ${l.total}`
     ),
     "",
-    `Items: ${money(order.itemsPrice)}`,
-    `Total: ${money(order.totalPrice)}`,
+    `Items:  ${money(order.itemsPrice)}`,
+    `Total:  ${money(order.totalPrice)}`,
     deliveryLine(order),
+    ...(address
+      ? ["", "DELIVERING TO", `  ${order.shippingAddress?.fullName || ""}`, `  ${address}`]
+      : []),
     "",
-    closing.replace(/<[^>]+>/g, ""),
+    strip(closing),
     "",
-    reply.replace(/&nbsp;·&nbsp;/g, " · "),
+    ...(contactBits.length ? [strip(contactBits.join(" · ")), ""] : []),
+    "Wear the Difference",
   ].join("\n");
 
   return { html, text };
@@ -154,10 +295,11 @@ const EMAILS = {
   paid: (order) => ({
     subject: `Your JULES & CO order ${order.orderNumber}`,
     heading: "Thank you — we have your order",
-    intro:
-      "Your payment went through and your order is with us. Here is what you bought.",
+    intro: "Your payment has gone through and your order is with us.",
+    highlight:
+      "We will confirm your order shortly and agree the delivery cost with you before anything is dispatched.",
     closing:
-      "We will be in touch shortly to confirm it and arrange delivery. Keep this email — the order number above is what we will refer to.",
+      "Keep this email — the order number above is what we will refer to if you get in touch.",
   }),
 
   processing: (order) => ({
@@ -171,10 +313,12 @@ const EMAILS = {
   shipped: (order) => ({
     subject: `Order ${order.orderNumber} is on its way`,
     heading: "Your order is on its way",
-    intro: order.trackingNumber
-      ? `It has left us. Your tracking reference is <strong>${order.trackingNumber}</strong>.`
-      : "It has left us and is on its way to you.",
-    closing: "If anything looks wrong when it arrives, reply to this email and we will put it right.",
+    intro: "It has left us and is on its way to you.",
+    highlight: order.trackingNumber
+      ? `Tracking reference: <strong>${escape(order.trackingNumber)}</strong>`
+      : "",
+    closing:
+      "If anything is not right when it arrives, reply to this email and we will put it right.",
   }),
 
   delivered: (order) => ({
@@ -189,10 +333,11 @@ const EMAILS = {
     subject: `Order ${order.orderNumber} cancelled`,
     heading: "Your order has been cancelled",
     intro: "This order has been cancelled and will not be dispatched.",
-    closing:
+    highlight:
       order.paymentStatus === "paid"
-        ? "You paid for this order, so a refund is due to you. We will be in touch about it — reply to this email if you have not heard from us."
-        : "Nothing has been charged. Reply to this email if this was not what you expected.",
+        ? "You paid for this order, so a refund is due to you. We will be in touch about it."
+        : "Nothing has been charged.",
+    closing: "Reply to this email if this was not what you expected.",
   }),
 };
 
@@ -211,8 +356,8 @@ async function sendOrderEmail(order, event) {
   if (already) return { sent: false, reason: "already sent" };
 
   const contact = await storeContact();
-  const { subject, heading, intro, closing } = template(order);
-  const { html, text } = layout({ heading, intro, order, closing, contact });
+  const { subject, heading, intro, closing, highlight } = template(order);
+  const { html, text } = layout({ heading, intro, order, closing, contact, highlight });
 
   const result = await mailer.sendEmail({ to: order.customer?.email, subject, html, text });
 
@@ -249,4 +394,4 @@ async function notifyCustomer(order, event) {
   }
 }
 
-module.exports = { EMAILS, sendOrderEmail, notifyCustomer, deliveryLine };
+module.exports = { EMAILS, sendOrderEmail, notifyCustomer, deliveryLine, optionText };

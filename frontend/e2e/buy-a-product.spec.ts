@@ -116,11 +116,11 @@ test.describe("buying a product", () => {
     await page.getByPlaceholder("Street Address").fill(BUYER.address);
     await page.getByPlaceholder("City").fill(BUYER.city);
     await page.getByPlaceholder("Region").fill(BUYER.region);
-    await page.getByRole("button", { name: "Continue to Payment" }).click();
+    await page.getByRole("button", { name: /Continue to Review/i }).click();
 
-    // Mobile money is the default; there is nothing to type here any more.
-    // Paystack collects the number on its own page, which is the whole point.
-    await page.getByRole("button", { name: "Review Order" }).click();
+    // Two steps now: shipping, then review and pay. There is no payment step on
+    // this site at all — Paystack collects the card or mobile money number on
+    // its own page, which is the whole point of handing over.
 
     /**
      * The handoff is blocked rather than followed.
@@ -147,7 +147,7 @@ test.describe("buying a product", () => {
       await route.fulfill({ response });
     });
 
-    await page.getByRole("button", { name: "Place Order & Pay" }).click();
+    await page.getByRole("button", { name: /Place Order & Pay/i }).click();
     await expect.poll(() => payment, { timeout: 30000 }).toBeTruthy();
 
     // A real Paystack session, for a real order, with the order number as its

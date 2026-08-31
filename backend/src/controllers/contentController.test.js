@@ -38,7 +38,9 @@ describe("reading content", () => {
     // The defaults are the values that were hardcoded in the frontend, so
     // shipping this cannot blank the homepage.
     expect(Object.keys(res.body).sort()).toEqual([...SLOT_KEYS].sort());
-    expect(res.body["hero.slides"]).toHaveLength(3);
+    // Compared against the defaults themselves rather than a hardcoded count,
+    // which went stale the first time a hero slide was added.
+    expect(res.body["hero.slides"]).toHaveLength(defaultsFor("hero.slides").length);
     expect(res.body["site.seo"].title).toMatch(/JULES & CO/);
   });
 
@@ -53,7 +55,8 @@ describe("reading content", () => {
     // Untouched slots still come back. Asserted against the hero rather than
     // the testimonials, which ship empty on purpose — nobody's words go on the
     // homepage until someone has actually said them.
-    expect(res.body["hero.slides"]).toHaveLength(3);
+    expect(res.body["hero.slides"]).toHaveLength(defaultsFor("hero.slides").length);
+    expect(res.body["hero.slides"].length).toBeGreaterThan(0);
   });
 
   test("a single slot can be read on its own", async () => {
