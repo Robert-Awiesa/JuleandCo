@@ -29,11 +29,27 @@ function normaliseOrigin(value?: string) {
  * `/api` works in a browser and fails on the server, where there is no page to
  * be relative to.
  *
- * VERCEL_URL is the running deployment's own hostname, which is exactly what a
- * server render should call: it reaches the same code it is part of, including
- * on preview deployments, without anything to configure.
+ * The order matters, and `VERCEL_URL` deliberately comes last:
+ *
+ *   API_ORIGIN                     — set by backend/server.js when one process
+ *                                    serves both halves, pointing at loopback.
+ *   CLIENT_URL                     — the shop's real address, once it has one.
+ *   VERCEL_PROJECT_PRODUCTION_URL  — the project's *stable* production domain.
+ *   VERCEL_URL                     — this one deployment's own hostname.
+ *
+ * `VERCEL_URL` looks like the obvious choice and is a trap: it is the immutable
+ * per-deployment URL, and Vercel's Deployment Protection guards those even when
+ * the production alias is public. A server render fetching itself there is
+ * redirected to an authentication page, every request fails, and because these
+ * reads fall back rather than throw, the site renders perfectly — with no
+ * products, no navigation and no hero. It fails as an empty shop, not an error.
  */
-const API_ORIGIN = normaliseOrigin(process.env.API_ORIGIN || process.env.VERCEL_URL);
+const API_ORIGIN = normaliseOrigin(
+  process.env.API_ORIGIN ||
+    process.env.CLIENT_URL ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    process.env.VERCEL_URL
+);
 const API_URL = API_ORIGIN
   ? `${API_ORIGIN}/api`
   : process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";

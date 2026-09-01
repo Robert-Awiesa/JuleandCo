@@ -112,9 +112,14 @@ async function applyTransaction(transaction) {
  *
  *   CLIENT_URL   — set deliberately by an operator. Wins, and is what you set
  *                  once a custom domain is in front of the deployment.
- *   VERCEL_URL   — the running deployment's own hostname, injected by Vercel.
- *                  Means a fresh deployment works with nothing configured.
- *   the request's own origin — development, where the two above are absent.
+ *   VERCEL_PROJECT_PRODUCTION_URL — the project's *stable* production domain,
+ *                  so a fresh deployment works with nothing configured.
+ *   the request's own origin — development, where the above are absent.
+ *
+ * `VERCEL_URL` is deliberately not used. It is the immutable per-deployment
+ * hostname, and Vercel's Deployment Protection guards those even when the
+ * production alias is public — so a customer who had just paid would be
+ * returned to an authentication page instead of their confirmation.
  *
  * The request comes last on purpose: the Host header is set by the caller, so
  * trusting it first would let someone hand a customer a payment link that
@@ -122,7 +127,8 @@ async function applyTransaction(transaction) {
  * That is a convincing place to ask for card details again.
  */
 function siteOrigin(req) {
-  const configured = process.env.CLIENT_URL || process.env.VERCEL_URL;
+  const configured =
+    process.env.CLIENT_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL;
   const base = configured
     ? configured.split(",")[0].trim()
     : `${req.protocol}://${req.get("host")}`;

@@ -27,6 +27,10 @@ export function siteUrl(): string {
   return (
     normalise(process.env.NEXT_PUBLIC_SITE_URL) ||
     normalise(process.env.CLIENT_URL) ||
+    // The project's stable production domain, ahead of this one deployment's
+    // immutable hostname — otherwise robots.txt, the sitemap and every
+    // canonical advertise a URL that changes on every deploy.
+    normalise(process.env.VERCEL_PROJECT_PRODUCTION_URL) ||
     normalise(process.env.VERCEL_URL) ||
     FALLBACK
   );

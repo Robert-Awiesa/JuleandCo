@@ -268,18 +268,18 @@ describe("where Paystack sends the customer back to", () => {
 
   afterEach(() => {
     delete process.env.CLIENT_URL;
-    delete process.env.VERCEL_URL;
+    delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
   });
 
   test("an operator's own domain wins", () => {
     process.env.CLIENT_URL = "https://julesandco.com";
-    process.env.VERCEL_URL = "https://jules.onrender.com";
+    process.env.VERCEL_PROJECT_PRODUCTION_URL = "https://jules.onrender.com";
 
     expect(siteOrigin(request_("jules.onrender.com"))).toBe("https://julesandco.com");
   });
 
   test("the deployment's own address is used when nothing is configured", () => {
-    process.env.VERCEL_URL = "https://jules.onrender.com";
+    process.env.VERCEL_PROJECT_PRODUCTION_URL = "https://jules.onrender.com";
 
     // Without this the deployed shop would return paying customers to
     // localhost, which is a dead tab on their own machine.

@@ -78,14 +78,25 @@ long-lived-server shape and mean nothing here.
 
 ### `CLIENT_URL` and why it matters more than it looks
 
-Unset, everything falls back to `VERCEL_URL` — the deployment's own hostname —
-so a fresh deploy works with nothing configured. Three things use it:
+Unset, everything falls back to `VERCEL_PROJECT_PRODUCTION_URL` — the project's
+stable production domain — so a fresh deploy works with nothing configured.
+Four things use it:
 
 - **Where Paystack returns a customer after paying.** Wrong, and someone who has
   just paid lands somewhere unexpected.
 - **`metadataBase`**, which makes the share image absolute. WhatsApp, Facebook
   and X all require that, or a shared link previews with no picture.
-- **robots.txt and the sitemap**, which name absolute URLs.
+- **robots.txt, the sitemap and every canonical URL**, which must be absolute.
+- **The origin server components fetch the API on.** They cannot use a relative
+  `/api`; there is no page for it to be relative to.
+
+> **Never use `VERCEL_URL` for any of these.** It is the immutable
+> per-deployment hostname, and Vercel's Deployment Protection guards those even
+> when the production alias is public. A server render fetching itself there is
+> redirected to an authentication page. Because storefront reads fall back
+> rather than throw, the site then renders perfectly — with no products, no
+> navigation and no hero. It fails as an *empty shop*, not as an error, which is
+> the hardest kind of failure to recognise.
 
 So the moment a custom domain is in front of the project, set `CLIENT_URL` to it
 — otherwise all three keep pointing at the `vercel.app` address.
