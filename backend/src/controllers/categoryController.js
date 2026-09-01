@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const Category = require("../models/Category");
 const Subcategory = require("../models/Subcategory");
 const Product = require("../models/Product");
+const AttributeGroup = require("../models/AttributeGroup");
 
 // @desc    List categories
 // @route   GET /api/categories
@@ -84,6 +85,34 @@ const deleteCategory = asyncHandler(async (req, res) => {
     res.status(409);
     throw new Error(`Cannot delete "${category.name}" — remove its ${subCount} sub-categories first`);
   }
+
+  /**
+   * Attribute groups that name this category and nothing else.
+   *
+   * An empty `categories` list means "applies to every category", so simply
+   * pulling the slug out would not orphan these groups — it would do something
+   * worse and quieter: a Fabric field would start appearing on eyewear, and a
+   * Frame Shape filter on bags. Refused rather than silently widened, and the
+   * groups are named so it is obvious what to reassign.
+   */
+  const orphaned = await AttributeGroup.find({ categories: [category.slug] })
+    .select("label")
+    .lean();
+
+  if (orphaned.length > 0) {
+    res.status(409);
+    throw new Error(
+      `Cannot delete "${category.name}" — ${orphaned.length} attribute group(s) apply to it ` +
+        `and nothing else (${orphaned.map((g) => g.label).join(", ")}). ` +
+        `Reassign or delete them first, or they would start applying to every category.`
+    );
+  }
+
+  // Groups that also cover other categories just lose this one.
+  await AttributeGroup.updateMany(
+    { categories: category.slug },
+    { $pull: { categories: category.slug } }
+  );
 
   await category.deleteOne();
   res.json({ message: "Category removed" });

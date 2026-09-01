@@ -67,6 +67,27 @@ function CategoryPanel({ category }: { category: Category }) {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  /**
+   * Removing a category for good.
+   *
+   * Retiring is the right answer almost every time — it takes a line off the
+   * shop and keeps its products editable. This is for a category that was
+   * created by mistake, or a line the shop is genuinely finished with.
+   *
+   * The API refuses while anything still depends on it: products, sub-categories,
+   * or attribute groups that apply to it and nothing else. Those refusals name
+   * what is in the way, so they are shown as they come back rather than
+   * flattened into "could not delete".
+   */
+  const deleteCategoryMutation = useMutation({
+    mutationFn: () => api.del(`/categories/id/${category._id}`),
+    onSuccess: () => {
+      toast.success(`"${category.name}" deleted`);
+      invalidate.configuration();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   return (
     <section
       className={
@@ -91,13 +112,36 @@ function CategoryPanel({ category }: { category: Category }) {
               : "No variant axes configured"}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => retireMutation.mutate(!category.isActive)}
-          className="shrink-0 text-xs uppercase tracking-wide text-obsidian/50 underline-offset-4 hover:text-obsidian hover:underline"
-        >
-          {category.isActive ? "Retire" : "Reactivate"}
-        </button>
+        <div className="flex shrink-0 items-center gap-3">
+          <button
+            type="button"
+            onClick={() => retireMutation.mutate(!category.isActive)}
+            className="text-xs uppercase tracking-wide text-obsidian/50 underline-offset-4 hover:text-obsidian hover:underline"
+          >
+            {category.isActive ? "Retire" : "Reactivate"}
+          </button>
+
+          {/* Deliberately quieter than Retire, and it says "permanently" —
+              retiring is reversible and is what you almost always want. */}
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                confirm(
+                  `Permanently delete the "${category.name}" category?\n\n` +
+                    `This cannot be undone. Retiring hides it from the shop instead ` +
+                    `and keeps everything editable.`
+                )
+              ) {
+                deleteCategoryMutation.mutate();
+              }
+            }}
+            disabled={deleteCategoryMutation.isPending}
+            className="text-xs uppercase tracking-wide text-obsidian/35 underline-offset-4 hover:text-red-600 hover:underline disabled:opacity-40"
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       {!category.isActive && (
