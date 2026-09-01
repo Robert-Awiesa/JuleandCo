@@ -1405,3 +1405,125 @@ production build clean.
 - Error tracking and uptime monitoring; a restore has never been rehearsed.
 - Next.js 14 → 16 for the residual advisories. 14.2.35 is the latest 14.x, so
   the middleware auth bypass is already patched.
+
+### 2026-09-01 — Live on shopatjules.com
+
+The shop is deployed, on its own domain, taking real money, and sending real
+email. What follows is what actually went wrong on the way, because none of it
+was visible from the code.
+
+#### Four failures between "it builds" and "it works"
+
+**A committed `.npmrc` killed every build.** It held
+`script-shell=C:\Program Files\Git\bin\bash.exe` — a Windows path, read by a
+Linux builder, which then tried to spawn it to run `mongodb-memory-server`'s
+postinstall and failed the whole install with ENOENT. It was a workaround for
+the folder once being named `jules&co`, obsolete since the rename. Per-machine
+npm config belongs in `~/.npmrc`; `.npmrc` is now gitignored.
+
+**Redeploy rebuilds the same commit.** Three deployments in a row failed
+identically because Redeploy was being used after a fix — it re-runs *that
+deployment's* commit, never a newer one. Any time the Source line shows an old
+hash, that is what happened.
+
+**`VERCEL_URL` is a trap, and mine.** Server components need an absolute origin,
+and I reached for `VERCEL_URL`. That is the immutable per-deployment hostname,
+and Vercel's Deployment Protection guards those even when the production alias
+is public — verified live: the alias answered `/api/health` with 200, the
+deployment URL with a 302 to an auth page. So every server-side read was
+redirected to a login form. Because storefront reads fall back rather than
+throw, the site rendered perfectly and **emptily**: no products, no navigation,
+no hero. It failed as an empty shop, not an error, which is far harder to
+recognise. `VERCEL_PROJECT_PRODUCTION_URL` is the stable domain and is what
+these should always have used — in `lib/api.ts`, `siteUrl.ts`, and the Paystack
+return URL, where the same fault would have returned a paying customer to a
+Vercel login page.
+
+**`NEXT_PUBLIC_API_URL` was never set, and only the admin noticed.** The login
+page reported "Something went wrong" — its fallback for a *network* failure
+rather than an API error. The built chunk contained `localhost:5000/api`, so
+the browser was posting to a server on the operator's own machine. The
+storefront was unaffected because it fetches server-side through a different
+path entirely. `NEXT_PUBLIC_*` is compiled in at build time, so setting it
+requires a rebuild, not a restart.
+
+#### DNS, and reading the table instead of inferring
+
+The domain is `shopatjules.com`; `ishopatjules@gmail.com` is only the Resend
+login. An hour went into `ishopatjules.com` returning NXDOMAIN from Verisign
+before that was spotted — worth checking the registrar's own domain list before
+trusting the name in anyone's head.
+
+Resend's two SPF records were **CNAME**, not MX. Their values are hostnames, so
+they had been entered as TXT, where a bare hostname does nothing at all. I
+predicted MX from the shape of the values and was wrong; Resend's own record
+table settled it in one glance. Read the table.
+
+Namecheap's **URL Redirect Record** on `@` cannot coexist with an A record, and
+the panel reports the clash as "Failed to retrieve the record!" rather than
+naming it.
+
+#### Two product bugs the shop found for itself
+
+**A published product read SOLD OUT beside "only 1 left".** It had a Frame
+Colour axis with no colours in it: the page rendered the heading with nothing
+under it, so no variant could match a choice nobody could make. Then, once
+colours were added, it *still* said sold out — because the variant grid rebuild
+lived inside `InventoryTab`, in an effect that only ran while that tab was
+mounted. Adding a colour under Options & Images and saving never regenerated
+the grid, and `shouldDirty: false` meant even opening the tab edited the form
+silently. The rebuild now runs in `ProductForm` and marks the form dirty when it
+changes something.
+
+Two gate rules cover what remains, mirrored in the admin checklist: an option
+with no values, and a grid naming none of the axes. The second is deliberately
+loose — one variant per axis, not every combination — because stocking only
+some combinations is legitimate.
+
+**The product page promised things the shop does not do.** Hardcoded:
+"complimentary shipping on orders over GH₵1,000" (the threshold model that had
+been deliberately removed), "30-day returns" (the policy said otherwise), and a
+two-year guarantee nobody had agreed. Now a content slot, set to what the shop
+actually offers — free shipping over GH₵700, 3-day returns — with the returns
+policy and checkout note updated in the same pass so the three cannot drift.
+
+#### Smaller things worth keeping
+
+- **Image upload was already right for serverless** — the API only signs and the
+  browser posts straight to Cloudinary, so no photograph passes through the
+  function or meets its body limit. Verified end to end against the real
+  account. What was wrong was the reporting: `"Image upload failed"` threw away
+  Cloudinary's reason, and the catch then replaced even that with "check your
+  connection", sending people to look at their wifi instead of their file size.
+- Site imagery and product shots are separate Cloudinary folders now; sharing
+  one meant hero banners filled the product form's "Reuse a shot" picker.
+- `MAIL_REPLY_TO`: the from-address must be at the verified domain, but the
+  inbox anyone reads is a Gmail account. Without it, every "reply to this email"
+  in five templates was an invitation to a bounce.
+- Categories can be deleted, not only retired — the endpoint existed and was
+  routed, and nothing called it. It needed one more guard first: attribute
+  groups reference categories by slug, and an **empty** category list means
+  "applies to everything", so pulling a deleted slug from a group that named
+  only that one would have made Fabric appear on eyewear.
+- The hero was dimmed by three stacked layers, including `opacity-70` on the
+  photograph itself, so the page showed through it. The image is opaque now and
+  the scrims are weighted where the type is.
+
+#### Proven live
+
+Order placed → Paystack took real money → the webhook marked it paid unprompted
+→ a receipt sent from `orders@shopatjules.com` → advancing the status emailed
+again. `notifications[]` on the order records both, so the admin can answer
+"have they heard from us?" without opening Resend.
+
+backend **392/392**, `tsc` clean, production build clean.
+
+#### Still outstanding
+- The `[CONFIRM: …]` markers in the returns policy: who pays return delivery,
+  what is not accepted back, refund turnaround.
+- Contact details under Settings are empty, and both policy pages point at them.
+- One administrator, no second account.
+- Local development still points at the production database. Once real orders
+  exist, running the suites locally would place real orders and move real stock.
+- Error tracking and uptime monitoring; a restore has never been rehearsed.
+- Real photography and testimonials; the homepage tiles are still Unsplash.
