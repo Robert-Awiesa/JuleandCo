@@ -30,6 +30,23 @@ function sender() {
   return process.env.MAIL_FROM || "JULES & CO <onboarding@resend.dev>";
 }
 
+/**
+ * Where a customer's reply actually goes.
+ *
+ * The from-address has to be at the domain verified in Resend, because that is
+ * the only domain whose DNS authorises Resend to send. But a shop rarely reads
+ * mail at that address — the inbox somebody actually watches is usually
+ * elsewhere, often a Gmail account.
+ *
+ * Without this, every "reply to this email and we will put it right" in these
+ * messages is an invitation to a bounce. Set MAIL_REPLY_TO to the inbox that is
+ * genuinely read; unset, replies go back to the from-address, which is correct
+ * when a mailbox does exist there.
+ */
+function replyTo() {
+  return process.env.MAIL_REPLY_TO || undefined;
+}
+
 function post(path, body) {
   const payload = JSON.stringify(body);
 
@@ -98,15 +115,20 @@ async function sendEmail({ to, subject, html, text }) {
     return { sent: false, reason: "no recipient" };
   }
 
+  const reply = replyTo();
+
   const result = await post("/emails", {
     from: sender(),
     to: [to],
     subject,
     html,
     text,
+    // Omitted entirely when unset — Resend treats an empty reply_to as an
+    // address and refuses the send.
+    ...(reply ? { reply_to: reply } : {}),
   });
 
   return { sent: true, id: result.id };
 }
 
-module.exports = { sendEmail, isConfigured, sender };
+module.exports = { sendEmail, isConfigured, sender, replyTo };

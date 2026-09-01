@@ -99,7 +99,8 @@ Create it with:
 | `NEXT_PUBLIC_GA_ID` | Optional. Google Analytics 4 measurement ID; unset, nothing is measured (frontend, build-time) |
 | `ORDER_EXPIRY_MINUTES` | Optional. How long an unpaid order holds stock (default 60) |
 | `RESEND_API_KEY` | Optional. Order emails via Resend; unset, none are sent |
-| `MAIL_FROM` | Optional. Sender address; defaults to `onboarding@resend.dev` |
+| `MAIL_FROM` | Optional. Sender address, at a Resend-verified domain; defaults to `onboarding@resend.dev` |
+| `MAIL_REPLY_TO` | Optional. Inbox customer replies go to, when the sender address has no mailbox |
 | `JWT_SECRET` | Signs the auth cookie |
 | `JWT_EXPIRES_IN` | Token lifetime (e.g. `30d`) |
 | `CLIENT_URL` | Storefront origin — CORS, and where Paystack returns a customer after paying (`http://localhost:3000`) |
