@@ -45,7 +45,9 @@ describe("publish readiness", () => {
       images: [],
       subCategory: "",
       price: 0,
-      options: [{ name: "Metal" }],
+      // Values supplied so this test reports only the four it is about, and
+      // not the separate "a value for every option" rule as well.
+      options: [{ name: "Metal", values: [{ value: "gold", label: "Gold" }] }],
       variants: [],
     }).map((b) => b.id);
 
@@ -53,8 +55,12 @@ describe("publish readiness", () => {
   });
 
   test("options with no variants block, because nothing could be added to the cart", () => {
+    // A populated axis, so the missing variants are the only fault.
     const blockers = publishBlockers(
-      productFixture({ options: [{ name: "Metal", values: [] }], variants: [] })
+      productFixture({
+        options: [{ name: "Metal", values: [{ value: "gold", label: "Gold" }] }],
+        variants: [],
+      })
     );
     expect(blockers.map((b) => b.id)).toEqual(["variants"]);
   });

@@ -37,6 +37,22 @@ const PUBLISH_RULES = [
       "This product has options but no variants, so a customer could choose one and never add it to the cart.",
     test: (p) => (p.options || []).length === 0 || (p.variants || []).length > 0,
   },
+  {
+    id: "optionValues",
+    label: "A value for every option",
+    /**
+     * An axis with nothing in it is worse than no axis at all.
+     *
+     * The product page renders the heading — "Frame Colour" — with no swatches
+     * beneath it, so the customer is asked to choose from nothing. No variant
+     * can match a choice that cannot be made, so the button reads SOLD OUT
+     * while the stock figure beside it says one left. The rule above passes
+     * this happily: there *is* an option and there *is* a variant.
+     */
+    reason:
+      "An option with no values asks the customer to choose from an empty list, so nothing can be added to the cart and the product reads as sold out however much stock it has.",
+    test: (p) => (p.options || []).every((o) => (o.values || []).length > 0),
+  },
 ];
 
 /** The rules a product fails. Empty means it is safe to publish. */

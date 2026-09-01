@@ -60,6 +60,13 @@ export function evaluateReadiness(
       hint: "Options with no variants leave a picker a customer can never add to the cart.",
       done: options.length === 0 || variants.length > 0,
     },
+    {
+      // Ids are kept identical to the backend gate so the two can be compared.
+      id: "optionValues",
+      label: "A value for every option",
+      hint: "An empty option renders its heading with nothing under it, so no variant can match and the product reads as sold out.",
+      done: options.every((o) => (o.values ?? []).length > 0),
+    },
   ];
 
   // Only spec-role groups: a selection or an internal measurement missing is
