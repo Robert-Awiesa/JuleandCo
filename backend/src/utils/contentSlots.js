@@ -716,7 +716,12 @@ const SLOTS = {
     fields: [
       { key: "email", label: "Email", type: "text" },
       { key: "phone", label: "Phone", type: "text" },
-      { key: "whatsapp", label: "WhatsApp number", type: "text", help: "Digits only, with country code." },
+      {
+        key: "whatsapp",
+        label: "WhatsApp number",
+        type: "text",
+        help: 'With country code. Spaces and a leading + are fine — the floating button strips them, so "+233 24 659 8404" and "233246598404" both work.',
+      },
       { key: "address", label: "Address", type: "textarea" },
       { key: "instagram", label: "Instagram URL", type: "url" },
       { key: "tiktok", label: "TikTok URL", type: "url" },
@@ -724,7 +729,7 @@ const SLOTS = {
     defaults: {
       email: "",
       phone: "",
-      whatsapp: "",
+      whatsapp: "+233 24 659 8404",
       address: "",
       instagram: "https://instagram.com",
       tiktok: "https://tiktok.com",
