@@ -29,9 +29,24 @@ const shippingAddressSchema = new mongoose.Schema(
   {
     fullName: { type: String, required: true },
     phone: { type: String, required: true },
+
+    /**
+     * Where to deliver, as the customer would describe it out loud.
+     *
+     * Checkout used to ask for a street address, a city and a region. Most
+     * Ghanaian addresses are directional — a landmark, an area, a town — so
+     * that split forced the useful part into whichever box happened to fit.
+     * One field now holds the lot.
+     */
     address: { type: String, required: true },
-    city: { type: String, required: true },
-    region: { type: String, required: true },
+
+    /**
+     * Kept, and no longer required. Orders placed before the change carry
+     * them, and dropping the paths would hide that history from the admin and
+     * from the customer aggregation that reads `lastCity`.
+     */
+    city: String,
+    region: String,
   },
   { _id: false }
 );

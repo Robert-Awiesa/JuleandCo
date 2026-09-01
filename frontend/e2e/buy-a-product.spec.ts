@@ -14,9 +14,8 @@ const BUYER = {
   name: "Playwright Buyer",
   phone: "0244000111",
   email: "playwright.buyer@example.com",
-  address: "12 Oxford Street",
-  city: "Accra",
-  region: "Greater Accra",
+  // One directional location, as Ghanaian addresses are actually given.
+  address: "Blue gate opposite Shell filling station, Haatso, Accra",
 };
 
 /** Set by the purchase test and read by the ones that follow it. */
@@ -113,9 +112,7 @@ test.describe("buying a product", () => {
     await page.getByPlaceholder("Full Name").fill(BUYER.name);
     await page.getByPlaceholder("Phone Number").fill(BUYER.phone);
     await page.getByPlaceholder("Email Address").fill(BUYER.email);
-    await page.getByPlaceholder("Street Address").fill(BUYER.address);
-    await page.getByPlaceholder("City").fill(BUYER.city);
-    await page.getByPlaceholder("Region").fill(BUYER.region);
+    await page.getByPlaceholder(/^Location/).fill(BUYER.address);
     await page.getByRole("button", { name: /Continue to Review/i }).click();
 
     // Two steps now: shipping, then review and pay. There is no payment step on

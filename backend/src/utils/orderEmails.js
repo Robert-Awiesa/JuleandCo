@@ -100,7 +100,14 @@ function deliveryLine(order) {
   return `Delivery: ${money(order.shippingPrice)}.`;
 }
 
-/** "12 Oxford Street, Accra, Greater Accra" — the parts that exist, in order. */
+/**
+ * The delivery location as one line.
+ *
+ * Checkout now collects a single directional location rather than a street,
+ * city and region, so `address` usually carries the lot. The other two are
+ * still joined when present, because orders placed before that change have
+ * them and a receipt should read the same way for both.
+ */
 function addressText(order) {
   const a = order.shippingAddress || {};
   return [a.address, a.city, a.region].filter(Boolean).join(", ");

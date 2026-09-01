@@ -27,8 +27,6 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
     fullName: "",
     phone: "",
     address: "",
-    city: "",
-    region: "",
   });
   // Checkout is guest-only, so an email is the only way to send a receipt or
   // reach the buyer about the order.
@@ -226,28 +224,29 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
               />
-              <input
-                required
-                placeholder="Street Address"
-                value={shipping.address}
-                onChange={(e) => setShipping({ ...shipping, address: e.target.value })}
-                className="w-full border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
-              />
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <input
+              {/*
+                One free-text location, not a street address split across city
+                and region.
+
+                Most Ghanaian addresses are directional rather than numbered —
+                a landmark, an area, a town. Asking for "Street Address" then
+                "City" then "Region" forces that into boxes it does not fit, and
+                what arrived was a rider's guess. A single field lets someone
+                write the directions they would give over the phone, which is
+                what the delivery actually runs on.
+              */}
+              <div>
+                <textarea
                   required
-                  placeholder="City"
-                  value={shipping.city}
-                  onChange={(e) => setShipping({ ...shipping, city: e.target.value })}
-                  className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
+                  rows={3}
+                  placeholder="Location — e.g. Blue gate opposite Shell filling station, Haatso, Accra"
+                  value={shipping.address}
+                  onChange={(e) => setShipping({ ...shipping, address: e.target.value })}
+                  className="w-full resize-none border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
                 />
-                <input
-                  required
-                  placeholder="Region"
-                  value={shipping.region}
-                  onChange={(e) => setShipping({ ...shipping, region: e.target.value })}
-                  className="border border-line-strong bg-transparent px-4 py-3 text-sm focus:border-gold focus:outline-none"
-                />
+                <p className="mt-2 text-xs text-ink-subtle">
+                  Landmarks help. Tell us what you would tell a driver on the phone.
+                </p>
               </div>
               <Button type="submit" className="mt-2">
                 Continue to Review
@@ -263,7 +262,7 @@ export function CheckoutView({ delivery }: { delivery: DeliverySettings }) {
                 <p className="mb-1 text-xs uppercase tracking-widest2 text-ink-subtle">Ship To</p>
                 <p className="font-medium">{shipping.fullName}</p>
                 <p className="text-ink-muted">
-                  {shipping.address}, {shipping.city}, {shipping.region}
+                  {shipping.address}
                 </p>
                 <p className="text-ink-muted">{shipping.phone} · {email}</p>
               </div>
