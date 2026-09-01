@@ -53,6 +53,39 @@ const PUBLISH_RULES = [
       "An option with no values asks the customer to choose from an empty list, so nothing can be added to the cart and the product reads as sold out however much stock it has.",
     test: (p) => (p.options || []).every((o) => (o.values || []).length > 0),
   },
+  {
+    id: "variantsMatchOptions",
+    label: "Stock held against the actual options",
+    /**
+     * The stock grid can fall out of step with the axes.
+     *
+     * A product that had no colours, then gained two, kept its single unnamed
+     * variant — so the stock sat on a row carrying no option values at all,
+     * every colour reported out of stock, and the page said SOLD OUT beside
+     * "only 1 left". The two rules above both pass that: there are options,
+     * there is a variant, and the options have values.
+     *
+     * The check is deliberately loose — one variant naming each axis, rather
+     * than every combination — because a shop may legitimately stock only some
+     * combinations. What it will not allow is a grid that names none of them.
+     */
+    reason:
+      "The stock grid does not match this product's options, so no choice a customer makes can find its stock. Open the Inventory tab to rebuild it.",
+    test: (p) => {
+      const axes = (p.options || []).filter((o) => (o.values || []).length > 0);
+      if (axes.length === 0) return true;
+
+      // Having no variants at all is the rule above's to report. Saying it
+      // twice makes the checklist read as two separate faults.
+      if ((p.variants || []).length === 0) return true;
+
+      return axes.every((axis) =>
+        (p.variants || []).some((v) =>
+          (v.optionValues || []).some((ov) => ov.name === axis.name)
+        )
+      );
+    },
+  },
 ];
 
 /** The rules a product fails. Empty means it is safe to publish. */

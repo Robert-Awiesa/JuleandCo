@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { buildVariantMatrix } from "./variantMatrix";
 import { fillMissingSkus } from "./sku";
 import type { ProductOption } from "../../_lib/types";
 import type { ProductFormInput } from "./schema";
@@ -20,12 +18,10 @@ export function InventoryTab() {
   const options = (useWatch({ control, name: "options" }) ?? []) as ProductOption[];
   const variants = watch("variants") ?? [];
 
-  // Rebuild the grid whenever the axes change, preserving stock and SKUs that
-  // have already been entered against surviving combinations.
-  useEffect(() => {
-    setValue("variants", buildVariantMatrix(options, variants), { shouldDirty: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(options)]);
+  // The grid is rebuilt by ProductForm whenever the axes change, so it stays in
+  // step even when this tab has never been opened. It used to happen here, and
+  // a product saved without visiting Inventory kept whatever variants it had
+  // before the axes were edited.
 
   const axes = options.filter((option) => (option.values || []).length > 0);
   const total = variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);

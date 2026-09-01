@@ -67,6 +67,19 @@ export function evaluateReadiness(
       hint: "An empty option renders its heading with nothing under it, so no variant can match and the product reads as sold out.",
       done: options.every((o) => (o.values ?? []).length > 0),
     },
+    {
+      id: "variantsMatchOptions",
+      label: "Stock held against the actual options",
+      hint: "The stock grid does not match the options — open the Inventory tab to rebuild it.",
+      // No variants at all is the rule above's to report, not this one's.
+      done:
+        variants.length === 0 ||
+        options
+          .filter((o) => (o.values ?? []).length > 0)
+          .every((axis) =>
+            variants.some((v) => (v.optionValues ?? []).some((ov) => ov.name === axis.name))
+          ),
+    },
   ];
 
   // Only spec-role groups: a selection or an internal measurement missing is

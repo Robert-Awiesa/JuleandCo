@@ -17,6 +17,8 @@ import { OptionsImagesTab } from "./OptionsImagesTab";
 import { InventoryTab } from "./InventoryTab";
 import { CrossSellTab } from "./CrossSellTab";
 import { ReadinessPanel } from "./ReadinessPanel";
+import { buildVariantMatrix } from "./variantMatrix";
+import type { ProductOption } from "../../_lib/types";
 
 function toFormValues(product?: AdminProduct): ProductFormInput {
   if (!product) {
@@ -85,6 +87,33 @@ export function ProductForm({ product }: { product?: AdminProduct }) {
     resolver: zodResolver(productFormSchema),
     defaultValues: toFormValues(product),
   });
+
+  /**
+   * Keep the stock grid in step with the axes, from anywhere in the form.
+   *
+   * This used to live inside InventoryTab, so it only ran while that tab was
+   * open. Add a colour under Options & Images, save without visiting Inventory,
+   * and the variants were never rebuilt: the axis had two colours, the grid
+   * still held the single row from before, and the product went live reporting
+   * every colour out of stock while the rollup said one left.
+   *
+   * `shouldDirty` is true when the rebuild actually changes something, so the
+   * Save button and the unsaved-changes marker both notice — silently editing
+   * the form and telling nobody is how the old version lost the change.
+   */
+  const watchedOptions = form.watch("options");
+  useEffect(() => {
+    const current = form.getValues("variants") ?? [];
+    const rebuilt = buildVariantMatrix(
+      (watchedOptions ?? []) as ProductOption[],
+      current as never
+    );
+
+    if (JSON.stringify(rebuilt) !== JSON.stringify(current)) {
+      form.setValue("variants", rebuilt as never, { shouldDirty: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(watchedOptions)]);
 
   useEffect(() => {
     function warnOnUnload(e: BeforeUnloadEvent) {
