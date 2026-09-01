@@ -61,16 +61,28 @@ export function Hero({ slides }: { slides: HeroSlide[] }) {
           sizes="100vw"
           style={{ objectPosition: s.objectPosition }}
           className={`object-cover transition-opacity duration-1000 ease-in-out ${
-            i === index % visible.length ? "opacity-70" : "opacity-0"
+            i === index % visible.length ? "opacity-100" : "opacity-0"
           }`}
         />
       ))}
 
-      {/* Vertical scrim blends the image into the page below. */}
-      <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/25 to-surface/50" />
-      {/* Horizontal scrim guarantees the copy stays legible over any photo,
-          not just one that happens to be dark behind the text. */}
-      <div className="absolute inset-0 bg-gradient-to-r from-surface/85 via-surface/40 to-transparent" />
+      {/*
+        Two scrims, and no third one on the photograph itself.
+        
+        The image used to sit at 70% opacity as well, so the page showed through
+        it and every hero looked muddy — three darkening layers over
+        photography that is actually sharp. The image is now fully opaque and
+        the scrims do the whole job, weighted where the type is rather than
+        spread evenly over the picture.
+      */}
+
+      {/* Bottom edge only, so the photograph melts into the page below it
+          without dimming the subject's face in the middle. */}
+      <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-surface/20" />
+
+      {/* The left third, where the headline sits. Strong enough to keep ivory
+          type legible over a pale photograph, gone entirely by the centre. */}
+      <div className="absolute inset-0 bg-gradient-to-r from-surface/80 via-surface/20 to-transparent" />
 
       <div className="container-elevated relative z-10 pb-20 text-ink">
         <motion.p

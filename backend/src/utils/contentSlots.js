@@ -114,7 +114,9 @@ const SLOTS = {
         alt: "A JULES & CO campaign photograph",
         headline: "It's shop@jules",
         emoji: "🛍️",
-        objectPosition: "center",
+        // Framed lower than the others, so the crop is pulled up the image to
+        // bring the subject off the bottom edge.
+        objectPosition: "center 65%",
         active: true,
       },
     ],
