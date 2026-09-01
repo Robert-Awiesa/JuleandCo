@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { fetchProductBySlug, fetchProductReviews } from "@/lib/api";
 import { ProductDetailView } from "@/components/product/ProductDetailView";
 import { ProductReviews } from "@/components/product/ProductReviews";
+import { fetchContentSlot } from "@/lib/content";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { breadcrumbSchema, productSchema } from "@/lib/structuredData";
 
@@ -37,7 +38,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const product = await fetchProductBySlug(params.slug);
   if (!product) notFound();
 
-  const reviews = await fetchProductReviews(product.id);
+  const [reviews, assurances] = await Promise.all([
+    fetchProductReviews(product.id),
+    fetchContentSlot("product.assurances"),
+  ]);
 
   return (
     <>
@@ -52,7 +56,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
         ])}
       />
 
-      <ProductDetailView product={product} related={product.related ?? []} />
+      <ProductDetailView
+        product={product}
+        related={product.related ?? []}
+        assurances={assurances}
+      />
       <ProductReviews
         productId={product.id}
         reviews={reviews}

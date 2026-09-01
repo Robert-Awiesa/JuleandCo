@@ -599,13 +599,13 @@ const SLOTS = {
           id: "damaged",
           heading: "If it arrives damaged, or is not what you ordered",
           body:
-            "Contact us within [CONFIRM: 7] days of delivery with your order number and a photograph. We will replace the piece or refund you in full, including any delivery you paid. This is always our cost, never yours.",
+            "Contact us within 3 days of delivery with your order number and a photograph. We will replace the piece or refund you in full, including any delivery you paid. This is always our cost, never yours.",
         },
         {
           id: "changed-mind",
           heading: "If you change your mind",
           body:
-            "Write to us within [CONFIRM: 7] days of delivery. The piece must be unworn, undamaged and in its original packaging. Once we have it back and have checked it, we will refund the price of the piece.\n\n[CONFIRM: who pays return delivery in this case — you or the customer.]",
+            "Write to us within 3 days of delivery. The piece must be unworn, undamaged and in its original packaging. Once we have it back and have checked it, we will refund the price of the piece.\n\n[CONFIRM: who pays return delivery in this case — you or the customer.]",
         },
         {
           id: "exceptions",
@@ -686,6 +686,49 @@ const SLOTS = {
     },
   },
 
+  "product.assurances": {
+    label: "Product page assurances",
+    description:
+      "The short reassurances under the Add to Bag button, on every product page. **Only promise what the shop actually does** — these shipped hardcoded, and claimed complimentary shipping over GH₵1,000 and 30-day returns, neither of which was true.",
+    kind: "list",
+    itemLabel: "Assurance",
+    itemTitle: "text",
+    fields: [
+      {
+        key: "icon",
+        label: "Icon",
+        type: "select",
+        options: [
+          { value: "truck", label: "Delivery" },
+          { value: "returns", label: "Returns" },
+          { value: "shield", label: "Guarantee" },
+          { value: "sparkle", label: "Quality" },
+        ],
+        default: "truck",
+      },
+      { key: "text", label: "Text", type: "text", required: true },
+    ],
+    /**
+     * Defaults that are true whatever the owner later decides.
+     *
+     * Delivery is agreed after confirmation rather than priced at checkout, so
+     * the line says exactly that. Returns point at the policy rather than
+     * naming a number that would then have to be kept in step with it.
+     */
+    defaults: [
+      {
+        id: "a1",
+        icon: "truck",
+        text: "Free shipping on orders over GH₵700",
+      },
+      {
+        id: "a2",
+        icon: "returns",
+        text: "3-day returns",
+      },
+    ],
+  },
+
   "store.delivery": {
     label: "Delivery",
     group: "settings",
@@ -703,7 +746,7 @@ const SLOTS = {
     ],
     defaults: {
       checkoutNote:
-        "Delivery is arranged with you once your order is confirmed — we will be in touch with the cost before anything is dispatched.",
+        "Orders over GH₵700 ship free. Below that, delivery is arranged with you once your order is confirmed — we will be in touch with the cost before anything is dispatched.",
     },
   },
 

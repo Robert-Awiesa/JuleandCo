@@ -2,7 +2,7 @@
 
 import { Fragment } from "react";
 import Link from "next/link";
-import { Heart, RefreshCw, ShieldCheck, Truck } from "lucide-react";
+import { Heart, RefreshCw, ShieldCheck, Sparkles, Truck } from "lucide-react";
 import { Product } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -15,13 +15,24 @@ import { useCartStore } from "@/store/useCartStore";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { useHydrated } from "@/lib/useHydrated";
 import { cn, discountPercent, stockLabel } from "@/lib/utils";
+import type { ProductAssurance } from "@/lib/content";
 
 interface ProductDetailViewProps {
   product: Product;
   related: Product[];
+  /** Editable under Content — see the note beside where these render. */
+  assurances?: ProductAssurance[];
 }
 
-export function ProductDetailView({ product, related }: ProductDetailViewProps) {
+/** The icons an assurance may choose from, keyed by the value stored. */
+const ASSURANCE_ICONS = {
+  truck: Truck,
+  returns: RefreshCw,
+  shield: ShieldCheck,
+  sparkle: Sparkles,
+} as const;
+
+export function ProductDetailView({ product, related, assurances = [] }: ProductDetailViewProps) {
   const discount = discountPercent(product.price, product.compareAtPrice);
   const {
     options,
@@ -137,17 +148,28 @@ export function ProductDetailView({ product, related }: ProductDetailViewProps) 
             </button>
           </div>
 
-          <div className="mt-8 space-y-3 border-t border-line pt-6 text-sm text-ink-muted">
-            <p className="flex items-center gap-2">
-              <Truck size={15} /> Complimentary shipping within Ghana on orders over GH₵1,000
-            </p>
-            <p className="flex items-center gap-2">
-              <RefreshCw size={15} /> 30-day returns &amp; exchanges
-            </p>
-            <p className="flex items-center gap-2">
-              <ShieldCheck size={15} /> 2-year craftsmanship guarantee
-            </p>
-          </div>
+          {/**
+            * Editable under Content, not written here.
+            *
+            * These shipped hardcoded and claimed complimentary shipping over
+            * GH₵1,000 and 30-day returns. Neither was true: delivery is agreed
+            * with the customer after the order is confirmed and is never priced
+            * by the system, and the returns policy names its own window. A
+            * promise on the product page that the policy page contradicts is
+            * the kind of thing a customer is entitled to hold you to.
+            */}
+          {assurances.length > 0 && (
+            <div className="mt-8 space-y-3 border-t border-line pt-6 text-sm text-ink-muted">
+              {assurances.map((item) => {
+                const Icon = ASSURANCE_ICONS[item.icon] ?? Truck;
+                return (
+                  <p key={item.id} className="flex items-center gap-2">
+                    <Icon size={15} className="shrink-0" /> {item.text}
+                  </p>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

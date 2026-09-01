@@ -122,6 +122,13 @@ export interface PolicyContent {
   sections: PolicySection[];
 }
 
+/** One reassurance under the Add to Bag button. */
+export interface ProductAssurance {
+  id: string;
+  icon: "truck" | "returns" | "shield" | "sparkle";
+  text: string;
+}
+
 export interface SiteContent {
   "hero.slides": HeroSlide[];
   "home.collections": CollectionTile[];
@@ -129,6 +136,7 @@ export interface SiteContent {
   "nav.megaMenu": MegaMenuSection[];
   "layout.footer": FooterContent;
   "page.ethos": EthosContent;
+  "product.assurances": ProductAssurance[];
   "page.privacy": PolicyContent;
   "page.returns": PolicyContent;
   "page.terms": PolicyContent;
@@ -157,6 +165,7 @@ const OFFLINE_FALLBACK: SiteContent = {
     beliefs: [],
     promise: "",
   },
+  "product.assurances": [],
   "page.privacy": { headline: "Privacy Notice", intro: "", sections: [] },
   "page.returns": { headline: "Returns & Refunds", intro: "", sections: [] },
   "page.terms": { headline: "Terms of Sale", intro: "", sections: [] },
