@@ -776,8 +776,12 @@ const SLOTS = {
       phone: "",
       whatsapp: "+233 24 659 8404",
       address: "",
-      instagram: "https://instagram.com",
-      tiktok: "https://tiktok.com",
+      // Canonical profile URLs. The links as shared from the apps carry
+      // per-share tracking tokens — igsi=, _t=, utm_source=qr — which belong to
+      // one QR scan or one share sheet, can expire, and say nothing useful in a
+      // permanent link on a website.
+      instagram: "https://www.instagram.com/jule.sandco",
+      tiktok: "https://www.tiktok.com/@julesandco0",
     },
   },
 

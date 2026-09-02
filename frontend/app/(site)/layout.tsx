@@ -93,7 +93,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="font-sans" suppressHydrationWarning>
         {/* Who the shop is, and that it has a search — so Google can offer one
             in the result rather than only linking the homepage. */}
-        <JsonLd schema={organizationSchema(content["site.seo"])} />
+        <JsonLd schema={organizationSchema(content["site.seo"], content["store.contact"])} />
         <JsonLd schema={websiteSchema()} />
         <Analytics />
 

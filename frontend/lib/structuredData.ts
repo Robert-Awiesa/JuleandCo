@@ -25,8 +25,23 @@ function absolute(url: string): string {
   return /^https?:\/\//.test(url) ? url : `${siteUrl()}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
-export function organizationSchema(seo: { description?: string }) {
+export function organizationSchema(
+  seo: { description?: string },
+  contact: { instagram?: string; tiktok?: string } = {}
+) {
   const base = siteUrl();
+
+  /**
+   * The shop's own profiles elsewhere.
+   *
+   * `sameAs` is how a search engine works out that this site, that Instagram
+   * account and that TikTok account are one business rather than three. Only
+   * real profiles go in — an empty or placeholder link claims a presence that
+   * does not exist.
+   */
+  const sameAs = [contact.instagram, contact.tiktok].filter(
+    (url): url is string => Boolean(url) && !/^https?:\/\/(www\.)?(instagram|tiktok)\.com\/?$/.test(url!)
+  );
 
   return {
     "@context": "https://schema.org",
@@ -35,6 +50,7 @@ export function organizationSchema(seo: { description?: string }) {
     url: base,
     logo: absolute("/images/brand/logo-header.png"),
     description: seo.description,
+    ...(sameAs.length > 0 ? { sameAs } : {}),
   };
 }
 
